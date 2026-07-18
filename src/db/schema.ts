@@ -92,8 +92,12 @@ export const opportunities = pgTable("opportunities", {
   companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
   thesisId: uuid("thesis_id").references(() => theses.id),
   source: text("source").notNull(), // 'inbound' | 'outbound'
-  sourceChannel: text("source_channel"), // 'application' | 'github' | 'web' | ...
+  sourceChannel: text("source_channel"), // 'application' | 'github' | 'hackernews' | 'arxiv' | 'web'
   status: text("status").notNull().default("sourced"), // sourced|screening|screened|scored|decided
+  // Conviction: auto-computed at ingestion so the system can surface founders
+  // crossing a threshold on their own (before any manual assessment).
+  convictionScore: integer("conviction_score"), // 0-100
+  convictionReason: text("conviction_reason"),
   screenResult: text("screen_result"), // 'pass' | 'reject' | null
   screenReason: text("screen_reason"),
   decision: text("decision"), // 'invest' | 'pass' | 'watch'

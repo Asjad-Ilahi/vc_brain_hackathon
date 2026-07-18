@@ -29,6 +29,8 @@ export async function createOpportunity(input: {
   source: "inbound" | "outbound";
   sourceChannel: string;
   thesisId?: string | null;
+  convictionScore?: number | null;
+  convictionReason?: string | null;
   company: {
     name: string;
     domain?: string | null;
@@ -62,6 +64,8 @@ export async function createOpportunity(input: {
       source: input.source,
       sourceChannel: input.sourceChannel,
       status: "sourced",
+      convictionScore: input.convictionScore ?? null,
+      convictionReason: input.convictionReason ?? null,
     })
     .returning();
 

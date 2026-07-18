@@ -31,6 +31,8 @@ export type OpportunitySummary = {
   status: string;
   screenResult: string | null;
   decision: string | null;
+  convictionScore: number | null;
+  convictionReason: string | null;
   founders: { id: string; name: string; founderScore: number; isColdStart: boolean }[];
   axes: AxisTriple;
   timeToDecisionMs: number | null;
@@ -107,6 +109,8 @@ export async function listOpportunities(): Promise<OpportunitySummary[]> {
       status: o.status,
       screenResult: o.screenResult,
       decision: o.decision,
+      convictionScore: o.convictionScore ?? null,
+      convictionReason: o.convictionReason ?? null,
       founders: fList,
       axes: axisTriple(axesByOpp.get(o.id) ?? []),
       timeToDecisionMs: ttd,

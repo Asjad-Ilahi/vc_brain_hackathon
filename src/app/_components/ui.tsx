@@ -94,6 +94,21 @@ export function AxisCard({ axisKey, data }: { axisKey: keyof AxisTriple; data: A
   );
 }
 
+export function ConvictionBadge({ score }: { score: number | null }) {
+  if (score == null) return null;
+  const tone = score >= 68 ? "emerald" : score >= 50 ? "amber" : "slate";
+  const cls: Record<string, string> = {
+    emerald: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/40",
+    amber: "bg-amber-500/10 text-amber-300 ring-amber-500/30",
+    slate: "bg-slate-500/10 text-slate-300 ring-slate-500/30",
+  };
+  return (
+    <span className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-semibold ring-1 ${cls[tone]}`} title="conviction score">
+      {score >= 68 ? "🔥" : ""}{score}
+    </span>
+  );
+}
+
 export function Spinner({ label }: { label?: string }) {
   return (
     <span className="inline-flex items-center gap-2 text-sm text-slate-400">
