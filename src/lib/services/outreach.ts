@@ -1,13 +1,49 @@
 /** Activate — draft and send cold outreach to a sourced founder. */
 import { db } from "@/db/client";
 import { outreach, theses, opportunities } from "@/db/schema";
-import { text as llmText } from "@/lib/openai";
+import { text as llmText, structured } from "@/lib/openai";
 import { getOpportunityContext, formatContext } from "./context";
 import { formatThesis } from "./thesis";
 import { env } from "@/lib/env";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { sendMail } from "@/lib/mail";
+import { tavilySearch } from "@/lib/tavily";
+import { githubUserEmailFromCommits } from "@/lib/github";
 import { founderDisplayName } from "@/lib/utils";
+
+/**
+ * Find the founder's contact email so the INVESTOR never has to. Tries public
+ * GitHub commit emails first, then a broad web search + extraction. Returns null
+ * only when no public email genuinely exists (then the UI offers their profiles).
+ * Fail-soft — a lookup failure never blocks the outreach draft.
+ */
+async function resolveFounderEmail(name: string | null, githubLogin: string | null): Promise<string | null> {
+  const bad = (e: string) => /noreply|no-reply|^(info|hello|support|contact|admin|team|sales|press)@/.test(e) || /\.(png|jpg|svg)$/.test(e);
+  if (githubLogin) {
+    try {
+      const e = (await githubUserEmailFromCommits(githubLogin))?.trim().toLowerCase();
+      if (e && e.includes("@") && !bad(e)) return e;
+    } catch { /* ignore */ }
+  }
+  if (name && !name.startsWith("@")) {
+    try {
+      const { results } = await tavilySearch(`"${name}" email OR contact OR "reach me"`, { maxResults: 4 });
+      if (results.length) {
+        const text = results.map((r) => `[${r.title}] ${r.content}`).join("\n\n").slice(0, 4000);
+        const { email } = await structured({
+          schema: z.object({ email: z.string().nullable().describe("A single public contact email for this exact person, or null. Never a generic info@/noreply address.") }),
+          schemaName: "FounderEmail",
+          system: "Extract one public contact email for the named person from the evidence, or null if none is clearly theirs.",
+          user: `Person: ${name}\n\n${text}`,
+        });
+        const e = (email || "").trim().toLowerCase();
+        if (e && e.includes("@") && !bad(e)) return e;
+      }
+    } catch { /* ignore */ }
+  }
+  return null;
+}
 
 export async function draftOutreach(opportunityId: string) {
   const ctx = await getOpportunityContext(opportunityId);
@@ -24,6 +60,15 @@ export async function draftOutreach(opportunityId: string) {
   const f0 = ctx.founders[0];
   const display = f0 ? founderDisplayName(f0.fullName, f0.githubLogin) : null;
   const founderName = display && !display.startsWith("@") ? display : "there";
+
+  // The system finds the recipient — not the investor. Resolve + store the email
+  // here so the outreach console shows it pre-filled the moment the draft is ready.
+  if (!ctx.opportunity.applicantEmail) {
+    const email = await resolveFounderEmail(f0?.fullName ?? display, f0?.githubLogin ?? null);
+    if (email) {
+      await db.update(opportunities).set({ applicantEmail: email }).where(eq(opportunities.id, opportunityId));
+    }
+  }
 
   const draft = await llmText({
     system: `You draft short, specific, non-cringe cold outreach from a VC to a founder we sourced

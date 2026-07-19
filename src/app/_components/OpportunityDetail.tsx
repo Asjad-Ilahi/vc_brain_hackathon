@@ -195,6 +195,8 @@ export default function OpportunityDetail({ id }: { id: string }) {
     try {
       const r = await postJson<{ draftMessage: string }>(`/api/opportunities/${id}/outreach`);
       setOutreach(r.draftMessage);
+      // Reload so the email the system just resolved pre-fills the recipient field.
+      await load();
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -278,6 +280,18 @@ export default function OpportunityDetail({ id }: { id: string }) {
   // the panel read-only — the API enforces this too; this just hides dead buttons.
   const canDeploy = me?.role === "investor" || me?.role === "admin";
   const founderName = s.founders[0]?.name;
+  // Outbound leads must CONVERGE (founder applies via the ref link → status
+  // "applied") before capital can be deployed — you don't fund someone who
+  // hasn't agreed to talk. Until then the decision panel stays inactive.
+  const awaitingFounder = s.source === "outbound" && s.status !== "applied" && !s.decision;
+  // Public profiles the system resolved — the manual-outreach fallback when no
+  // email exists, so the investor is never left to "go find it".
+  const f0 = s.founders[0];
+  const profileLinks = [
+    f0?.githubLogin ? { label: "GitHub", href: `https://github.com/${f0.githubLogin}` } : null,
+    f0?.linkedinUrl ? { label: "LinkedIn", href: f0.linkedinUrl } : null,
+    f0?.twitterHandle ? { label: "X", href: `https://x.com/${f0.twitterHandle.replace(/^@/, "")}` } : null,
+  ].filter(Boolean) as { label: string; href: string }[];
   const rejected = s.screenResult === "reject";
   const screened = stages.screen ?? (s.screenResult ? "done" : "idle");
   const claimsBySection = (needle: string[]) =>
@@ -332,6 +346,11 @@ export default function OpportunityDetail({ id }: { id: string }) {
                     decided by {s.decidedBy ?? "human"} in {fmtDuration(s.timeToDecisionMs)}
                   </div>
                 ) : null}
+              </div>
+            ) : awaitingFounder ? (
+              <div className="flex items-center gap-1.5 rounded-full border border-[#eceef3] bg-white px-3 py-1.5">
+                <span className="text-[11px] text-muted">◷</span>
+                <span className="text-[11.5px] font-semibold text-muted">Clock starts when they apply</span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 border border-bad/40 bg-badwash px-3 py-1.5">
@@ -435,14 +454,45 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 <div className="grid gap-3">
                   <div>
                     <label className="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1 font-semibold">Recipient Email</label>
-                    <input
-                      type="email"
-                      value={recipientEmail}
-                      onChange={(e) => setRecipientEmail(e.target.value)}
-                      disabled={outreachSent || sendingOutreach}
-                      placeholder="Enter founder email address..."
-                      className="w-full bg-[#F8F8F8] border-0 rounded-full px-6 py-3 text-[12.5px] text-ink focus:outline-none focus:ring-1 focus:ring-[#0045FF]"
-                    />
+                    {recipientEmail ? (
+                      <>
+                        <input
+                          type="email"
+                          value={recipientEmail}
+                          onChange={(e) => setRecipientEmail(e.target.value)}
+                          disabled={outreachSent || sendingOutreach}
+                          className="w-full bg-[#F8F8F8] border-0 rounded-full px-6 py-3 text-[12.5px] text-ink focus:outline-none focus:ring-1 focus:ring-[#0045FF]"
+                        />
+                        {!outreachSent ? <p className="mt-1.5 pl-1 text-[10.5px] font-semibold text-ok">✓ Found by the system from public sources — you don&apos;t need to look it up</p> : null}
+                      </>
+                    ) : (
+                      <>
+                        <div className="rounded-[18px] border border-warn/25 bg-warnwash px-4 py-3 text-[11.5px]">
+                          <p className="font-semibold text-ink">No public email found.</p>
+                          <p className="mt-0.5 text-muted">
+                            The system searched GitHub commits and the open web.
+                            {profileLinks.length ? " Reach out via their profile:" : " No public profile surfaced either."}
+                          </p>
+                          {profileLinks.length ? (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {profileLinks.map((l) => (
+                                <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="rounded-full border border-[#eceef3] bg-white px-2.5 py-1 text-[10.5px] font-semibold text-muted hover:border-[#0045FF] hover:text-[#0045FF]">
+                                  {l.label} ↗
+                                </a>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                        <input
+                          type="email"
+                          value={recipientEmail}
+                          onChange={(e) => setRecipientEmail(e.target.value)}
+                          disabled={outreachSent || sendingOutreach}
+                          placeholder="…or add an email yourself if you have one (optional)"
+                          className="mt-2 w-full bg-[#F8F8F8] border-0 rounded-full px-6 py-3 text-[12.5px] text-ink focus:outline-none focus:ring-1 focus:ring-[#0045FF]"
+                        />
+                      </>
+                    )}
                   </div>
 
                   <div>
@@ -742,6 +792,14 @@ export default function OpportunityDetail({ id }: { id: string }) {
                     first signal → decision: {fmtDuration(s.timeToDecisionMs)}
                   </p>
                 ) : null}
+              </div>
+            ) : awaitingFounder ? (
+              <div className="mt-3 rounded-2xl border border-[#eceef3] bg-white p-4 text-center">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[#9E9E9E]">◷ Awaiting the founder</div>
+                <p className="mt-2 text-[12px] leading-relaxed text-muted">
+                  This is an outbound lead. Send the outreach and let the founder apply through your link —
+                  the 24-hour clock and <b className="text-ink">Deploy</b> unlock the moment they convert. You don&apos;t decide before they&apos;ve agreed to talk.
+                </p>
               </div>
             ) : canDeploy ? (
               <div className="mt-3 flex flex-col gap-2">
