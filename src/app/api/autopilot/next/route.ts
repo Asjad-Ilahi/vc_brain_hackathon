@@ -98,10 +98,10 @@ export async function POST(req: Request) {
     }
   }
 
-  // 2. If queue is empty, trigger sourcing sweep in the background (cooldown 60s)
+  // 2. If queue is empty, trigger sourcing sweep in the background (cooldown 30s)
   if (!candidate) {
     const nowTime = Date.now();
-    if (nowTime - lastSweepAt > 60_000) {
+    if (nowTime - lastSweepAt > 30_000) {
       lastSweepAt = nowTime;
       try {
         await sourceAll(user.id);

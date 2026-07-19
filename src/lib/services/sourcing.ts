@@ -74,14 +74,16 @@ function pickSector(t: Thesis | null, fallback: string): string {
  * back — it's a company that already won.
  */
 function githubQueryFromThesis(t: Thesis | null): string {
-  const sector = pickSector(t, "AI infrastructure");
-  const cutoff = new Date(Date.now() - 550 * 86_400_000).toISOString().slice(0, 10);
-  return `"${sector}" stars:30..2500 created:>${cutoff} fork:false pushed:>2025-01-01`;
+  const sector = pickSector(t, "AI");
+  // Use unquoted keywords + broad star range to find individual devs building
+  // in the thesis space. The old exact-phrase query only matched org repos.
+  const cutoff = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10);
+  return `${sector} stars:10..5000 created:>${cutoff} fork:false`;
 }
 
 export async function sourceFromGithub(userId: string, limit = 5): Promise<string[]> {
   const thesis = await getActiveThesis(userId);
-  const repos = await githubSearchRepos(githubQueryFromThesis(thesis), Math.max(limit * 3, 12));
+  const repos = await githubSearchRepos(githubQueryFromThesis(thesis), Math.max(limit * 4, 16));
   const created: string[] = [];
 
   const candidateRepos = repos.filter(repo => repo.owner.type !== "Organization");
