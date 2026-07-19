@@ -1,9 +1,9 @@
 /**
- * Outbound email — the founder-facing half of the 24h promise.
+ * Outbound email · the founder-facing half of the 24h promise.
  * FAIL-SOFT BY DESIGN: when SMTP env vars are absent (or a send fails) the app
- * behaves exactly as before — founders still have their /apply/status link.
+ * behaves exactly as before · founders still have their /apply/status link.
  * Callers therefore never await-and-throw on mail; sendMail reports, not raises.
- * Node runtime only (nodemailer) — the routes that use this already declare it.
+ * Node runtime only (nodemailer) · the routes that use this already declare it.
  */
 import nodemailer from "nodemailer";
 import { env } from "./env";
@@ -23,7 +23,7 @@ function transporter() {
 
 export async function sendMail(to: string, subject: string, text: string, html?: string): Promise<{ sent: boolean }> {
   if (!mailConfigured()) {
-    console.log(`[mail] SMTP not configured — skipped "${subject}" to ${to}`);
+    console.log(`[mail] SMTP not configured · skipped "${subject}" to ${to}`);
     return { sent: false };
   }
   try {
@@ -63,17 +63,17 @@ export async function sendApplicationReceived(to: string, company: string, publi
   const statusUrl = `${env.appUrl}/apply/status?ref=${publicRef}`;
   const text = `We received your application for ${company}.
 
-Our screening agents are auditing your pitch against the fund thesis and your public footprint. A human investor makes the final call — expect a decision within 24 hours.
+Our screening agents are auditing your pitch against the fund thesis and your public footprint. A human investor makes the final call · expect a decision within 24 hours.
 
 Track your application (no account needed):
 ${statusUrl}`;
   return sendMail(
     to,
-    `Application received — ${company}`,
+    `Application received · ${company}`,
     text,
     shell(
       "Application received",
-      `<p style="margin:0;font-size:14px;line-height:1.6;color:#e2eaff">Your application for <b style="color:#ffffff">${company}</b> is in the assessment queue. Our agents are auditing the pitch against the fund thesis and your public footprint — a human investor makes the final call within <b style="color:#ffffff">24 hours</b>.</p>`,
+      `<p style="margin:0;font-size:14px;line-height:1.6;color:#e2eaff">Your application for <b style="color:#ffffff">${company}</b> is in the assessment queue. Our agents are auditing the pitch against the fund thesis and your public footprint · a human investor makes the final call within <b style="color:#ffffff">24 hours</b>.</p>`,
       statusUrl
     )
   );
@@ -81,23 +81,23 @@ ${statusUrl}`;
 
 const DECISION_COPY: Record<string, { subject: string; headline: string; body: string }> = {
   invest: {
-    subject: "Good news — the fund wants to go further",
+    subject: "Good news · the fund wants to go further",
     headline: "We're advancing",
     body: "The investor reviewed the full diligence and wants to take this further. Expect a direct follow-up shortly.",
   },
   watch: {
     subject: "Decision: you're on our watchlist",
     headline: "On the watchlist",
-    body: "Not a yes yet — the fund is tracking your progress and may re-engage as you hit new milestones. Your founder profile stays in our memory.",
+    body: "Not a yes yet · the fund is tracking your progress and may re-engage as you hit new milestones. Your founder profile stays in our memory.",
   },
   pass: {
     subject: "Decision on your application",
     headline: "Not this round",
-    body: "The fund isn't moving forward right now. This isn't permanent — founders are re-evaluated whenever new signals appear, and your track record persists.",
+    body: "The fund isn't moving forward right now. This isn't permanent · founders are re-evaluated whenever new signals appear, and your track record persists.",
   },
 };
 
-/** Sent when the investor records the human decision — the 24h promise, kept. */
+/** Sent when the investor records the human decision · the 24h promise, kept. */
 export async function sendDecisionEmail(
   to: string,
   company: string,
@@ -108,7 +108,7 @@ export async function sendDecisionEmail(
   const copy = DECISION_COPY[decision] ?? DECISION_COPY.pass;
   const statusUrl = `${env.appUrl}/apply/status?ref=${publicRef}`;
   const fb = feedback ? `\n\nInvestor feedback:\n"${feedback}"` : "";
-  const text = `${copy.headline} — ${company}.
+  const text = `${copy.headline} · ${company}.
 
 ${copy.body}${fb}
 
@@ -116,7 +116,7 @@ Full status:
 ${statusUrl}`;
   return sendMail(
     to,
-    `${copy.subject} — ${company}`,
+    `${copy.subject} · ${company}`,
     text,
     shell(
       copy.headline,

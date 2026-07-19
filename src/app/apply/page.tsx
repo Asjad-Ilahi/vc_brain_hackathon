@@ -94,7 +94,7 @@ function ApplyPageContent() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f7f8fb] text-ink">
-      {/* Header — matches the workspace brand */}
+      {/* Header · matches the workspace brand */}
       <header className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-2xl bg-gradient-to-b from-brand to-branddeep text-white">
@@ -176,7 +176,7 @@ function ApplyPageContent() {
 
                 <div className="flex flex-col gap-1.5">
                   <label className={labelCls}>Interview / call notes <span className="normal-case text-faint">(optional)</span></label>
-                  <textarea className={`${inputCls} resize-none`} rows={3} value={interviewText} onChange={(e) => setInterviewText(e.target.value)} placeholder="Paste notes from a call or interview — they become a separate evidence source the validator cross-checks against your deck." />
+                  <textarea className={`${inputCls} resize-none`} rows={3} value={interviewText} onChange={(e) => setInterviewText(e.target.value)} placeholder="Paste notes from a call or interview · they become a separate evidence source the validator cross-checks against your deck." />
                 </div>
 
                 <button type="submit" className="u-btn-primary mt-1 w-full justify-center py-3.5 text-[14px]">Submit application</button>

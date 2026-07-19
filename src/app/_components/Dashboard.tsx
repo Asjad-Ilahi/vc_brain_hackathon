@@ -70,7 +70,7 @@ export default function Dashboard() {
       key: "scorer",
       name: "Scorer Agent",
       role: "3-Axis Conviction Scoring",
-      description: "Scores opportunities independently across three key dimensions — Founder track record, Market size & dynamics, and Idea/Product viability.",
+      description: "Scores opportunities independently across three key dimensions · Founder track record, Market size & dynamics, and Idea/Product viability.",
     },
     {
       key: "memo",
@@ -120,8 +120,8 @@ export default function Dashboard() {
 
   // ---------------------------------------------------------------------
   // Autopilot: after the profile is saved, background agents take each find
-  // through the FULL check — background check, screening, 3-way scoring,
-  // memo, verification — in parallel, until `target` deals are finished.
+  // through the FULL check · background check, screening, 3-way scoring,
+  // memo, verification · in parallel, until `target` deals are finished.
   // The investor sees results, not buttons.
   // ---------------------------------------------------------------------
   const [auto, setAuto] = useState<AutoStatus | null>(null);
@@ -371,7 +371,7 @@ export default function Dashboard() {
           />
           <Stat
             label="Founders In Memory"
-            value={founderCount?.total ?? "—"}
+            value={founderCount?.total ?? ""}
             sub={founderCount ? `+${founderCount.week} this week` : undefined}
             icon={<IconDatabase />}
           />
@@ -390,9 +390,9 @@ export default function Dashboard() {
             <span className="flex items-center gap-2.5 font-mono text-[12px] text-muted group-hover:text-ink">
               <Spinner />
               {auto.working > 0 || auto.queued > 0 ? (
-                <span>Agents working in the background — <strong className="text-ink">{auto.ready}</strong> ready for you · {auto.working} being checked · {auto.queued} waiting</span>
+                <span>Agents working in the background · <strong className="text-ink">{auto.ready}</strong> ready for you · {auto.working} being checked · {auto.queued} waiting</span>
               ) : (
-                <span className="animate-pulse text-accent">Autonomous Agent active — continuously scanning channels for new founders...</span>
+                <span className="animate-pulse text-accent">Autonomous Agent active · continuously scanning channels for new founders...</span>
               )}
             </span>
             <span className="flex items-center gap-1.5 font-mono text-[10.5px] text-faint">
@@ -427,7 +427,7 @@ export default function Dashboard() {
               {awaiting.length === 0 ? (
                 <p className="py-8 text-center text-[13px] text-white/80 font-sans">
                   {auto && (auto.working > 0 || auto.queued > 0)
-                    ? "Agents are running the first full checks — results appear here."
+                    ? "Agents are running the first full checks · results appear here."
                     : "Nothing waiting on you. The autonomous agent is continuously checking for deals, or you can add an application."}
                 </p>
               ) : (
@@ -470,15 +470,15 @@ export default function Dashboard() {
                         <div className="bg-[#F8F8F8] border border-[#eceef3] rounded-[20px] md:rounded-full px-6 py-2 flex items-center justify-around md:justify-end gap-6 shrink-0">
                           <div className="flex flex-col items-center">
                             <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Founder axis</span>
-                            <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.founder?.score ?? "—"}</span>
+                            <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.founder?.score ?? ""}</span>
                           </div>
                           <div className="flex flex-col items-center">
                             <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Market axis</span>
-                            <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.market?.score ?? "—"}</span>
+                            <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.market?.score ?? ""}</span>
                           </div>
                           <div className="flex flex-col items-center">
                             <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Idea axis</span>
-                            <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.idea_vs_market?.score ?? "—"}</span>
+                            <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.idea_vs_market?.score ?? ""}</span>
                           </div>
                         </div>
                       </Link>
@@ -511,7 +511,7 @@ export default function Dashboard() {
             <div className="border-t border-[#eceef3] pt-4 space-y-4">
               {crossed.length === 0 ? (
                 <p className="py-8 text-center text-[13px] text-muted font-sans">
-                  No strong matches yet — run a search.
+                  No strong matches yet · run a search.
                 </p>
               ) : (
                 crossed.slice(0, 5).map((o) => (
@@ -541,15 +541,15 @@ export default function Dashboard() {
                     <div className="bg-[#F8F8F8] border border-[#eceef3] rounded-[20px] md:rounded-full px-6 py-2.5 flex items-center justify-around md:justify-end gap-6 shrink-0">
                       <div className="flex flex-col items-center">
                         <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Founder axis</span>
-                        <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.founder?.score ?? "—"}</span>
+                        <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.founder?.score ?? ""}</span>
                       </div>
                       <div className="flex flex-col items-center">
                         <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Market axis</span>
-                        <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.market?.score ?? "—"}</span>
+                        <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.market?.score ?? ""}</span>
                       </div>
                       <div className="flex flex-col items-center">
                         <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Idea axis</span>
-                        <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.idea_vs_market?.score ?? "—"}</span>
+                        <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.idea_vs_market?.score ?? ""}</span>
                       </div>
                     </div>
                   </Link>
@@ -739,7 +739,7 @@ function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
   if (uniqueNodes.length === 0) {
     return (
       <div className="flex h-56 items-center justify-center text-[12px] text-faint border border-line bg-cardalt rounded-2xl">
-        No relationships in sourcing graph yet — scan for candidates.
+        No relationships in sourcing graph yet · scan for candidates.
       </div>
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 /**
- * The living profile — "a credit score for founders". The persistent score with
+ * The living profile · "a credit score for founders". The persistent score with
  * its full trajectory, every venture the person has surfaced with, and every
  * timestamped signal Memory holds on them. Follows the person, never the company.
  */
@@ -128,7 +128,7 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
                 {/* mini bar chart */}
                 <div className="flex h-24 items-end gap-1.5 px-2">
                   {chrono.map((h) => (
-                    <div key={h.id} className="group relative flex-1" title={`${h.score} — ${h.reason}`}>
+                    <div key={h.id} className="group relative flex-1" title={`${h.score} · ${h.reason}`}>
                       <div
                         className={`w-full rounded-t-sm ${h.delta > 0 ? "bg-[#12A150]" : h.delta < 0 ? "bg-[#E0355A]" : "bg-[#eceef3]"}`}
                         style={{ height: `${Math.max(8, (h.score / maxScore) * 96)}px` }}

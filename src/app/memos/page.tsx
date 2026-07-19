@@ -39,7 +39,7 @@ export default function MemosPage() {
       <PageHeader
         eyebrow="Module 06 · Memos"
         title="Investment memos."
-        sub="Auto-drafted from diligence. Every claim linked to evidence. The recommendation is the system's — the decision is yours."
+        sub="Auto-drafted from diligence. Every claim linked to evidence. The recommendation is the system's · the decision is yours."
       />
       <div className="space-y-4">
         {!loading && rows.length > 0 ? (
@@ -49,7 +49,7 @@ export default function MemosPage() {
           <div className="py-20 text-center"><Spinner label="Loading memos…" /></div>
         ) : rows.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
-            No memos yet — run diligence on a pipeline deal.
+            No memos yet · run diligence on a pipeline deal.
           </div>
         ) : shown.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">

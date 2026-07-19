@@ -23,7 +23,7 @@ const NAV = [
 const PUBLIC_PATHS = ["/signin", "/signup", "/setup", "/onboarding", "/admin", "/apply", "/invite"];
 
 // Declared at module scope (not inside AppShell) so it isn't recreated on every
-// render — a component created during render resets its subtree state each time.
+// render · a component created during render resets its subtree state each time.
 function SidebarNav({ pathname, onNav }: { pathname: string; onNav?: () => void }) {
   return (
     <nav className="flex flex-1 flex-col gap-1.5 px-3">
@@ -56,7 +56,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isPublic = pathname === "/" || PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
   // The mobile drawer closes via each nav Link's onClick, the logo, and Escape
-  // (below) — no route-change effect needed, which also avoids a setState-in-
+  // (below) · no route-change effect needed, which also avoids a setState-in-
   // effect cascade. Keep the Escape-to-close subscription.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setNavOpen(false);

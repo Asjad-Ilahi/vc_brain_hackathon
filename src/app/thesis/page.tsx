@@ -67,8 +67,8 @@ export default function ThesisPage() {
       });
       const n = r.archivedStaleHypotheses ?? 0;
       setMsg(
-        `Thesis committed — every downstream score now filters through this lens.${
-          n > 0 ? ` ${n} unassessed hypothesis${n === 1 ? "" : "es"} from the previous lens archived — run a radar sweep to repopulate.` : ""
+        `Thesis committed · every downstream score now filters through this lens.${
+          n > 0 ? ` ${n} unassessed hypothesis${n === 1 ? "" : "es"} from the previous lens archived · run a radar sweep to repopulate.` : ""
         }`
       );
       router.refresh();
@@ -181,7 +181,7 @@ export default function ThesisPage() {
             />
           </Section>
 
-          <Section n="2.3" title="Founder lens" sub="Archetypes bias sourcing — Radar surfaces founders matching this pattern before they enter public fundraising.">
+          <Section n="2.3" title="Founder lens" sub="Archetypes bias sourcing · Radar surfaces founders matching this pattern before they enter public fundraising.">
             <div className="flex flex-wrap gap-1.5">
               {ARCHETYPE_OPTIONS.map((a) => (
                 <Chip key={a} active={draft.archetypes.includes(a)} onClick={() => toggle("archetypes", a)}>
@@ -223,7 +223,7 @@ export default function ThesisPage() {
             />
           </Section>
 
-          <Section n="3.2" title="Signal sources" sub="Each source has its own trust level. Enable only what matches your conviction style — more sources ≠ better.">
+          <Section n="3.2" title="Signal sources" sub="Each source has its own trust level. Enable only what matches your conviction style · more sources ≠ better.">
             <div className="flex flex-wrap gap-1.5">
               {SOURCE_OPTIONS.map((s) => (
                 <Chip key={s.id} active={draft.enabledSources.includes(s.id)} onClick={() => toggle("enabledSources", s.id)}>
@@ -237,7 +237,7 @@ export default function ThesisPage() {
         {/* Preview rail */}
         <aside className="h-fit bg-[#F8F8F8] rounded-[24px] border-0 p-6 lg:sticky lg:top-4 shadow-none">
           <Eyebrow>Preview weight</Eyebrow>
-          <p className="mt-1 text-[11px] text-faint">How this lens tilts the three axes (never averaged — read separately).</p>
+          <p className="mt-1 text-[11px] text-faint">How this lens tilts the three axes (never averaged · read separately).</p>
           {weights ? (
             <div className="mt-3 space-y-3">
               {(

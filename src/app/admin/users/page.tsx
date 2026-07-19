@@ -86,7 +86,7 @@ export default function AdminUsersPage() {
         role: inviteRole,
       });
       setInviteEmail("");
-      setNotice(`Invite created for ${r.invite.email}. Share the link below — it works once.`);
+      setNotice(`Invite created for ${r.invite.email}. Share the link below · it works once.`);
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -101,7 +101,7 @@ export default function AdminUsersPage() {
       setCopied(link);
       window.setTimeout(() => setCopied(null), 1500);
     } catch {
-      /* clipboard blocked — the field is selectable as a fallback */
+      /* clipboard blocked · the field is selectable as a fallback */
     }
   }
 

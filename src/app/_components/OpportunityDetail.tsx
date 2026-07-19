@@ -131,7 +131,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
         screenRes = r.result;
         setStage("screen", "done");
       }
-      // The screen is a real gate — rejects stop here unless overridden.
+      // The screen is a real gate · rejects stop here unless overridden.
       if (screenRes === "reject" && !opts?.force) {
         setErr("Screened out before full analysis. Override below if you disagree with the gate.");
         return;
@@ -277,14 +277,14 @@ export default function OpportunityDetail({ id }: { id: string }) {
   const checkK = Math.round((thesis?.checkSizeMinUsd ?? 100_000) / 1000);
   const ownPct = thesis?.ownershipTargetPct ?? 7;
   // Only an investor/admin records the human decision (RBAC). Analyst/viewer see
-  // the panel read-only — the API enforces this too; this just hides dead buttons.
+  // the panel read-only · the API enforces this too; this just hides dead buttons.
   const canDeploy = me?.role === "investor" || me?.role === "admin";
   const founderName = s.founders[0]?.name;
   // Outbound leads must CONVERGE (founder applies via the ref link → status
-  // "applied") before capital can be deployed — you don't fund someone who
+  // "applied") before capital can be deployed · you don't fund someone who
   // hasn't agreed to talk. Until then the decision panel stays inactive.
   const awaitingFounder = s.source === "outbound" && s.status !== "applied" && !s.decision;
-  // Public profiles the system resolved — the manual-outreach fallback when no
+  // Public profiles the system resolved · the manual-outreach fallback when no
   // email exists, so the investor is never left to "go find it".
   const f0 = s.founders[0];
   const profileLinks = [
@@ -368,21 +368,21 @@ export default function OpportunityDetail({ id }: { id: string }) {
             {s.axes.founder ? (
               <span className={`tnum text-[24px] font-bold ${scoreTone(s.axes.founder.score)}`}>{s.axes.founder.score}</span>
             ) : (
-              <span className="text-[13px] text-faint">—</span>
+              <span className="text-[13px] text-faint"></span>
             )}
           </StripCell>
           <StripCell label="Market">
             {s.axes.market ? (
               <span className={`tnum text-[24px] font-bold ${scoreTone(s.axes.market.score)}`}>{s.axes.market.score}</span>
             ) : (
-              <span className="text-[13px] text-faint">—</span>
+              <span className="text-[13px] text-faint"></span>
             )}
           </StripCell>
           <StripCell label="Idea vs market">
             {s.axes.idea_vs_market ? (
               <span className={`tnum text-[24px] font-bold ${scoreTone(s.axes.idea_vs_market.score)}`}>{s.axes.idea_vs_market.score}</span>
             ) : (
-              <span className="text-[13px] text-faint">—</span>
+              <span className="text-[13px] text-faint"></span>
             )}
           </StripCell>
           <StripCell label="Contradictions">
@@ -436,7 +436,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
             </div>
             {rejected ? (
               <p className="mt-2.5 border border-bad/30 bg-badwash px-3 py-2 text-[12px] text-bad">
-                Screened out: {s.screenReason ?? "clear non-fit"} — full analysis is gated until you override.
+                Screened out: {s.screenReason ?? "clear non-fit"} · full analysis is gated until you override.
               </p>
             ) : null}
             {err ? <p className="mt-2.5 text-[12px] text-bad">{err}</p> : null}
@@ -463,7 +463,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                           disabled={outreachSent || sendingOutreach}
                           className="w-full bg-[#F8F8F8] border-0 rounded-full px-6 py-3 text-[12.5px] text-ink focus:outline-none focus:ring-1 focus:ring-[#0045FF]"
                         />
-                        {!outreachSent ? <p className="mt-1.5 pl-1 text-[10.5px] font-semibold text-ok">✓ Found by the system from public sources — you don&apos;t need to look it up</p> : null}
+                        {!outreachSent ? <p className="mt-1.5 pl-1 text-[10.5px] font-semibold text-ok">✓ Found by the system from public sources · you don&apos;t need to look it up</p> : null}
                       </>
                     ) : (
                       <>
@@ -557,12 +557,12 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 {predictor.gaps.map((x, i) => (
                   <li key={i} className="flex gap-2 text-[12.5px] text-muted opacity-75">
                     <span className="text-[#B7791F]">·</span>
-                    {x} <span className="text-[10.5px] font-sans">(gap — stated, not guessed)</span>
+                    {x} <span className="text-[10.5px] font-sans">(gap · stated, not guessed)</span>
                   </li>
                 ))}
               </ul>
               <p className="mt-3 text-[11.5px] text-faint font-sans">
-                confidence {Math.round(predictor.confidence * 100)}% — this feeds the Founder score as evidence; it never replaces judgment.
+                confidence {Math.round(predictor.confidence * 100)}% · this feeds the Founder score as evidence; it never replaces judgment.
               </p>
             </section>
           ) : isCold && !s.decision ? (
@@ -570,7 +570,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
               <div>
                 <Eyebrow className="!text-[#B7791F]">New founder · background check not run yet</Eyebrow>
                 <p className="mt-1 max-w-lg text-[12.5px] text-muted">
-                  No track record on file — exactly who this fund exists to find. Check their public footprint
+                  No track record on file · exactly who this fund exists to find. Check their public footprint
                   (what they write, where they participate, how long they've been at it) before judging.
                 </p>
               </div>
@@ -627,12 +627,12 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 <div>
                   <MemoTitle>Deal terms</MemoTitle>
                   <p className="mt-1 text-[13px] text-muted font-sans">
-                    ${checkK}K SAFE · target {ownPct}% · standard pro-rata. Derived from the committed thesis — not negotiated.
+                    ${checkK}K SAFE · target {ownPct}% · standard pro-rata. Derived from the committed thesis · not negotiated.
                   </p>
                 </div>
                 {sections.gaps && sections.gaps.length ? (
                   <div className="border border-[#B7791F]/30 bg-[#FDF2D8] p-4 rounded-xl">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#B7791F]">Flagged gaps — stated, never fabricated</div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#B7791F]">Flagged gaps · stated, never fabricated</div>
                     <ul className="mt-1.5 space-y-1">
                       {sections.gaps.map((g, i) => (
                         <li key={i} className="text-[12.5px] text-muted font-sans">· {g}</li>
@@ -706,7 +706,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                             <span className="truncate text-faint">· {e.reason}</span>
                           </div>
                         ))}
-                        <div className="pt-2 text-[10px] text-[#9E9E9E]">Score follows the person across ventures — never resets.</div>
+                        <div className="pt-2 text-[10px] text-[#9E9E9E]">Score follows the person across ventures · never resets.</div>
                       </div>
                     ) : null}
                   </div>
@@ -718,7 +718,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
           {/* Signals */}
           <section className="mt-6">
             <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#9E9E9E] font-sans">
-              Memory · signals ({signals.length}) — timestamped, source-tagged, deduped
+              Memory · signals ({signals.length}) · timestamped, source-tagged, deduped
             </div>
             <div className="grid gap-2">
               {signals.map((sg) => (
@@ -755,7 +755,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 <div key={label}>
                   <div className="flex justify-between text-[11.5px] font-sans font-medium text-ink">
                     <span>{label}</span>
-                    <span className={`tnum font-bold ${v != null ? scoreTone(v) : "text-faint"}`}>{v ?? "—"}</span>
+                    <span className={`tnum font-bold ${v != null ? scoreTone(v) : "text-faint"}`}>{v ?? ""}</span>
                   </div>
                   <div className="mt-1 h-1.5 bg-[#eceef3] rounded-full overflow-hidden">
                     {v != null ? <div className={`h-full rounded-full ${v >= 80 ? "bg-[#12A150]" : v >= 60 ? "bg-[#0045FF]" : "bg-[#E0355A]"}`} style={{ width: `${v}%` }} /> : null}
@@ -797,8 +797,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
               <div className="mt-3 rounded-2xl border border-[#eceef3] bg-white p-4 text-center">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-[#9E9E9E]">◷ Awaiting the founder</div>
                 <p className="mt-2 text-[12px] leading-relaxed text-muted">
-                  This is an outbound lead. Send the outreach and let the founder apply through your link —
-                  the 24-hour clock and <b className="text-ink">Deploy</b> unlock the moment they convert. You don&apos;t decide before they&apos;ve agreed to talk.
+                  This is an outbound lead. Send the outreach and let the founder apply through your link the 24-hour clock and <b className="text-ink">Deploy</b> unlock the moment they convert. You don&apos;t decide before they&apos;ve agreed to talk.
                 </p>
               </div>
             ) : canDeploy ? (
@@ -815,7 +814,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                   disabled={deciding || !memo}
                   className="bg-white border border-[#eceef3] rounded-full px-4 py-2.5 text-[11.5px] font-bold uppercase tracking-wider text-muted hover:bg-slate-50 hover:text-ink disabled:opacity-40 cursor-pointer"
                 >
-                  ◎ Watch — track in Memory
+                  ◎ Watch · track in Memory
                 </button>
                 <button
                   onClick={extendClock}
@@ -832,12 +831,12 @@ export default function OpportunityDetail({ id }: { id: string }) {
                   ✕ Reject with feedback
                 </button>
                 {!memo ? (
-                  <p className="text-[10.5px] text-faint">Deploy unlocks once the memo is drafted — the system never decides for you.</p>
+                  <p className="text-[10.5px] text-faint">Deploy unlocks once the memo is drafted · the system never decides for you.</p>
                 ) : null}
               </div>
             ) : (
               <div className="mt-3 text-[12px] leading-relaxed text-muted">
-                Read-only — recording the decision is an investor action. Your role can review the
+                Read-only · recording the decision is an investor action. Your role can review the
                 diligence and memo, but not deploy capital.
               </div>
             )}

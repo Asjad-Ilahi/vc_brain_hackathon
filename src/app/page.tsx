@@ -5,7 +5,7 @@ import DarkVeilClient from "./_components/DarkVeilClient";
 
 /* ─── SVG Shape Illustrations for step cards ─── */
 
-/** 01 — Triangle (Set your thesis) */
+/** 01 · Triangle (Set your thesis) */
 function ShapeThesis() {
   return (
     <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -23,7 +23,7 @@ function ShapeThesis() {
   );
 }
 
-/** 02 — Horizontal bars (We find founders / Radar) */
+/** 02 · Horizontal bars (We find founders / Radar) */
 function ShapeRadar() {
   return (
     <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -34,7 +34,7 @@ function ShapeRadar() {
   );
 }
 
-/** 03 — Star/Cross (Screen in one place) */
+/** 03 · Star/Cross (Screen in one place) */
 function ShapeScreen() {
   return (
     <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -54,7 +54,7 @@ function ShapeScreen() {
   );
 }
 
-/** 04 — Diamond (Decide in 24h) */
+/** 04 · Diamond (Decide in 24h) */
 function ShapeDiamond() {
   return (
     <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -144,7 +144,7 @@ function StepBadge({ n }: { n: string }) {
   );
 }
 
-/** Public landing page — VC.Brain */
+/** Public landing page · VC.Brain */
 export default function LandingPage() {
   const [showModal, setShowModal] = useState(false);
   const [companyName, setCompanyName] = useState("");
@@ -1074,7 +1074,7 @@ export default function LandingPage() {
             color: "#9E9E9E",
           }}
         >
-          © VC.Brain · v0.9 · <Link href="/admin" style={{ textDecoration: "underline", color: "#666" }}>Investor Command Center</Link> · <Link href="/apply" style={{ textDecoration: "underline", color: "#666" }}>Founders — Apply</Link> · <Link href="/apply/status" style={{ textDecoration: "underline", color: "#666" }}>Check status</Link>
+          © VC.Brain · v0.9 · <Link href="/admin" style={{ textDecoration: "underline", color: "#666" }}>Investor Command Center</Link> · <Link href="/apply" style={{ textDecoration: "underline", color: "#666" }}>Founders · Apply</Link> · <Link href="/apply/status" style={{ textDecoration: "underline", color: "#666" }}>Check status</Link>
         </span>
         <span
           style={{
@@ -1345,7 +1345,7 @@ export default function LandingPage() {
                 {publicRef && (
                   <div style={{ marginTop: "18px" }}>
                     <p style={{ fontSize: "11.5px", color: "#9E9E9E" }}>
-                      No account needed — this private link is how you check your outcome:
+                      No account needed · this private link is how you check your outcome:
                     </p>
                     <Link
                       href={`/apply/status?ref=${publicRef}`}

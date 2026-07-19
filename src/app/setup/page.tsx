@@ -7,7 +7,7 @@ import { inputCls, labelCls } from "../_components/ui";
 
 /**
  * First-run bootstrap screen. If the workspace already has an operator, there is
- * nothing to set up — send them to sign in. Otherwise, create the founding admin
+ * nothing to set up · send them to sign in. Otherwise, create the founding admin
  * and drop straight into thesis calibration.
  */
 export default function SetupPage() {
@@ -68,7 +68,7 @@ export default function SetupPage() {
     <AuthCard
       eyebrow="First-run setup"
       title="Create the founding admin"
-      sub="This is a fresh workspace. The first account is the administrator — it provisions everyone else. There is no public sign-up."
+      sub="This is a fresh workspace. The first account is the administrator · it provisions everyone else. There is no public sign-up."
       footer={
         <>
           Already set up?{" "}

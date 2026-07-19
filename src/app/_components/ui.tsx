@@ -43,7 +43,7 @@ export function ScorePill({ n, label }: { n: number; label?: string }) {
   );
 }
 
-/** ↑ improving · − stable · ↓ declining — rounded chip. */
+/** ↑ improving · − stable · ↓ declining · rounded chip. */
 export function TrendArrow({ trend, title }: { trend?: string | null; title?: string }) {
   const t = trend === "improving" ? "↑" : trend === "declining" ? "↓" : "−";
   const cls =
@@ -238,7 +238,7 @@ export function AxisCard({ axisKey, data }: { axisKey: keyof AxisTriple; data?: 
       <div className="mt-2 flex items-baseline gap-2.5">
         <span className={`tnum text-[30px] font-extrabold leading-none ${scoreTone(data.score)}`}>{data.score}</span>
         {data.prevScore != null && data.prevScore !== data.score ? (
-          <span className="tnum text-[11px] text-faint" title="previous assessment — history kept">prev {data.prevScore}</span>
+          <span className="tnum text-[11px] text-faint" title="previous assessment · history kept">prev {data.prevScore}</span>
         ) : null}
         {data.rating ? <Badge tone={data.rating === "bullish" ? "ok" : data.rating === "bear" ? "bad" : "neutral"}>{data.rating}</Badge> : null}
       </div>

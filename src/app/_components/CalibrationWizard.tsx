@@ -1,10 +1,10 @@
 "use client";
 /**
- * Calibration console — the complete signup + fund-calibration flow.
+ * Calibration console · the complete signup + fund-calibration flow.
  *
  * Design: NOT the reference prototype's card-and-rail. A split console:
  * questions on the left, and on the right a live THESIS.SPEC panel that
- * compiles in real time as you answer — the product's core promise (your lens
+ * compiles in real time as you answer · the product's core promise (your lens
  * drives the machine) made visible from the first keystroke. Steps are
  * validation-gated; the final step reviews everything and launches atomically:
  * account → thesis → first radar sweep.
@@ -69,7 +69,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
   ] as const;
 
   /* ------------------------------ persistence ------------------------------ */
-  // Draft autosaves locally — the password NEVER touches storage.
+  // Draft autosaves locally · the password NEVER touches storage.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
@@ -114,7 +114,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
       .finally(() => setBooted(true));
   }, [mode]);
 
-  // Signup mode: if already signed in, this is a recalibration — move over.
+  // Signup mode: if already signed in, this is a recalibration · move over.
   // Also detect an already-calibrated workspace (join, don't stomp).
   useEffect(() => {
     if (mode !== "signup") return;
@@ -163,7 +163,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
       switch (STEPS[i].id) {
         case "you":
           if (account.name.trim().length < 2) return "Add your full name.";
-          if (!EMAIL_RE.test(account.email.trim())) return "A valid work email is required — memos are delivered to it.";
+          if (!EMAIL_RE.test(account.email.trim())) return "A valid work email is required · memos are delivered to it.";
           if (!identity.role.trim()) return "Add your role.";
           return null;
         case "fund":
@@ -173,7 +173,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
           if (draft.geographies.length === 0) return "Pick at least one geography.";
           return null;
         case "lens":
-          if (draft.sectors.length === 0) return "Pick at least one sector — the radar needs a direction.";
+          if (draft.sectors.length === 0) return "Pick at least one sector · the radar needs a direction.";
           return null;
         case "founder":
           return null;
@@ -267,7 +267,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
               title={joinMode ? "Join the workspace." : mode === "signup" ? "Welcome. Let's meet you first" : "Welcome. Let's meet you first"}
               sub={
                 joinMode
-                  ? `“${existing?.workspaceName ?? "This workspace"}” is already calibrated${existing?.calibratedBy ? ` by ${existing.calibratedBy}` : ""} — you'll join it as a team member. The committed thesis stays untouched; recalibrate any time from the Thesis module.`
+                  ? `“${existing?.workspaceName ?? "This workspace"}” is already calibrated${existing?.calibratedBy ? ` by ${existing.calibratedBy}` : ""} · you'll join it as a team member. The committed thesis stays untouched; recalibrate any time from the Thesis module.`
                   : "This is the human on the other side of every decision. The system will never deploy without your confirmation."
               }
             >
@@ -313,7 +313,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
               n={STEPS[step].n}
               total={STEPS.length}
               title="Fund parameters."
-              sub="Sets the boundaries — check sizes, stages, and geographies determine what the radar even surfaces."
+              sub="Sets the boundaries · check sizes, stages, and geographies determine what the radar even surfaces."
             >
               <div className="space-y-8">
                 {/* Row 1: Fund Name & Fund Size */}
@@ -424,7 +424,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
                   <div className="mb-4">
                     <div className="flex items-baseline justify-between mb-1.5">
                       <span className="block font-sans text-[12px] font-bold text-[#000000]">Non-negotiables</span>
-                      <span className="text-[11px] text-[#6E6E6E] font-sans">plain English — enforced by screening</span>
+                      <span className="text-[11px] text-[#6E6E6E] font-sans">plain English · enforced by screening</span>
                     </div>
                     <textarea
                       value={draft.notes}
@@ -618,12 +618,12 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
               <div className="divide-y divide-line rounded-2xl overflow-hidden border border-line bg-white shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
                 <ReviewRow
                   label="GP"
-                  value={`${account.name || "—"} · ${identity.role}`}
+                  value={`${account.name || ""} · ${identity.role}`}
                   onEdit={() => go(STEPS.findIndex(s => s.id === "you"))}
                 />
                 <ReviewRow
                   label="Fund"
-                  value={`${identity.fundName || "unnamed"} · ${identity.fundSize || "—"}`}
+                  value={`${identity.fundName || "unnamed"} · ${identity.fundSize || ""}`}
                   onEdit={() => go(STEPS.findIndex(s => s.id === "fund"))}
                 />
                 <ReviewRow
@@ -633,12 +633,12 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
                 />
                 <ReviewRow
                   label="Geographies"
-                  value={draft.geographies.join(" · ") || "—"}
+                  value={draft.geographies.join(" · ") || ""}
                   onEdit={() => go(STEPS.findIndex(s => s.id === "fund"))}
                 />
                 <ReviewRow
                   label="Sectors"
-                  value={draft.sectors.join(" · ") || "—"}
+                  value={draft.sectors.join(" · ") || ""}
                   onEdit={() => go(STEPS.findIndex(s => s.id === "lens"))}
                 />
                 <ReviewRow
@@ -663,7 +663,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
                 <label className="flex cursor-pointer items-start gap-2.5 rounded-2xl border border-line bg-[#F8F8F8] px-5 py-4">
                   <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="mt-0.5 accent-[#0045FF]" />
                   <span className="text-[13px] leading-snug text-[#6E6E6E]">
-                    I understand the system <strong className="text-[#000000]">finds, checks and drafts</strong> on its own — but{" "}
+                    I understand the system <strong className="text-[#000000]">finds, checks and drafts</strong> on its own · but{" "}
                     <strong className="text-[#000000]">never invests a dollar without my confirmation</strong>.
                   </span>
                 </label>

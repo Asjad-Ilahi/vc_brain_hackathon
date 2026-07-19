@@ -49,7 +49,7 @@ export default function DiligencePage() {
           <div className="py-20 text-center"><Spinner label="Loading queue…" /></div>
         ) : queue.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
-            Queue is clear — source founders on the Radar or take an application.
+            Queue is clear · source founders on the Radar or take an application.
           </div>
         ) : shown.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
@@ -69,7 +69,7 @@ export default function DiligencePage() {
                     <div className="flex items-baseline gap-2">
                       <span className="truncate text-[14px] font-bold text-ink group-hover:text-[#0045FF]">{o.company}</span>
                       <span className="truncate text-[11.5px] text-muted">
-                        {o.founders[0]?.name} · {o.sector ?? "—"}
+                        {o.founders[0]?.name} · {o.sector ?? ""}
                       </span>
                       {o.founders.some((f) => f.isColdStart) ? <Badge tone="warn">new founder</Badge> : null}
                     </div>

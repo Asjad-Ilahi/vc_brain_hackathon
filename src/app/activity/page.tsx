@@ -40,14 +40,14 @@ export default function ActivityPage() {
       <PageHeader
         eyebrow="Agent activity"
         title="What the agents are doing."
-        sub="Every step the system takes is logged here — sourcing, screening, scoring, memo drafting and verification, newest first."
+        sub="Every step the system takes is logged here · sourcing, screening, scoring, memo drafting and verification, newest first."
       />
 
       {loading ? (
         <div className="py-24 text-center"><Spinner label="Loading activity…" /></div>
       ) : rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#eceef3] py-16 text-center text-[13px] text-faint">
-          No agent activity yet — run a search or full check on a deal.
+          No agent activity yet · run a search or full check on a deal.
         </div>
       ) : (
         <div className="bg-card rounded-[24px] p-6 border border-line space-y-3">

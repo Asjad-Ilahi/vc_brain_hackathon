@@ -155,7 +155,7 @@ function Pipeline() {
       <PageHeader
         eyebrow="Module 03 · Pipeline & screening"
         title={`${active.length} opportunit${active.length === 1 ? "y" : "ies"} on the clock.`}
-        sub="Every deal gets three separate scores — Founder, Market, Idea — never blended into one number. Founder scores follow the person, not the company."
+        sub="Every deal gets three separate scores · Founder, Market, Idea · never blended into one number. Founder scores follow the person, not the company."
         right={
           <div className="flex flex-col items-end gap-2">
             <GhostButton onClick={() => setShowApply(true)}>+ New application</GhostButton>
@@ -174,7 +174,7 @@ function Pipeline() {
           <div className="mb-4 border border-accent/40 bg-wash px-3.5 py-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-[12px] text-accent">
-                {querying ? "Resolving query…" : `Query: "${q}" — ${queryResults?.length ?? 0} ranked matches`}
+                {querying ? "Resolving query…" : `Query: "${q}" · ${queryResults?.length ?? 0} ranked matches`}
               </span>
               <button onClick={() => router.push("/pipeline")} className="text-[11px] text-muted hover:text-ink">
                 ✕ Clear
@@ -370,7 +370,7 @@ function Th({ children }: { children: React.ReactNode }) {
 }
 
 function AxisCell({ data }: { data?: { score: number; trend: string; rationale: string } }) {
-  if (!data) return <td className="px-3.5 py-3 text-[11px] text-faint">—</td>;
+  if (!data) return <td className="px-3.5 py-3 text-[11px] text-faint"></td>;
   return (
     <td className="px-3.5 py-3">
       <div className="flex items-center gap-2">
@@ -398,13 +398,13 @@ function Row({ o, i, reasons }: { o: OpportunitySummary; i: number; reasons?: st
             <div className="min-w-0">
               <div className="truncate text-[13px] font-semibold group-hover:text-[#0045FF]">{o.company}</div>
               <div className="truncate text-[11px] text-faint">
-                {f?.name ?? "—"} · {o.sector ?? "—"}
+                {f?.name ?? ""} · {o.sector ?? ""}
                 {f?.isColdStart ? " · new founder" : ""}
               </div>
               {reasons?.length ? (
                 <div className="mt-0.5 truncate text-[10.5px] text-[#0045FF]">matched: {reasons.join(", ")}</div>
               ) : null}
-              {/* On narrow screens the countdown column scrolls off — surface it here. */}
+              {/* On narrow screens the countdown column scrolls off · surface it here. */}
               <div className="mt-0.5 flex items-center gap-1.5 lg:hidden">
                 <Countdown deadline={o.deadlineAt} decided={!!o.decision} />
                 {o.flags > 0 ? <Badge tone="warn">⚠ {o.flags}</Badge> : null}
@@ -420,14 +420,14 @@ function Row({ o, i, reasons }: { o: OpportunitySummary; i: number; reasons?: st
             <TrendArrow trend={o.axes.founder?.trend} />
           </span>
         ) : (
-          "—"
+          ""
         )}
       </td>
       <AxisCell data={o.axes.founder} />
       <AxisCell data={o.axes.market} />
       <AxisCell data={o.axes.idea_vs_market} />
       <td className="px-3.5 py-3">
-        {o.flags > 0 ? <Badge tone="warn">⚠ {o.flags}</Badge> : <span className="text-[11px] text-faint">—</span>}
+        {o.flags > 0 ? <Badge tone="warn">⚠ {o.flags}</Badge> : <span className="text-[11px] text-faint"></span>}
       </td>
       <td className="px-3.5 py-3">
         <Countdown deadline={o.deadlineAt} decided={!!o.decision} />

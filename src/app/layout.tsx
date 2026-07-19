@@ -7,8 +7,8 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jbmono", dis
 const urbanist = Urbanist({ subsets: ["latin"], variable: "--font-urbanist", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "VC Brain — Founder Intelligence",
-  description: "Decide on any deal in 24 hours — sourcing, screening, diligence, and evidence-backed memos.",
+  title: "VC Brain · Founder Intelligence",
+  description: "Decide on any deal in 24 hours · sourcing, screening, diligence, and evidence-backed memos.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

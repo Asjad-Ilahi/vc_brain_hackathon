@@ -66,7 +66,7 @@ export default function MemoryPage() {
       <PageHeader
         eyebrow="Module 04 · Memory"
         title="Founder database."
-        sub="Every founder we have ever seen — with a score that follows the person across companies. Nothing is deleted, nothing resets."
+        sub="Every founder we have ever seen · with a score that follows the person across companies. Nothing is deleted, nothing resets."
       />
 
       <div className="space-y-4">

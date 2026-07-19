@@ -14,13 +14,13 @@ type StatusData = {
 };
 
 const OUTCOME: Record<string, { label: string; wash: string; text: string; blurb: string }> = {
-  invest: { label: "Advancing", wash: "bg-okwash", text: "text-ok", blurb: "The fund wants to take this further — expect a direct follow-up." },
+  invest: { label: "Advancing", wash: "bg-okwash", text: "text-ok", blurb: "The fund wants to take this further · expect a direct follow-up." },
   watch: { label: "On the watchlist", wash: "bg-warnwash", text: "text-warn", blurb: "Not a yes yet. The fund is tracking your progress and may re-engage as you hit new milestones." },
-  pass: { label: "Not this round", wash: "bg-badwash", text: "text-bad", blurb: "The fund isn't moving forward right now. This isn't permanent — founders are re-evaluated whenever new signals appear." },
+  pass: { label: "Not this round", wash: "bg-badwash", text: "text-bad", blurb: "The fund isn't moving forward right now. This isn't permanent · founders are re-evaluated whenever new signals appear." },
 };
 
 function fmt(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "";
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
@@ -143,7 +143,7 @@ function StatusContent() {
               ) : (
                 <div className="mt-6 rounded-2xl border border-[#dfe7ff] bg-[#EBF0FF] p-5">
                   <p className="text-[12.5px] leading-relaxed text-ink">
-                    Your pitch is being audited against the fund thesis and your public footprint. A human investor makes the final call — you&apos;ll see it here{data.deadlineAt ? ` by ${fmt(data.deadlineAt)}` : " within 24 hours"}.
+                    Your pitch is being audited against the fund thesis and your public footprint. A human investor makes the final call · you&apos;ll see it here{data.deadlineAt ? ` by ${fmt(data.deadlineAt)}` : " within 24 hours"}.
                   </p>
                 </div>
               )}

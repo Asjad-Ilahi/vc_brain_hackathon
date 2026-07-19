@@ -3,7 +3,7 @@
  * Client-driven founder search with a REAL progress system: each source runs
  * as its own request, so the loader shows genuine per-source state (searching →
  * found N / nothing / failed) and results stream into the page one by one as
- * each source finishes — no fake progress bars, no long blind waits.
+ * each source finishes · no fake progress bars, no long blind waits.
  */
 import { useCallback, useRef, useState } from "react";
 import { postJson } from "./api";
@@ -69,8 +69,8 @@ export function SweepLoader({ channels, running, total }: { channels: SweepChann
         {running ? <Spinner /> : <span className="text-[12px] text-ok">✓</span>}
         <span className="text-[12px] text-accent">
           {running
-            ? `Searching ${channels.length} sources — results appear below as each one finishes (${total} so far)`
-            : `Search finished — ${total} matching founder${total === 1 ? "" : "s"} found`}
+            ? `Searching ${channels.length} sources · results appear below as each one finishes (${total} so far)`
+            : `Search finished · ${total} matching founder${total === 1 ? "" : "s"} found`}
         </span>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">

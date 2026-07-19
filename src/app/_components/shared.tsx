@@ -122,7 +122,7 @@ export function GhostButton({
   );
 }
 
-/** Inbound application — deck + company name is the minimum bar. */
+/** Inbound application · deck + company name is the minimum bar. */
 export function ApplyModal({ onClose, onDone }: { onClose: () => void; onDone: (id: string) => void }) {
   const [companyName, setCompanyName] = useState("");
   const [text, setText] = useState("");
@@ -171,7 +171,7 @@ export function ApplyModal({ onClose, onDone }: { onClose: () => void; onDone: (
       />
       <label className={`mt-4 ${labelCls}`}>…or paste deck text</label>
       <textarea value={text} onChange={(e) => setText(e.target.value)} rows={5} className={inputCls} placeholder="Problem, product, team, traction…" />
-      <p className="mt-2 text-[11.5px] text-faint">That&apos;s the whole form — over-collecting works against a 24-hour decision.</p>
+      <p className="mt-2 text-[11.5px] text-faint">That&apos;s the whole form · over-collecting works against a 24-hour decision.</p>
       {err ? <p className="mt-2 text-[12.5px] text-bad">{err}</p> : null}
       <div className="mt-5 flex justify-end gap-2.5">
         <GhostButton onClick={onClose}>Cancel</GhostButton>

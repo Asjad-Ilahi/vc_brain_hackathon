@@ -59,7 +59,7 @@ export default function RadarPage() {
     setSearching(true);
     setSearchStatus("Searching deeply across GitHub, arXiv, LinkedIn and Web...");
     setStatus(null);
-    // Guard against a hung/slow request — surface a clear flag instead of a
+    // Guard against a hung/slow request · surface a clear flag instead of a
     // spinner that never resolves.
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 120000);
@@ -157,7 +157,7 @@ export default function RadarPage() {
     setBusy(kind);
     try {
       const r = await postJson<{ created: string[] }>(`/api/source/${kind}`);
-      setStatus(`${r.created.length} new from ${kind} — repeat finds update the existing card instead of duplicating.`);
+      setStatus(`${r.created.length} new from ${kind} · repeat finds update the existing card instead of duplicating.`);
       await load();
     } catch (e) {
       setStatus(`Sourcing failed: ${(e as Error).message}`);
@@ -183,7 +183,7 @@ export default function RadarPage() {
       <PageHeader
         eyebrow="Module 02 / Track B · Outbound radar"
         title="Founders you haven't met yet."
-        sub="We scan 8 public sources for people building things that fit your thesis. Every card is backed by real, linked evidence. Activate writes a draft intro — it never sends money."
+        sub="We scan 8 public sources for people building things that fit your thesis. Every card is backed by real, linked evidence. Activate writes a draft intro · it never sends money."
         right={
           <span className="flex items-center gap-1.5 u-card px-2.5 py-1 text-[11px] text-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-ok" /> {SOURCEABLE.length} sources · scans daily + on demand
@@ -264,7 +264,7 @@ export default function RadarPage() {
           <div className="min-w-0">
             {shown.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
-                Nothing here{filter !== "all" ? " for this filter" : ""} yet — run a search from the panel on the right.
+                Nothing here{filter !== "all" ? " for this filter" : ""} yet · run a search from the panel on the right.
               </div>
             ) : (
               <div className="grid gap-3 xl:grid-cols-2">
@@ -294,7 +294,7 @@ export default function RadarPage() {
             {channels && (
               <div className="bg-[#F8F8F8] rounded-[24px] border-0 p-6 shadow-none">
                 <div className="text-[10.5px] uppercase tracking-wider text-muted font-bold">Channel intelligence</div>
-                <p className="mt-0.5 text-[11px] text-faint">Which sources find your best founders — learns from your decisions.</p>
+                <p className="mt-0.5 text-[11px] text-faint">Which sources find your best founders · learns from your decisions.</p>
                 <div className="mt-3 space-y-2.5">
                   {channels.channels.length === 0 ? (
                     <p className="text-[12px] text-faint">No channels used yet.</p>
@@ -364,9 +364,9 @@ export default function RadarPage() {
       </div>
 
       {outreach && (
-        <Modal title={`Draft outreach — ${outreach.company}`} onClose={() => setOutreach(null)}>
+        <Modal title={`Draft outreach · ${outreach.company}`} onClose={() => setOutreach(null)}>
           <div className="border border-ok/40 bg-okwash px-3 py-1.5 text-[11px] text-ok">
-            Drafted, not sent — activation triggers a real application, never an investment.
+            Drafted, not sent · activation triggers a real application, never an investment.
           </div>
           <p className="mt-3 whitespace-pre-wrap text-[13px] leading-relaxed">{outreach.draft}</p>
           <div className="mt-4 flex justify-end">
@@ -378,7 +378,7 @@ export default function RadarPage() {
   );
 }
 
-/** Resolved email + public profiles — so the investor doesn't have to go look. */
+/** Resolved email + public profiles · so the investor doesn't have to go look. */
 function ContactRail({
   email,
   f,
@@ -435,7 +435,7 @@ function RadarCard({
   const f = o.founders[0];
   const cold = o.founders.some((x) => x.isColdStart);
   const signal = CHANNEL_SIGNAL[o.sourceChannel ?? ""] ?? "Signal";
-  // The company/project is always a real entity — lead with it. The founder is
+  // The company/project is always a real entity · lead with it. The founder is
   // enrichment: a real name, an @handle, or an honest "unidentified" (never junk).
   const person = f && f.nameResolved ? f.name : null;
   const avatarText = person && !f!.isHandle ? initialsOf(person) : initialsOf(o.company);
@@ -472,14 +472,14 @@ function RadarCard({
           {cold ? `New founder · ${signal}` : signal}
         </div>
         <p className="mt-1.5 line-clamp-2 text-[12.5px] text-muted leading-relaxed font-sans">{o.oneLiner ?? o.convictionReason}</p>
-        <p className="mt-1 line-clamp-1 text-[11px] text-faint font-sans">why now: {o.convictionReason ?? "—"}</p>
+        <p className="mt-1 line-clamp-1 text-[11px] text-faint font-sans">why now: {o.convictionReason ?? ""}</p>
         <ContactRail email={o.applicantEmail ?? null} f={f} />
         <div className="mt-4 flex items-end justify-between">
           <div className="flex items-center gap-4">
             <div>
               <div className="text-[10px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Match</div>
               <div className={`tnum text-[24px] font-bold leading-none mt-0.5 ${(o.convictionScore ?? 0) >= threshold ? "text-[#0045FF]" : "text-ink"}`}>
-                {o.convictionScore ?? "—"}
+                {o.convictionScore ?? ""}
               </div>
             </div>
             {f && f.nameResolved ? (
