@@ -8,6 +8,7 @@ import { PageHeader } from "../_components/shared";
 type Activity = {
   id: string;
   agent: string;
+  inputSummary: string | null;
   outputSummary: string | null;
   createdAt: string;
   opportunityId: string;
@@ -49,23 +50,36 @@ export default function ActivityPage() {
           No agent activity yet — run a search or full check on a deal.
         </div>
       ) : (
-        <div className="bg-[#F8F8F8] rounded-[28px] p-6 border-0 shadow-none space-y-3">
+        <div className="bg-card rounded-[24px] p-6 border border-line space-y-3">
           {rows.map((a) => {
             const time = new Date(a.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
             const tone = AGENT_TONE[a.agent] ?? "bg-[#F4F5F8] text-[#9E9E9E]";
             return (
-              <Link
+              <div
                 key={a.id}
-                href={`/opportunity/${a.opportunityId}`}
-                className="flex items-center gap-3 bg-white rounded-full px-8 py-3.5 border border-[#eceef3] shadow-none hover:bg-slate-50 transition-all"
+                className="flex items-start gap-4 bg-paper rounded-xl px-5 py-4 border border-line"
               >
-                <span className={`shrink-0 px-2.5 py-1 text-[10px] font-bold uppercase rounded-full ${tone}`}>{a.agent}</span>
-                <span className="min-w-0 flex-1 text-[13px]">
-                  <span className="font-bold text-ink">{a.company}</span>
-                  <span className="text-muted font-sans font-medium"> — {a.outputSummary ?? "…"}</span>
+                <span className={`shrink-0 px-2.5 py-1 text-[10px] font-bold uppercase rounded-full mt-0.5 ${tone}`}>
+                  {a.agent}
                 </span>
-                <span className="tnum shrink-0 text-[11.5px] text-faint">{time}</span>
-              </Link>
+                <div className="min-w-0 flex-1 text-[13px] space-y-1">
+                  <div className="font-bold text-ink flex items-center gap-2">
+                    {a.company}
+                    <span className="font-mono font-normal text-[10.5px] text-faint">
+                      (ID: {a.opportunityId.slice(0, 8)}...)
+                    </span>
+                  </div>
+                  {a.inputSummary ? (
+                    <div className="font-mono text-[11.5px] text-muted leading-relaxed bg-[#fbfbfb] border border-[#f0f0f0] p-2 rounded">
+                      <span className="font-semibold text-accent font-sans">Input:</span> {a.inputSummary}
+                    </div>
+                  ) : null}
+                  <div className="text-muted leading-relaxed font-sans">
+                    <span className="font-semibold text-ink">Output:</span> {a.outputSummary ?? "…"}
+                  </div>
+                </div>
+                <span className="tnum shrink-0 text-[11.5px] text-faint mt-0.5">{time}</span>
+              </div>
             );
           })}
         </div>

@@ -12,6 +12,7 @@ export async function GET() {
       .select({
         id: reasoningSteps.id,
         agent: reasoningSteps.agent,
+        inputSummary: reasoningSteps.inputSummary,
         outputSummary: reasoningSteps.outputSummary,
         createdAt: reasoningSteps.createdAt,
         opportunityId: reasoningSteps.opportunityId,
@@ -21,7 +22,7 @@ export async function GET() {
       .innerJoin(opportunities, eq(reasoningSteps.opportunityId, opportunities.id))
       .innerJoin(companies, eq(opportunities.companyId, companies.id))
       .orderBy(desc(reasoningSteps.createdAt))
-      .limit(14);
+      .limit(100);
     return ok(rows);
   } catch (e) {
     return fail(errMessage(e));
