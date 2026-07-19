@@ -38,21 +38,22 @@ export async function sendMail(to: string, subject: string, text: string, html?:
 /* ------------------------- founder-loop templates ------------------------- */
 
 function shell(title: string, bodyHtml: string, statusUrl: string): string {
-  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;background-color:#0d0f1d;color:#ffffff;padding:40px 20px;border-radius:16px;">
+  // Light/blue brand system — matches the workspace (white cards, #0045FF, ink text).
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;background-color:#f7f8fb;color:#111318;padding:40px 20px;border-radius:16px;">
   <div style="text-align:center;padding-bottom:24px;">
     <span style="font-family:monospace;font-weight:800;font-size:16px;letter-spacing:.2em;color:#0045FF;">VC.BRAIN</span>
   </div>
-  <div style="background-color:#161936;border:1px solid rgba(0, 69, 255, 0.25);border-radius:14px;padding:32px;box-shadow:0 8px 32px rgba(0, 0, 0, 0.24);">
-    <h2 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">${title}</h2>
-    <div style="color:#e2eaff;font-size:14px;line-height:1.6;margin-bottom:20px;">
+  <div style="background-color:#ffffff;border:1px solid #eceef3;border-radius:16px;padding:32px;box-shadow:0 8px 30px rgba(17,19,24,0.06);">
+    <h2 style="margin:0 0 12px;font-size:20px;font-weight:800;color:#111318;letter-spacing:-0.02em;">${title}</h2>
+    <div style="color:#5b6472;font-size:14px;line-height:1.6;margin-bottom:20px;">
       ${bodyHtml}
     </div>
     <div style="text-align:center;margin-top:24px;margin-bottom:16px;">
-      <a href="${statusUrl}" style="display:inline-block;background:#0045FF;color:#ffffff;text-decoration:none;font-weight:700;font-size:13.5px;padding:12px 24px;border-radius:9999px;box-shadow:0 4px 12px rgba(0, 69, 255, 0.35);letter-spacing:0.02em;">Track Application Status</a>
+      <a href="${statusUrl}" style="display:inline-block;background:#0045FF;color:#ffffff;text-decoration:none;font-weight:700;font-size:13.5px;padding:12px 24px;border-radius:9999px;box-shadow:0 4px 12px rgba(0,69,255,0.28);letter-spacing:0.02em;">Track Application Status</a>
     </div>
-    <p style="margin:20px 0 0;font-size:11.5px;color:#98a1b2;line-height:1.5;border-top:1px solid rgba(0, 69, 255, 0.15);padding-top:16px;text-align:center;">
+    <p style="margin:20px 0 0;font-size:11.5px;color:#8a93a6;line-height:1.5;border-top:1px solid #eceef3;padding-top:16px;text-align:center;">
       This private link is your tracking dashboard (no login required):<br>
-      <a href="${statusUrl}" style="color:#4d7fff;text-decoration:none;">${statusUrl}</a>
+      <a href="${statusUrl}" style="color:#0045FF;text-decoration:none;">${statusUrl}</a>
     </p>
   </div>
 </div>`;
@@ -73,7 +74,7 @@ ${statusUrl}`;
     text,
     shell(
       "Application received",
-      `<p style="margin:0;font-size:14px;line-height:1.6;color:#e2eaff">Your application for <b style="color:#ffffff">${company}</b> is in the assessment queue. Our agents are auditing the pitch against the fund thesis and your public footprint · a human investor makes the final call within <b style="color:#ffffff">24 hours</b>.</p>`,
+      `<p style="margin:0;font-size:14px;line-height:1.6;color:#5b6472">Your application for <b style="color:#111318">${company}</b> is in the assessment queue. Our agents are auditing the pitch against the fund thesis and your public footprint · a human investor makes the final call within <b style="color:#111318">24 hours</b>.</p>`,
       statusUrl
     )
   );
@@ -120,9 +121,9 @@ ${statusUrl}`;
     text,
     shell(
       copy.headline,
-      `<p style="margin:0;font-size:14px;line-height:1.6;color:#e2eaff">${copy.body}</p>` +
+      `<p style="margin:0;font-size:14px;line-height:1.6;color:#5b6472">${copy.body}</p>` +
         (feedback
-          ? `<p style="margin:12px 0 0;font-size:13px;line-height:1.6;color:#ffffff;border-left:3px solid #0045FF;padding-left:12px;font-style:italic;">“${feedback}”</p>`
+          ? `<p style="margin:12px 0 0;font-size:13px;line-height:1.6;color:#111318;border-left:3px solid #0045FF;padding-left:12px;font-style:italic;">“${feedback}”</p>`
           : ""),
       statusUrl
     )
