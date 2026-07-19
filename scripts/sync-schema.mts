@@ -59,9 +59,9 @@ async function main() {
   await run(`ALTER TABLE "opportunities" ADD COLUMN IF NOT EXISTS "applicant_email" text`);
   await run(`ALTER TABLE "opportunities" ADD COLUMN IF NOT EXISTS "deck_url" text`);
   await run(`ALTER TABLE "theses" ADD COLUMN IF NOT EXISTS "user_id" uuid`);
-  await run(`DO $$ BEGIN ALTER TABLE "sourcing_nodes" ADD CONSTRAINT "sourcing_nodes_opportunity_id_opportunities_id_fk" FOREIGN KEY ("opportunity_id") REFERENCES "public"."opportunities"("id") ON DELETE cascade; EXCEPTION WHEN duplicate_object THEN null; END $$`);
-  await run(`DO $$ BEGIN ALTER TABLE "theses" ADD CONSTRAINT "theses_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade; EXCEPTION WHEN duplicate_object THEN null; END $$`);
-  await run(`DO $$ BEGIN ALTER TABLE "opportunities" ADD CONSTRAINT "opportunities_public_ref_unique" UNIQUE("public_ref"); EXCEPTION WHEN duplicate_object THEN null; END $$`);
+  await run(`DO $$ BEGIN ALTER TABLE "sourcing_nodes" ADD CONSTRAINT "sourcing_nodes_opportunity_id_opportunities_id_fk" FOREIGN KEY ("opportunity_id") REFERENCES "public"."opportunities"("id") ON DELETE cascade; EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$`);
+  await run(`DO $$ BEGIN ALTER TABLE "theses" ADD CONSTRAINT "theses_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade; EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$`);
+  await run(`DO $$ BEGIN ALTER TABLE "opportunities" ADD CONSTRAINT "opportunities_public_ref_unique" UNIQUE("public_ref"); EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$`);
 
   // --- 0006: invites + users.role ---
   await run(`CREATE TABLE IF NOT EXISTS "invites" (
@@ -75,7 +75,7 @@ async function main() {
     "created_at" timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT "invites_token_unique" UNIQUE("token"))`);
   await run(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "role" text DEFAULT 'investor' NOT NULL`);
-  await run(`DO $$ BEGIN ALTER TABLE "invites" ADD CONSTRAINT "invites_invited_by_user_id_users_id_fk" FOREIGN KEY ("invited_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null; EXCEPTION WHEN duplicate_object THEN null; END $$`);
+  await run(`DO $$ BEGIN ALTER TABLE "invites" ADD CONSTRAINT "invites_invited_by_user_id_users_id_fk" FOREIGN KEY ("invited_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null; EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$`);
 
   await report("AFTER");
   const n = (await run(`SELECT count(*)::int n FROM opportunities WHERE public_ref = 'nonexistent'`))[0].n;
