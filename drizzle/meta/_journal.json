@@ -15,6 +15,27 @@
       "when": 1784403108893,
       "tag": "0001_unknown_vector",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784406124365,
+      "tag": "0002_big_sister_grimm",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784409329889,
+      "tag": "0003_messy_may_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784416122168,
+      "tag": "0004_damp_ultimates",
+      "breakpoints": true
     }
   ]
 }

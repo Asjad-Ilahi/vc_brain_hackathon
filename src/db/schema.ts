@@ -21,6 +21,18 @@ import {
 } from "drizzle-orm/pg-core";
 
 // ---------------------------------------------------------------------------
+// Users — the investors operating this workspace. Passwords are scrypt-hashed;
+// sessions are HMAC-signed HTTP-only cookies (see lib/session.ts).
+// ---------------------------------------------------------------------------
+export const users = pgTable("users", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------------------------------------------------------------------------
 // Thesis Engine (configurable, not hardcoded)
 // ---------------------------------------------------------------------------
 export const theses = pgTable("theses", {
@@ -33,7 +45,11 @@ export const theses = pgTable("theses", {
   checkSizeMaxUsd: integer("check_size_max_usd"),
   ownershipTargetPct: real("ownership_target_pct"),
   riskAppetite: text("risk_appetite"), // 'low' | 'medium' | 'high'
-  notes: text("notes"),
+  notes: text("notes"), // non-negotiables, plain English — flows into every agent prompt
+  // Conviction threshold: signals crossing this score trigger assessment on their own.
+  convictionThreshold: integer("conviction_threshold").notNull().default(68),
+  // Onboarding profile: GP identity, fund, founder lens, enabled signal sources.
+  profileJson: jsonb("profile_json"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -100,9 +116,16 @@ export const opportunities = pgTable("opportunities", {
   convictionReason: text("conviction_reason"),
   screenResult: text("screen_result"), // 'pass' | 'reject' | null
   screenReason: text("screen_reason"),
+  // Decision is HUMAN-made (the memo only recommends). decidedBy records that.
   decision: text("decision"), // 'invest' | 'pass' | 'watch'
+  decisionNote: text("decision_note"),
+  decidedBy: text("decided_by"), // 'human' — the system never deploys on its own
   // Instrumentation: time-from-first-signal-to-decision (Investment Utility 30%).
   firstSignalAt: timestamp("first_signal_at", { withTimezone: true }).defaultNow().notNull(),
+  // The 24h clock: decide before this. Extendable (+24h) by the investor.
+  deadlineAt: timestamp("deadline_at", { withTimezone: true }),
+  // Autopilot claim marker — stale claims (worker died) auto-recover.
+  claimedAt: timestamp("claimed_at", { withTimezone: true }),
   decidedAt: timestamp("decided_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

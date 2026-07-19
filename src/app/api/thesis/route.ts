@@ -1,6 +1,6 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { theses } from "@/db/schema";
+import { theses, opportunities } from "@/db/schema";
 import { getActiveThesis } from "@/lib/services/thesis";
 import { ok, fail, errMessage } from "@/lib/api";
 
@@ -34,10 +34,31 @@ export async function POST(req: Request) {
         ownershipTargetPct: b.ownershipTargetPct ?? null,
         riskAppetite: b.riskAppetite ?? null,
         notes: b.notes ?? null,
+        convictionThreshold: Number(b.convictionThreshold) || 68,
+        profileJson: b.profileJson ?? null,
         isActive: true,
       })
       .returning();
-    return ok(row);
+
+    // Radar hypotheses are LENS-RELATIVE: unassessed outbound candidates sourced
+    // under the previous thesis are archived (status only — signals, founders and
+    // scores stay in Memory; nothing is discarded). Screened/decided work keeps.
+    let archived = 0;
+    if (b.archiveStale) {
+      const res = await db
+        .update(opportunities)
+        .set({ status: "archived" })
+        .where(
+          and(
+            eq(opportunities.source, "outbound"),
+            isNull(opportunities.screenResult),
+            isNull(opportunities.decision)
+          )
+        )
+        .returning({ id: opportunities.id });
+      archived = res.length;
+    }
+    return ok({ ...row, archivedStaleHypotheses: archived });
   } catch (e) {
     return fail(errMessage(e));
   }

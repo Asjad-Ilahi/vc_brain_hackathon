@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/source/all",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

@@ -3,6 +3,10 @@
  * at INGESTION for every sourced founder (no LLM). This is what lets the system
  * surface founders "crossing a conviction threshold on their own", before any
  * manual assessment or application. It ranks the Radar.
+ *
+ * Every channel carries its own evidence features (not just GitHub), and a
+ * founder corroborated across multiple independent channels earns a boost —
+ * one weak signal stays below the threshold; converging signals cross it.
  */
 export type ConvictionInput = {
   githubStars?: number;
@@ -13,6 +17,15 @@ export type ConvictionInput = {
   hnComments?: number;
   hasArxivPaper?: boolean;
   arxivDaysAgo?: number;
+  // Channel-specific evidence (web-extract family)
+  hasPatentFiling?: boolean;
+  inAcceleratorCohort?: boolean;
+  hackathonWin?: boolean;
+  productHuntLaunch?: boolean;
+  /** The extractor only returns candidates it can justify against the thesis. */
+  llmAssertedFit?: boolean;
+  /** Independent channels this founder has now been seen in (dedupe enrichment). */
+  channelsSeen?: number;
   thesisSectorMatch?: boolean;
   thesisGeoMatch?: boolean;
   founderScore?: number;
@@ -52,8 +65,18 @@ export function computeConviction(input: ConvictionInput): Conviction {
     score += pts;
     reasons.push({ weight: pts, text: "recent research paper" });
   }
-  if (input.thesisSectorMatch) { score += 10; reasons.push({ weight: 10, text: "matches thesis sector" }); }
-  if (input.thesisGeoMatch) { score += 5; reasons.push({ weight: 5, text: "in-thesis geography" }); }
+  if (input.hasPatentFiling) { score += 12; reasons.push({ weight: 12, text: "has a patent filing" }); }
+  if (input.inAcceleratorCohort) { score += 14; reasons.push({ weight: 14, text: "in a current accelerator batch" }); }
+  if (input.hackathonWin) { score += 10; reasons.push({ weight: 10, text: "recent hackathon build" }); }
+  if (input.productHuntLaunch) { score += 8; reasons.push({ weight: 8, text: "shipped a public launch" }); }
+  if (input.llmAssertedFit) { score += 6; reasons.push({ weight: 6, text: "matches what you look for" }); }
+  if (input.channelsSeen != null && input.channelsSeen >= 2) {
+    const pts = Math.min(16, (input.channelsSeen - 1) * 12);
+    score += pts;
+    reasons.push({ weight: pts, text: `seen in ${input.channelsSeen} different places` });
+  }
+  if (input.thesisSectorMatch) { score += 10; reasons.push({ weight: 10, text: "sector match" }); }
+  if (input.thesisGeoMatch) { score += 5; reasons.push({ weight: 5, text: "in your geography" }); }
   if (input.founderScore != null) {
     const pts = (input.founderScore - 50) * 0.2;
     score += pts;
@@ -69,4 +92,18 @@ export function computeConviction(input: ConvictionInput): Conviction {
   const reason = top.length ? top.join(" · ") : "limited public signal";
   const level: Conviction["level"] = finalScore >= 68 ? "high" : finalScore >= 50 ? "medium" : "low";
   return { score: finalScore, reason, level };
+}
+
+/** Token-overlap thesis matching — "AI infrastructure" matches "Infrastructure for ML inference". */
+export function matchesThesisTerms(text: string | null | undefined, list: string[] | undefined): boolean {
+  if (!text || !list?.length) return false;
+  const hay = text.toLowerCase();
+  const hayTokens = new Set(hay.split(/[^a-z0-9+]+/).filter((t) => t.length > 2));
+  return list.some((term) => {
+    if (!term) return false;
+    const t = term.toLowerCase();
+    if (hay.includes(t)) return true;
+    const tokens = t.split(/[^a-z0-9+]+/).filter((x) => x.length > 3);
+    return tokens.length > 0 && tokens.some((tok) => hayTokens.has(tok) || hay.includes(tok));
+  });
 }

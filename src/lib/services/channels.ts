@@ -5,7 +5,17 @@
  */
 import { listOpportunities } from "./list";
 
-const KNOWN_CHANNELS = ["github", "hackernews", "arxiv", "web", "producthunt", "accelerators"];
+const KNOWN_CHANNELS = [
+  "github",
+  "hackernews",
+  "arxiv",
+  "web",
+  "producthunt",
+  "hackathons",
+  "patents",
+  "accelerators",
+  "twitter", // social discourse — the cold-start footprint channel
+];
 
 export type ChannelStat = {
   name: string;

@@ -50,6 +50,10 @@ type SeedCase = {
   };
   source: "inbound" | "outbound";
   sourceChannel: string;
+  /** Hours since first signal — staggers the 24h clocks for a live-feeling demo. */
+  hoursAgo: number;
+  convictionScore?: number;
+  convictionReason?: string;
   signals: { sourceType: string; sourceUrl?: string; title: string; rawText: string; tags: string[] }[];
 };
 
@@ -79,6 +83,7 @@ const CASES: SeedCase[] = [
     },
     source: "inbound",
     sourceChannel: "application",
+    hoursAgo: 21,
     signals: [
       {
         sourceType: "deck",
@@ -118,6 +123,7 @@ const CASES: SeedCase[] = [
     },
     source: "inbound",
     sourceChannel: "application",
+    hoursAgo: 16,
     signals: [
       {
         sourceType: "deck",
@@ -156,6 +162,7 @@ const CASES: SeedCase[] = [
     },
     source: "inbound",
     sourceChannel: "application",
+    hoursAgo: 8,
     signals: [
       {
         sourceType: "deck",
@@ -199,6 +206,9 @@ const CASES: SeedCase[] = [
     },
     source: "outbound",
     sourceChannel: "github",
+    hoursAgo: 2,
+    convictionScore: 84,
+    convictionReason: "640\u2605 on GitHub \u00b7 shipping this week \u00b7 proven operator (FS 76)",
     signals: [
       {
         sourceType: "github",
@@ -224,13 +234,14 @@ async function main() {
     .insert(theses)
     .values({
       name: "Pre-seed / seed AI infra (US + EU)",
-      sectors: ["AI infrastructure", "developer tools", "women's health"],
+      sectors: ["AI infrastructure", "developer tools", "applied AI"],
       stages: ["pre-seed", "seed"],
       geographies: ["USA", "EU"],
       checkSizeMinUsd: 100000,
       checkSizeMaxUsd: 250000,
       ownershipTargetPct: 8,
       riskAppetite: "high",
+      convictionThreshold: 68,
       notes: "Technical founders shipping in the open. Cold-start friendly.",
       isActive: true,
     })
@@ -286,6 +297,10 @@ async function main() {
         source: c.source,
         sourceChannel: c.sourceChannel,
         status: "sourced",
+        convictionScore: c.convictionScore ?? null,
+        convictionReason: c.convictionReason ?? null,
+        firstSignalAt: new Date(Date.now() - c.hoursAgo * 3600_000),
+        deadlineAt: new Date(Date.now() + (24 - c.hoursAgo) * 3600_000),
       })
       .returning();
 

@@ -129,14 +129,59 @@ export const QueryParseSchema = z.object({
 });
 export type QueryParse = z.infer<typeof QueryParseSchema>;
 
+// --- Cold-start footprint predictor (Area of Research 3) ---------------------
+// A pre-track-record founder often still has a public footprint. This scores
+// that footprint honestly instead of defaulting the founder to zero.
+export const ColdStartPredictorSchema = z.object({
+  discourseQuality: z
+    .number()
+    .min(0)
+    .max(100)
+    .describe("Technical depth/quality of the person's public discourse (posts, replies, comments)"),
+  communityDepth: z
+    .number()
+    .min(0)
+    .max(100)
+    .describe("Depth of engagement in relevant technical communities (forums, Discords, OSS threads)"),
+  domainConsistency: z
+    .number()
+    .min(0)
+    .max(100)
+    .describe("How consistently they have focused on this domain over time"),
+  indicators: z
+    .array(z.string())
+    .describe("Concrete observed indicators, e.g. 'substantive replies to well-known ML researchers'"),
+  gaps: z
+    .array(z.string())
+    .describe("What could NOT be found, stated plainly, e.g. 'no LinkedIn tied to the handle yet'"),
+  summary: z.string().describe("2-3 sentence honest read of the public footprint"),
+  confidence: z.number().min(0).max(1).describe("Honest confidence given how sparse the evidence is"),
+  verdict: z.enum(["promising", "insufficient_data", "weak"]),
+});
+export type ColdStartPredictor = z.infer<typeof ColdStartPredictorSchema>;
+
 // --- Outbound candidate normalization ---------------------------------------
 export const OutboundCandidateSchema = z.object({
   companyName: z.string(),
   oneLiner: z.string(),
   sector: z.string().nullable(),
+  stage: z
+    .string()
+    .nullable()
+    .describe(
+      "Funding stage ONLY if explicitly stated in the results (e.g. 'raising pre-seed'). Never guess — null if unknown."
+    ),
   geography: z.string().nullable(),
   founderName: z.string(),
   founderHandle: z.string().describe("github login or normalized name"),
   whyRelevant: z.string().describe("Why this matches the thesis"),
+  thesisFit: z
+    .boolean()
+    .describe("True ONLY if this clearly fits the fund's sectors/stages/geographies"),
+  isEstablished: z
+    .boolean()
+    .describe(
+      "True if this is a well-known, already-funded or scaled company (e.g. Cohere, OpenAI, Mistral, any household name). When unsure, true."
+    ),
 });
 export type OutboundCandidate = z.infer<typeof OutboundCandidateSchema>;

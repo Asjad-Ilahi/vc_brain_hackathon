@@ -36,14 +36,27 @@ export async function scoreOpportunity(opportunityId: string): Promise<ThreeAxis
     user: `${formatThesis(thesis)}\n\n${formatContext(ctx)}\n\nScore this opportunity on all three axes independently.`,
   });
 
-  // Replace any prior axis rows for this opportunity, then insert the 3 axes.
-  await db.delete(axisScores).where(eq(axisScores.opportunityId, opportunityId));
+  // Memory keeps every assessment — prior axis rows are NEVER deleted ("nothing
+  // discarded"). Readers take the latest per axis; older rows are the trend.
+  // When history exists, trend is COMPUTED against the previous score rather
+  // than trusting a point-in-time LLM label.
+  const prior = await db.select().from(axisScores).where(eq(axisScores.opportunityId, opportunityId));
+  const lastOf = (axis: string) =>
+    prior
+      .filter((r) => r.axis === axis)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null;
+  const trendOf = (axis: string, score: number, llmTrend: string) => {
+    const p = lastOf(axis);
+    if (!p) return llmTrend;
+    return score > p.score + 2 ? "improving" : score < p.score - 2 ? "declining" : "stable";
+  };
+
   await db.insert(axisScores).values([
     {
       opportunityId,
       axis: "founder",
       score: result.founder.score,
-      trend: result.founder.trend,
+      trend: trendOf("founder", result.founder.score, result.founder.trend),
       confidence: result.founder.confidence,
       rationale: result.founder.rationale,
     },
@@ -52,7 +65,7 @@ export async function scoreOpportunity(opportunityId: string): Promise<ThreeAxis
       axis: "market",
       score: result.market.score,
       rating: result.market.rating,
-      trend: result.market.trend,
+      trend: trendOf("market", result.market.score, result.market.trend),
       confidence: result.market.confidence,
       rationale: result.market.rationale,
     },
@@ -60,14 +73,16 @@ export async function scoreOpportunity(opportunityId: string): Promise<ThreeAxis
       opportunityId,
       axis: "idea_vs_market",
       score: result.ideaVsMarket.score,
-      trend: result.ideaVsMarket.trend,
+      trend: trendOf("idea_vs_market", result.ideaVsMarket.score, result.ideaVsMarket.trend),
       confidence: result.ideaVsMarket.confidence,
       rationale: result.ideaVsMarket.rationale,
     },
   ]);
 
-  // Move the persistent Founder Score for every founder on this opportunity.
-  for (const f of ctx.founders) {
+  // Move the persistent Founder Score for every founder on this opportunity —
+  // only on the FIRST assessment of this opportunity (re-scores refine the axis
+  // picture; they don't repeatedly pump the person's score).
+  for (const f of prior.length > 0 ? [] : ctx.founders) {
     await bumpFounderScore(
       f.id,
       result.founderScoreDelta,

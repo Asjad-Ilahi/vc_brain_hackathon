@@ -1,8 +1,12 @@
 /**
- * Outbound sourcing — surface founders BEFORE they raise, across multiple modes:
- *   GitHub (dev signal) · Hacker News (launches/Show HN) · arXiv (research) · Web (Tavily).
- * Every candidate gets a deterministic conviction score at ingestion, and all
- * converge into the SAME opportunity pipeline as inbound applications.
+ * Outbound sourcing — surface founders BEFORE they raise, across the channels
+ * the brief names: GitHub (dev signal) · Hacker News (launches) · arXiv (papers)
+ * · patents · hackathons · accelerator cohorts · ProductHunt · open web.
+ *
+ * Every candidate gets a deterministic conviction score at ingestion; re-scans
+ * ENRICH existing opportunities (dedupe) instead of duplicating them; and
+ * candidates crossing the thesis conviction threshold trigger assessment on
+ * their own (auto-screen) — no human click required to start the funnel.
  */
 import { sql } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -14,8 +18,22 @@ import { OutboundCandidateSchema } from "@/lib/schemas";
 import { z } from "zod";
 import { withRetry } from "@/lib/utils";
 import { createOpportunity } from "./opportunity";
-import { getActiveThesis, formatThesis, type Thesis } from "./thesis";
-import { computeConviction } from "./conviction";
+import { getActiveThesis, formatThesis, getThesisProfile, type Thesis } from "./thesis";
+import { computeConviction, matchesThesisTerms } from "./conviction";
+import { screenOpportunity } from "./screen";
+import { listOpportunities } from "./list";
+
+export const ALL_CHANNELS = [
+  "github",
+  "hackernews",
+  "arxiv",
+  "producthunt",
+  "hackathons",
+  "patents",
+  "accelerators",
+  "web",
+] as const;
+export type Channel = (typeof ALL_CHANNELS)[number];
 
 function daysAgo(iso: string | number | null | undefined): number | undefined {
   if (iso == null) return undefined;
@@ -24,11 +42,8 @@ function daysAgo(iso: string | number | null | undefined): number | undefined {
   return Math.floor((Date.now() - t) / 86_400_000);
 }
 
-function matches(text: string | null | undefined, list: string[] | undefined): boolean {
-  if (!text || !list?.length) return false;
-  const t = text.toLowerCase();
-  return list.some((s) => s && t.includes(s.toLowerCase()));
-}
+// Token-overlap matching — real titles rarely contain the sector phrase verbatim.
+const matches = matchesThesisTerms;
 
 async function bumpChannel(name: string, found: number) {
   await db
@@ -43,24 +58,43 @@ async function bumpChannel(name: string, found: number) {
     });
 }
 
+/** Rotate through the thesis sectors so successive sweeps explore, not repeat. */
+function pickSector(t: Thesis | null, fallback: string): string {
+  const list = t?.sectors?.length ? t.sectors : [fallback];
+  return list[Math.floor(Math.random() * list.length)] ?? fallback;
+}
+
 // ---------------------------------------------------------------- GitHub -----
+/**
+ * Discovery band, not a fame contest: young repos (≤ ~18 months) with EARLY
+ * traction (30–2500★), individually owned, sorted by recent activity. A repo
+ * with 100k★ or an org owner (DeepSeek, Microsoft) is not a founder we can
+ * back — it's a company that already won.
+ */
 function githubQueryFromThesis(t: Thesis | null): string {
-  const sector = t?.sectors?.[0] || "AI infrastructure";
-  return `"${sector}" stars:>50 pushed:>2025-01-01`;
+  const sector = pickSector(t, "AI infrastructure");
+  const cutoff = new Date(Date.now() - 550 * 86_400_000).toISOString().slice(0, 10);
+  return `"${sector}" stars:30..2500 created:>${cutoff} fork:false pushed:>2025-01-01`;
 }
 
 export async function sourceFromGithub(limit = 5): Promise<string[]> {
   const thesis = await getActiveThesis();
-  const repos = await githubSearchRepos(githubQueryFromThesis(thesis), Math.max(limit * 2, 8));
+  const repos = await githubSearchRepos(githubQueryFromThesis(thesis), Math.max(limit * 3, 12));
   const created: string[] = [];
 
-  for (const repo of repos.slice(0, limit)) {
+  for (const repo of repos) {
+    if (created.length >= limit) break;
+    // Org-owned repos are companies, not discoverable founders.
+    if (repo.owner.type === "Organization") continue;
     let user;
     try {
       user = await githubUser(repo.owner.login);
     } catch {
       continue;
     }
+    if (user.type === "Organization") continue;
+    // Off-thesis repos are never shown — match against the whole description.
+    if (!matches(`${repo.full_name} ${repo.description ?? ""} ${repo.language ?? ""}`, thesis?.sectors)) continue;
     const conviction = computeConviction({
       githubStars: repo.stargazers_count,
       githubFollowers: user.followers,
@@ -69,7 +103,7 @@ export async function sourceFromGithub(limit = 5): Promise<string[]> {
       thesisSectorMatch: matches(repo.description, thesis?.sectors),
       thesisGeoMatch: matches(user.location, thesis?.geographies),
     });
-    const { opportunityId } = await createOpportunity({
+    const { opportunityId, deduped } = await createOpportunity({
       source: "outbound",
       sourceChannel: "github",
       thesisId: thesis?.id ?? null,
@@ -79,10 +113,11 @@ export async function sourceFromGithub(limit = 5): Promise<string[]> {
         name: repo.full_name.split("/")[1] ?? repo.full_name,
         domain: user.blog || null,
         sector: thesis?.sectors?.[0] ?? repo.language,
-        stage: "pre-seed",
+        // No stage asserted — funding stage is unknown until evidenced.
+        stage: null,
         geography: user.location,
         oneLiner: repo.description,
-        description: `Open-source project ${repo.full_name} (${repo.stargazers_count}★, ${repo.language ?? "?"}).`,
+        description: `Open-source project ${repo.full_name} (${repo.stargazers_count}★, ${repo.language ?? "?"}) — pre-company signal, no known raise.`,
       },
       founders: [
         {
@@ -106,7 +141,7 @@ export async function sourceFromGithub(limit = 5): Promise<string[]> {
         },
       ],
     });
-    created.push(opportunityId);
+    if (!deduped) created.push(opportunityId);
   }
   await bumpChannel("github", created.length);
   return created;
@@ -132,7 +167,7 @@ function companyFromHNTitle(title: string): string {
 
 export async function sourceFromHackerNews(limit = 4): Promise<string[]> {
   const thesis = await getActiveThesis();
-  const q = encodeURIComponent(thesis?.sectors?.[0] || "AI");
+  const q = encodeURIComponent(pickSector(thesis, "AI"));
   // Show HN only = actual product launches by a founder (not general articles).
   const url = `https://hn.algolia.com/api/v1/search?query=${q}&tags=show_hn&hitsPerPage=${Math.max(limit * 3, 12)}`;
   const data = await withRetry(
@@ -145,14 +180,16 @@ export async function sourceFromHackerNews(limit = 4): Promise<string[]> {
   );
 
   const created: string[] = [];
-  for (const hit of (data.hits ?? []).filter((h) => h.title && h.author).slice(0, limit)) {
+  for (const hit of (data.hits ?? []).filter((h) => h.title && h.author)) {
+    if (created.length >= limit) break;
+    if (!matches(hit.title, thesis?.sectors)) continue; // off-thesis: never shown
     const conviction = computeConviction({
       hnPoints: hit.points ?? 0,
       hnComments: hit.num_comments ?? 0,
       thesisSectorMatch: matches(hit.title, thesis?.sectors),
     });
     const company = companyFromHNTitle(hit.title);
-    const { opportunityId } = await createOpportunity({
+    const { opportunityId, deduped } = await createOpportunity({
       source: "outbound",
       sourceChannel: "hackernews",
       thesisId: thesis?.id ?? null,
@@ -161,7 +198,6 @@ export async function sourceFromHackerNews(limit = 4): Promise<string[]> {
       company: {
         name: company,
         sector: thesis?.sectors?.[0] ?? null,
-        stage: "pre-seed",
         oneLiner: hit.title,
         description: `Surfaced on Hacker News (${hit.points ?? 0} points, ${hit.num_comments ?? 0} comments).`,
       },
@@ -177,7 +213,7 @@ export async function sourceFromHackerNews(limit = 4): Promise<string[]> {
         },
       ],
     });
-    created.push(opportunityId);
+    if (!deduped) created.push(opportunityId);
   }
   await bumpChannel("hackernews", created.length);
   return created;
@@ -191,7 +227,7 @@ function tag(block: string, name: string): string | null {
 
 export async function sourceFromArxiv(limit = 3): Promise<string[]> {
   const thesis = await getActiveThesis();
-  const q = encodeURIComponent(thesis?.sectors?.[0] || "machine learning systems");
+  const q = encodeURIComponent(pickSector(thesis, "machine learning systems"));
   const url = `http://export.arxiv.org/api/query?search_query=all:${q}&sortBy=submittedDate&sortOrder=descending&max_results=${limit + 2}`;
   const xml = await withRetry(
     async () => {
@@ -211,12 +247,13 @@ export async function sourceFromArxiv(limit = 3): Promise<string[]> {
     const summary = tag(e, "summary");
     const published = tag(e, "published");
     if (!title || !author) continue;
+    if (!matches(`${title} ${summary ?? ""}`, thesis?.sectors)) continue; // off-thesis: never shown
     const conviction = computeConviction({
       hasArxivPaper: true,
       arxivDaysAgo: daysAgo(published),
       thesisSectorMatch: matches(`${title} ${summary}`, thesis?.sectors),
     });
-    const { opportunityId } = await createOpportunity({
+    const { opportunityId, deduped } = await createOpportunity({
       source: "outbound",
       sourceChannel: "arxiv",
       thesisId: thesis?.id ?? null,
@@ -225,7 +262,6 @@ export async function sourceFromArxiv(limit = 3): Promise<string[]> {
       company: {
         name: `${author.split(" ").slice(-1)[0]} et al. (research)`,
         sector: thesis?.sectors?.[0] ?? null,
-        stage: "pre-idea",
         oneLiner: title,
         description: (summary ?? "").slice(0, 300),
       },
@@ -241,22 +277,95 @@ export async function sourceFromArxiv(limit = 3): Promise<string[]> {
         },
       ],
     });
-    created.push(opportunityId);
+    if (!deduped) created.push(opportunityId);
   }
   await bumpChannel("arxiv", created.length);
   return created;
 }
 
-// -------------------------------------------------------------------- Web -----
-const WEB_EXTRACT_SYSTEM = `You extract likely early-stage founders/companies from web search
-results that match a fund thesis. Only include real, specific companies with a discernible founder
-signal. Return an empty list if nothing qualifies. Never invent details not present in the results.`;
+// ------------------------------------------- Web-extract channel family -------
+// One shared path: Tavily search with a channel-specific query, LLM extracts
+// real candidates, each lands in the same funnel with a conviction score.
+const WEB_EXTRACT_SYSTEM = `You extract UNDISCOVERED early-stage founders/companies from web
+search results for a venture fund that invests BEFORE anyone else notices. Hard rules:
+- EXCLUDE established companies: anything already famous, institutionally funded, or scaled
+  (Cohere, OpenAI, Anthropic, Mistral, Perplexity, Hugging Face, Databricks and the like). If you
+  recognize the name, or are unsure whether it is established, set isEstablished=true.
+- Set thesisFit=true ONLY when the candidate clearly fits the fund's sectors/stages/geographies.
+- Set stage ONLY if the results explicitly state it — never infer or guess a funding stage.
+- Only include real, specific companies/projects with a discernible founder signal (creator,
+  inventor, maintainer). Return an empty list if nothing qualifies. Never invent details.`;
 
-export async function sourceFromWeb(customQuery?: string, limit = 4): Promise<string[]> {
+/** Belt-and-braces: never surface household names, whatever the extractor says. */
+const ESTABLISHED_DENYLIST = [
+  "cohere", "openai", "anthropic", "mistral", "perplexity", "deepseek", "hugging face",
+  "huggingface", "databricks", "scale ai", "stability ai", "runway", "midjourney",
+  "together ai", "groq", "xai", "microsoft", "google", "meta", "nvidia", "amazon", "apple",
+  "ibm", "salesforce", "adobe", "bytedance", "tencent", "baidu", "alibaba",
+];
+function isDenylisted(name: string): boolean {
+  const n = name.toLowerCase();
+  return ESTABLISHED_DENYLIST.some((d) => n === d || n.includes(d));
+}
+
+type WebChannelSpec = {
+  channel: Channel;
+  sourceType: string;
+  query: (t: Thesis | null) => string;
+  candidateHint: string;
+  extraTags: string[];
+  signalPrefix: string;
+};
+
+const WEB_CHANNELS: Record<string, WebChannelSpec> = {
+  web: {
+    channel: "web",
+    sourceType: "web",
+    query: (t) =>
+      `new ${pickSector(t, "AI")} startups founders launches ${t?.geographies?.[0] ?? ""} 2026`,
+    candidateHint: "General web scan — prefer companies that have not announced a funding round.",
+    extraTags: [],
+    signalPrefix: "Web signal",
+  },
+  producthunt: {
+    channel: "producthunt",
+    sourceType: "producthunt",
+    query: (t) => `site:producthunt.com ${pickSector(t, "AI")} launch maker 2026`,
+    candidateHint: "These are Product Hunt launches — the maker who shipped the product is the founder signal.",
+    extraTags: ["launch"],
+    signalPrefix: "Product Hunt launch",
+  },
+  hackathons: {
+    channel: "hackathons",
+    sourceType: "hackathon",
+    query: (t) => `devpost hackathon winner ${pickSector(t, "AI")} project 2025 2026`,
+    candidateHint:
+      "These are hackathon results — winners/builders of standout projects are pre-track-record founder signals (exactly the cold-start case the fund wants early).",
+    extraTags: ["hackathon", "cold-start"],
+    signalPrefix: "Hackathon win",
+  },
+  patents: {
+    channel: "patents",
+    sourceType: "patent",
+    query: (t) => `site:patents.google.com ${pickSector(t, "machine learning")} 2025 filed`,
+    candidateHint: "These are patent filings — the inventor is the founder signal; the filing is the technical moat evidence.",
+    extraTags: ["patent", "ip"],
+    signalPrefix: "Patent filing",
+  },
+  accelerators: {
+    channel: "accelerators",
+    sourceType: "accelerator",
+    query: (t) =>
+      `"Y Combinator" OR "Techstars" 2026 batch ${pickSector(t, "AI")} startup founders announced`,
+    candidateHint: "These are accelerator cohort mentions — companies in a current batch, before their demo-day raise.",
+    extraTags: ["accelerator", "cohort"],
+    signalPrefix: "Accelerator cohort",
+  },
+};
+
+async function sourceViaWebExtract(spec: WebChannelSpec, limit: number, customQuery?: string): Promise<string[]> {
   const thesis = await getActiveThesis();
-  const query =
-    customQuery ||
-    `new ${thesis?.sectors?.[0] ?? "AI"} startups founders launches ${thesis?.geographies?.[0] ?? ""} 2025`;
+  const query = customQuery || spec.query(thesis);
   const { results, answer } = await tavilySearch(query, { maxResults: 8, depth: "advanced" });
 
   const evidence =
@@ -267,55 +376,131 @@ export async function sourceFromWeb(customQuery?: string, limit = 4): Promise<st
     schema: z.object({ candidates: z.array(OutboundCandidateSchema).default([]) }),
     schemaName: "OutboundCandidates",
     system: WEB_EXTRACT_SYSTEM,
-    user: `${formatThesis(thesis)}\n\nWeb results:\n${evidence}\n\nExtract up to ${limit} in-thesis candidates.`,
+    user: `${formatThesis(thesis)}\n\n${spec.candidateHint}\n\nWeb results:\n${evidence}\n\nExtract up to ${limit} in-thesis candidates.`,
   });
 
   const created: string[] = [];
-  for (const c of candidates.slice(0, limit)) {
-    const match = results.find((r) => c.companyName && r.title.toLowerCase().includes(c.companyName.toLowerCase().slice(0, 6)));
+  for (const c of candidates) {
+    if (created.length >= limit) break;
+    // Gates: no established companies, no off-thesis candidates — if it
+    // doesn't match what the investor looks for, it is never shown.
+    if (c.isEstablished || isDenylisted(c.companyName)) continue;
+    if (!c.thesisFit) continue;
+    const match = results.find(
+      (r) => c.companyName && r.title.toLowerCase().includes(c.companyName.toLowerCase().slice(0, 6))
+    );
     const conviction = computeConviction({
-      thesisSectorMatch: matches(c.sector, thesis?.sectors),
+      // Channel-specific evidence — every antenna carries its own weight.
+      hasPatentFiling: spec.channel === "patents",
+      inAcceleratorCohort: spec.channel === "accelerators",
+      hackathonWin: spec.channel === "hackathons",
+      productHuntLaunch: spec.channel === "producthunt",
+      llmAssertedFit: true, // the extractor only returns candidates it can justify
+      thesisSectorMatch: matches(`${c.sector} ${c.oneLiner} ${c.whyRelevant}`, thesis?.sectors),
       thesisGeoMatch: matches(c.geography, thesis?.geographies),
     });
-    const { opportunityId } = await createOpportunity({
+    const { opportunityId, deduped } = await createOpportunity({
       source: "outbound",
-      sourceChannel: "web",
+      sourceChannel: spec.channel,
       thesisId: thesis?.id ?? null,
       convictionScore: conviction.score,
       convictionReason: conviction.reason,
       company: {
         name: c.companyName,
         sector: c.sector,
-        stage: "seed",
+        // Stage only when the source explicitly said it — never simulated.
+        stage: c.stage ?? null,
         geography: c.geography,
         oneLiner: c.oneLiner,
         description: c.whyRelevant,
       },
-      founders: [{ fullName: c.founderName, handleSeed: c.founderHandle, role: "founder", isColdStart: true }],
+      founders: [
+        { fullName: c.founderName, handleSeed: c.founderHandle, role: "founder", isColdStart: true },
+      ],
       signals: [
         {
-          sourceType: "web",
+          sourceType: spec.sourceType,
           sourceUrl: match?.url ?? null,
           title: c.companyName,
-          rawText: `${c.oneLiner}. Why relevant: ${c.whyRelevant}. ${match ? `Source: ${match.content.slice(0, 300)}` : ""}`,
-          tags: ["outbound", "web"],
+          rawText: `${spec.signalPrefix}: ${c.oneLiner}. Why relevant: ${c.whyRelevant}. ${match ? `Source: ${match.content.slice(0, 300)}` : ""}`,
+          tags: ["outbound", spec.channel, ...spec.extraTags],
         },
       ],
     });
-    created.push(opportunityId);
+    if (!deduped) created.push(opportunityId);
   }
-  await bumpChannel("web", created.length);
+  await bumpChannel(spec.channel, created.length);
   return created;
 }
 
+export const sourceFromWeb = (customQuery?: string, limit = 4) =>
+  sourceViaWebExtract(WEB_CHANNELS.web, limit, customQuery);
+export const sourceFromProductHunt = (limit = 3) => sourceViaWebExtract(WEB_CHANNELS.producthunt, limit);
+export const sourceFromHackathons = (limit = 3) => sourceViaWebExtract(WEB_CHANNELS.hackathons, limit);
+export const sourceFromPatents = (limit = 2) => sourceViaWebExtract(WEB_CHANNELS.patents, limit);
+export const sourceFromAccelerators = (limit = 3) => sourceViaWebExtract(WEB_CHANNELS.accelerators, limit);
+
+// ------------------------------------------------- Threshold auto-trigger -----
+/**
+ * Pillar 2: assessment is "triggered by an inbound application, or by signals
+ * crossing a conviction threshold ON THEIR OWN". After a sweep, high-conviction
+ * unscreened candidates enter the funnel without a human click.
+ */
+export async function autoScreenHighConviction(max = 3): Promise<string[]> {
+  const thesis = await getActiveThesis();
+  const threshold = thesis?.convictionThreshold ?? 68;
+  const all = await listOpportunities();
+  const hot = all
+    .filter(
+      (o) =>
+        o.source === "outbound" &&
+        !o.screenResult &&
+        !o.decision &&
+        (o.convictionScore ?? 0) >= threshold
+    )
+    .sort((a, b) => (b.convictionScore ?? 0) - (a.convictionScore ?? 0))
+    .slice(0, max);
+
+  const screened: string[] = [];
+  await Promise.allSettled(
+    hot.map(async (o) => {
+      await screenOpportunity(o.id);
+      screened.push(o.id);
+    })
+  );
+  return screened;
+}
+
 // --------------------------------------------------------- Multi-modal sweep --
+/** Full radar sweep across the thesis-enabled channels + threshold auto-screen. */
 export async function sourceAll(): Promise<Record<string, number>> {
-  const [gh, hn, ax, web] = await Promise.allSettled([
-    sourceFromGithub(4),
-    sourceFromHackerNews(4),
-    sourceFromArxiv(3),
-    sourceFromWeb(undefined, 3),
-  ]);
-  const count = (r: PromiseSettledResult<string[]>) => (r.status === "fulfilled" ? r.value.length : 0);
-  return { github: count(gh), hackernews: count(hn), arxiv: count(ax), web: count(web) };
+  const profile = await getThesisProfile();
+  const enabled = new Set<string>(
+    profile?.enabledSources?.length ? profile.enabledSources : [...ALL_CHANNELS]
+  );
+
+  const runners: [string, () => Promise<string[]>][] = [
+    ["github", () => sourceFromGithub(4)],
+    ["hackernews", () => sourceFromHackerNews(3)],
+    ["arxiv", () => sourceFromArxiv(3)],
+    ["producthunt", () => sourceFromProductHunt(3)],
+    ["hackathons", () => sourceFromHackathons(3)],
+    ["patents", () => sourceFromPatents(2)],
+    ["accelerators", () => sourceFromAccelerators(3)],
+    ["web", () => sourceFromWeb(undefined, 3)],
+  ];
+
+  const active = runners.filter(([name]) => enabled.has(name));
+  const settled = await Promise.allSettled(active.map(([, fn]) => fn()));
+
+  const counts: Record<string, number> = {};
+  active.forEach(([name], i) => {
+    const r = settled[i];
+    counts[name] = r.status === "fulfilled" ? r.value.length : 0;
+  });
+
+  // Signals crossing the conviction threshold trigger assessment on their own.
+  const screened = await autoScreenHighConviction(3);
+  counts.autoScreened = screened.length;
+  return counts;
 }

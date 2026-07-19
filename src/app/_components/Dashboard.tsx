@@ -1,41 +1,53 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { OpportunitySummary } from "@/lib/services/list";
-import type { Thesis } from "@/lib/services/thesis";
-import { api, fmtDuration } from "./api";
-import { AxisCard, Badge, DecisionBadge, ScorePill, Spinner, ConvictionBadge } from "./ui";
+import type { Thesis, ThesisProfile } from "@/lib/services/thesis";
+import { api, postJson, fmtDuration } from "./api";
+import { Badge, Countdown, Eyebrow, ScorePill, Spinner, Stat, TraceLine, TrendArrow, countdownParts, useNow } from "./ui";
+import { ApplyModal, GhostButton, PrimaryButton, initialsOf } from "./shared";
+import { SweepLoader, useSweep } from "./useSweep";
 
-type QueryResult = OpportunitySummary & { matchScore: number; matchReasons: string[] };
-type ChannelStat = { name: string; found: number; scored: number; avgConviction: number; converted: number; quality: number };
-type ChannelIntel = { channels: ChannelStat[]; suggestions: { channel: string; why: string }[] };
+type Activity = { id: string; agent: string; outputSummary: string | null; createdAt: string; opportunityId: string; company: string };
+type ChannelStat = { name: string; found: number; quality: number };
+type AutoStatus = { ready: number; working: number; queued: number; decided: number; screenedOut: number };
+
+const AUTOPILOT_CONCURRENCY = 2; // parallel background workers
+const AUTOPILOT_DEFAULT_TARGET = 10; // fully-checked deals before pausing
 
 export default function Dashboard() {
   const router = useRouter();
+  const now = useNow(30_000);
   const [opps, setOpps] = useState<OpportunitySummary[]>([]);
   const [thesis, setThesis] = useState<Thesis | null>(null);
-  const [channels, setChannels] = useState<ChannelIntel | null>(null);
+  const [activity, setActivity] = useState<Activity[]>([]);
+  const [channels, setChannels] = useState<ChannelStat[]>([]);
+  const [founderCount, setFounderCount] = useState<{ total: number; week: number } | null>(null);
+  const [account, setAccount] = useState<{ name: string } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [view, setView] = useState<"pipeline" | "radar">("pipeline");
+  const [status, setStatus] = useState<string | null>(null);
   const [showApply, setShowApply] = useState(false);
-  const [showThesis, setShowThesis] = useState(false);
-  const [queryResults, setQueryResults] = useState<QueryResult[] | null>(null);
-  const [queryParsed, setQueryParsed] = useState<unknown>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
-      const [o, t, c] = await Promise.all([
+      const [o, t, a, c, f] = await Promise.all([
         api<OpportunitySummary[]>("/api/opportunities"),
         api<{ active: Thesis | null }>("/api/thesis"),
-        api<ChannelIntel>("/api/channels").catch(() => ({ channels: [], suggestions: [] })),
+        api<Activity[]>("/api/activity").catch(() => []),
+        api<{ channels: ChannelStat[] }>("/api/channels").catch(() => ({ channels: [] })),
+        api<{ firstSeenAt: string }[]>("/api/founders").catch(() => []),
       ]);
       setOpps(o);
       setThesis(t.active);
-      setChannels(c);
+      setActivity(a);
+      setChannels(c.channels);
+      api<{ user: { name: string } | null }>("/api/auth/me")
+        .then((r) => setAccount(r.user))
+        .catch(() => {});
+      const week = f.filter((x) => Date.now() - new Date(x.firstSeenAt).getTime() < 7 * 86_400_000).length;
+      setFounderCount({ total: f.length, week });
     } catch (e) {
       setStatus(`Load failed: ${(e as Error).message}`);
     } finally {
@@ -47,428 +59,435 @@ export default function Dashboard() {
     load();
   }, [load]);
 
-  async function runSource(kind: "github" | "web" | "hackernews" | "arxiv" | "all") {
-    setBusy(kind === "all" ? "Scouting GitHub · Hacker News · arXiv · Web…" : `Sourcing from ${kind}…`);
-    setStatus(null);
+  // ---------------------------------------------------------------------
+  // Autopilot: after the profile is saved, background agents take each find
+  // through the FULL check — background check, screening, 3-way scoring,
+  // memo, verification — in parallel, until `target` deals are finished.
+  // The investor sees results, not buttons.
+  // ---------------------------------------------------------------------
+  const [auto, setAuto] = useState<AutoStatus | null>(null);
+  const [target, setTarget] = useState<number>(AUTOPILOT_DEFAULT_TARGET);
+  const inFlight = useRef(0);
+
+  useEffect(() => {
     try {
-      if (kind === "all") {
-        const r = await api<Record<string, number>>("/api/source/all", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-        const total = Object.values(r).reduce((a, b) => a + b, 0);
-        setStatus(`Scouted ${total} founders — GitHub ${r.github}, HN ${r.hackernews}, arXiv ${r.arxiv}, Web ${r.web}. Ranked on the Radar.`);
-      } else {
-        const r = await api<{ created: string[] }>(`/api/source/${kind}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-        setStatus(`Sourced ${r.created.length} from ${kind}.`);
-      }
-      setView("radar");
-      await load();
-    } catch (e) {
-      setStatus(`Sourcing failed: ${(e as Error).message}`);
-    } finally {
-      setBusy(null);
-    }
+      const t = Number(localStorage.getItem("vcb.autopilot.target"));
+      if (t > 0) setTarget(t);
+    } catch {}
+  }, []);
+
+  const refreshAuto = useCallback(async () => {
+    try {
+      setAuto(await api<AutoStatus>("/api/autopilot/status"));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    refreshAuto();
+    const t = setInterval(refreshAuto, 5000);
+    return () => clearInterval(t);
+  }, [refreshAuto]);
+
+  // Worker pump: keep up to N parallel background checks running until the
+  // target is met or the queue is empty.
+  useEffect(() => {
+    const tick = setInterval(() => {
+      if (!auto) return;
+      const finished = auto.ready + auto.decided;
+      if (finished >= target || auto.queued === 0) return;
+      if (inFlight.current >= AUTOPILOT_CONCURRENCY) return;
+      inFlight.current += 1;
+      postJson<{ processed: string | null }>("/api/autopilot/next")
+        .catch(() => null)
+        .finally(() => {
+          inFlight.current -= 1;
+          refreshAuto();
+          load();
+        });
+    }, 4000);
+    return () => clearInterval(tick);
+  }, [auto, target, refreshAuto, load]);
+
+  function processMore() {
+    const next = (auto ? auto.ready + auto.decided : 0) + AUTOPILOT_DEFAULT_TARGET;
+    setTarget(next);
+    try {
+      localStorage.setItem("vcb.autopilot.target", String(next));
+    } catch {}
   }
 
-  const scored = opps.filter((o) => o.axes.founder).length;
+  // Live founder search with per-source progress; results stream in as each
+  // source finishes.
+  const sweep = useSweep(load);
+
+  function scoutAll() {
+    setStatus(null);
+    sweep.start(((thesis?.profileJson ?? null) as ThesisProfile | null)?.enabledSources);
+  }
+
+  // Onboarding hands off here: the wizard sets a flag, the dashboard runs the
+  // first search visibly so the investor watches results arrive one by one.
+  useEffect(() => {
+    if (!thesis) return;
+    try {
+      if (localStorage.getItem("vcb.sweep.request") === "1") {
+        localStorage.removeItem("vcb.sweep.request");
+        sweep.start(((thesis.profileJson ?? null) as ThesisProfile | null)?.enabledSources);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [thesis]);
+
+  const profile = (thesis?.profileJson ?? null) as ThesisProfile | null;
+  const threshold = thesis?.convictionThreshold ?? 68;
+
+  const undecided = opps.filter((o) => !o.decision);
+  const awaiting = opps.filter((o) => o.status === "awaiting_decision" && !o.decision);
+  const urgent = undecided.filter((o) => {
+    const p = countdownParts(o.deadlineAt, now);
+    return p && !p.expired && p.urgent;
+  });
+  const overdue = undecided.filter((o) => {
+    const p = countdownParts(o.deadlineAt, now);
+    return p?.expired;
+  });
+  const crossed = opps
+    .filter((o) => o.source === "outbound" && !o.decision && (o.convictionScore ?? 0) >= threshold)
+    .sort((a, b) => (b.convictionScore ?? 0) - (a.convictionScore ?? 0));
+  const crossed24h = crossed.filter((o) => now - new Date(o.firstSignalAt).getTime() < 24 * 3600_000);
+  const signals24h = opps.filter((o) => now - new Date(o.firstSignalAt).getTime() < 24 * 3600_000).length;
   const decided = opps.filter((o) => o.timeToDecisionMs != null);
   const avgTtd = decided.length ? decided.reduce((s, o) => s + (o.timeToDecisionMs ?? 0), 0) / decided.length : null;
-  const inbound = opps.filter((o) => o.source === "inbound").length;
 
-  const radar = opps
-    .filter((o) => o.source === "outbound" && !o.decision)
-    .sort((a, b) => (b.convictionScore ?? 0) - (a.convictionScore ?? 0));
-  const highConviction = radar.filter((o) => (o.convictionScore ?? 0) >= 68).length;
+  const hour = new Date(now).getHours();
+  const daypart = hour < 5 ? "night" : hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+  const firstName = (profile?.gpName ?? account?.name)?.split(/\s+/)[0];
+  const calibratedDays = thesis
+    ? Math.max(0, Math.floor((now - new Date(thesis.createdAt).getTime()) / 86_400_000))
+    : null;
 
-  const shown = queryResults ?? opps;
+  const channelBits = channels
+    .slice(0, 3)
+    .map((c) => `${c.name} ${c.found}`)
+    .join(" · ");
 
-  return (
-    <div className="mx-auto max-w-6xl px-5 py-6">
-      {/* Header */}
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800 pb-5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            VC&nbsp;Brain <span className="text-indigo-400">·</span> <span className="text-slate-400 text-lg font-medium">Founder Intelligence</span>
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">Discover founders before they raise → screen → 3-axis diligence → evidence-backed memo.</p>
-          {thesis ? (
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <span className="text-xs text-slate-500">Thesis:</span>
-              <Badge tone="indigo">{thesis.name}</Badge>
-              {thesis.sectors.slice(0, 4).map((s) => <Badge key={s}>{s}</Badge>)}
-              {thesis.geographies.map((g) => <Badge key={g} tone="slate">{g}</Badge>)}
-              <button onClick={() => setShowThesis(true)} className="ml-1 text-xs text-indigo-400 hover:underline">edit</button>
-            </div>
-          ) : (
-            <button onClick={() => setShowThesis(true)} className="mt-3 text-sm text-indigo-400 hover:underline">+ Configure fund thesis</button>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex gap-2">
-            <button onClick={() => setShowApply(true)} className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800">+ New application</button>
-            <button disabled={!!busy} onClick={() => runSource("all")} className="rounded-md bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400 disabled:opacity-50">⚡ Scout all sources</button>
-          </div>
-          <div className="inline-flex overflow-hidden rounded-md border border-slate-700 text-sm">
-            <button onClick={() => setView("pipeline")} className={`px-3 py-1 ${view === "pipeline" ? "bg-slate-700 text-white" : "text-slate-300 hover:bg-slate-800"}`}>Pipeline</button>
-            <button onClick={() => setView("radar")} className={`px-3 py-1 ${view === "radar" ? "bg-slate-700 text-white" : "text-slate-300 hover:bg-slate-800"}`}>
-              Radar{highConviction > 0 ? <span className="ml-1 rounded-full bg-emerald-500/20 px-1.5 text-[10px] text-emerald-300">{highConviction}🔥</span> : null}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Metrics */}
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Opportunities" value={String(opps.length)} sub={`${inbound} inbound · ${opps.length - inbound} outbound`} />
-        <Stat label="On the Radar" value={String(radar.length)} sub={`${highConviction} high-conviction`} />
-        <Stat label="Scored (3-axis)" value={`${scored}/${opps.length}`} />
-        <Stat label="Avg time to decision" value={fmtDuration(avgTtd)} sub="first signal → recommendation" />
+  if (loading)
+    return (
+      <div className="px-8 py-24 text-center">
+        <Spinner label="Loading command center…" />
       </div>
+    );
 
-      {(busy || status) && (
-        <div className="mt-4 rounded-md border border-slate-800 bg-slate-900/50 px-3 py-2 text-sm">
-          {busy ? <Spinner label={busy} /> : <span className="text-slate-300">{status}</span>}
+  // First run: no thesis yet → onboarding is the front door.
+  if (!thesis) {
+    return (
+      <div className="mx-auto max-w-xl px-6 py-24 text-center">
+        <Eyebrow className="justify-center text-center">A venture OS for solo GPs</Eyebrow>
+        <h1 className="mt-4 font-mono text-4xl font-bold leading-tight">
+          Decide on any deal
+          <br />
+          in <span className="text-accent">24 hours.</span>
+        </h1>
+        <p className="mx-auto mt-4 max-w-md text-[13.5px] text-muted">
+          VC.Brain sources founders, screens them against your thesis, and hands you a memo with
+          citations. You just say yes or no.
+        </p>
+        <div className="mt-8 flex justify-center gap-2">
+          <PrimaryButton onClick={() => router.push("/onboarding")}>Start onboarding →</PrimaryButton>
+          <GhostButton onClick={() => setShowApply(true)}>Submit an application</GhostButton>
         </div>
-      )}
-
-      {loading ? (
-        <div className="py-16 text-center"><Spinner label="Loading…" /></div>
-      ) : view === "radar" ? (
-        <RadarView radar={radar} channels={channels} onSource={runSource} busy={!!busy} />
-      ) : (
-        <>
-          {/* Query */}
-          <QueryBar
-            onResult={(res, parsed) => { setQueryResults(res); setQueryParsed(parsed); }}
-            onClear={() => { setQueryResults(null); setQueryParsed(null); }}
-            active={queryResults != null}
-          />
-          {queryParsed ? (
-            <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs text-slate-400">
-              Parsed filter: <code className="text-slate-300">{JSON.stringify(queryParsed)}</code>
-            </div>
-          ) : null}
-          <div className="mt-5 grid gap-3">
-            {shown.length === 0 ? (
-              <EmptyState onApply={() => setShowApply(true)} onScout={() => runSource("all")} />
-            ) : (
-              shown.map((o) => <OpportunityCard key={o.id} o={o} reasons={(o as QueryResult).matchReasons} />)
-            )}
-          </div>
-        </>
-      )}
-
-      {showApply && <ApplyModal onClose={() => setShowApply(false)} onDone={(id) => { setShowApply(false); router.push(`/opportunity/${id}`); }} />}
-      {showThesis && <ThesisModal current={thesis} onClose={() => setShowThesis(false)} onDone={() => { setShowThesis(false); load(); }} />}
-    </div>
-  );
-}
-
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/40 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-xl font-semibold text-slate-100">{value}</div>
-      {sub ? <div className="text-[11px] text-slate-500">{sub}</div> : null}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------- Radar ------
-function RadarView({ radar, channels, onSource, busy }: {
-  radar: OpportunitySummary[];
-  channels: ChannelIntel | null;
-  onSource: (k: "github" | "web" | "hackernews" | "arxiv" | "all") => void;
-  busy: boolean;
-}) {
-  return (
-    <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_300px]">
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Sourcing Radar <span className="font-normal text-slate-600">· discovered before they applied, ranked by conviction</span></h2>
-        </div>
-        <div className="mb-3 flex flex-wrap gap-2 text-xs">
-          {(["github", "hackernews", "arxiv", "web"] as const).map((k) => (
-            <button key={k} disabled={busy} onClick={() => onSource(k)} className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:bg-slate-800 disabled:opacity-50">+ {k}</button>
-          ))}
-        </div>
-        {radar.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-700 py-14 text-center text-slate-500">
-            No founders on the radar yet. Hit <span className="text-slate-300">⚡ Scout all sources</span>.
-          </div>
-        ) : (
-          <div className="grid gap-2">
-            {radar.map((o) => <RadarCard key={o.id} o={o} />)}
-          </div>
+        <p className="mt-4 font-mono text-[11px] text-faint">Ready in 6 minutes.</p>
+        {showApply && (
+          <ApplyModal onClose={() => setShowApply(false)} onDone={(id) => router.push(`/opportunity/${id}`)} />
         )}
       </div>
-      <ChannelPanel channels={channels} onSource={onSource} busy={busy} />
-    </div>
-  );
-}
-
-function RadarCard({ o }: { o: OpportunitySummary }) {
-  const founder = o.founders[0];
-  return (
-    <Link href={`/opportunity/${o.id}`} className="block rounded-lg border border-slate-800 bg-slate-900/40 p-3 transition hover:border-slate-600 hover:bg-slate-900/70">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <ConvictionBadge score={o.convictionScore} />
-            <span className="truncate font-semibold text-slate-100">{o.company}</span>
-            <Badge tone="emerald">{o.sourceChannel}</Badge>
-          </div>
-          {o.oneLiner ? <p className="mt-1 line-clamp-1 text-sm text-slate-400">{o.oneLiner}</p> : null}
-          <div className="mt-1 text-xs text-slate-500">
-            {founder ? <>{founder.name} · </> : null}
-            <span className="text-indigo-300">why now: {o.convictionReason ?? "—"}</span>
-          </div>
-        </div>
-        <span className="shrink-0 text-[11px] text-slate-500">{o.status === "sourced" ? "→ assess" : o.status}</span>
-      </div>
-    </Link>
-  );
-}
-
-function ChannelPanel({ channels, onSource, busy }: {
-  channels: ChannelIntel | null;
-  onSource: (k: "github" | "web" | "hackernews" | "arxiv" | "all") => void;
-  busy: boolean;
-}) {
-  if (!channels) return null;
-  const max = Math.max(1, ...channels.channels.map((c) => c.quality));
-  return (
-    <aside className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Channel intelligence</h3>
-      <p className="mt-0.5 text-[11px] text-slate-600">Which channels yield quality (learns from outcomes)</p>
-      <div className="mt-3 space-y-2">
-        {channels.channels.length === 0 ? (
-          <p className="text-xs text-slate-500">No channels used yet.</p>
-        ) : channels.channels.map((c) => (
-          <div key={c.name}>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-300">{c.name}</span>
-              <span className="text-slate-500">q{c.quality} · {c.found} found</span>
-            </div>
-            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
-              <div className="h-full rounded-full bg-indigo-500" style={{ width: `${(c.quality / max) * 100}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-      {channels.suggestions.length ? (
-        <div className="mt-4 border-t border-slate-800 pt-3">
-          <div className="text-[11px] font-medium text-amber-300">Underexplored channels</div>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {channels.suggestions.map((s) => (
-              <span key={s.channel} className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[11px] text-amber-200 ring-1 ring-amber-500/30">{s.channel}</span>
-            ))}
-          </div>
-        </div>
-      ) : null}
-      <button disabled={busy} onClick={() => onSource("all")} className="mt-4 w-full rounded-md bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400 disabled:opacity-50">⚡ Scout all sources</button>
-    </aside>
-  );
-}
-
-function OpportunityCard({ o, reasons }: { o: OpportunitySummary; reasons?: string[] }) {
-  const topFounder = [...o.founders].sort((a, b) => b.founderScore - a.founderScore)[0];
-  return (
-    <Link href={`/opportunity/${o.id}`} className="block rounded-xl border border-slate-800 bg-slate-900/40 p-4 transition hover:border-slate-600 hover:bg-slate-900/70">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate text-lg font-semibold text-slate-100">{o.company}</h3>
-            <Badge tone={o.source === "inbound" ? "indigo" : "emerald"}>{o.source}{o.sourceChannel ? `:${o.sourceChannel}` : ""}</Badge>
-            {o.source === "outbound" && o.convictionScore != null ? <ConvictionBadge score={o.convictionScore} /> : null}
-            {o.founders.some((f) => f.isColdStart) ? <Badge tone="amber">cold-start</Badge> : null}
-          </div>
-          {o.oneLiner ? <p className="mt-0.5 line-clamp-1 text-sm text-slate-400">{o.oneLiner}</p> : null}
-          <div className="mt-1 text-xs text-slate-500">
-            {[o.sector, o.stage, o.geography].filter(Boolean).join(" · ")}
-            {topFounder ? <> · {topFounder.name} <span className="text-slate-400">(FS {topFounder.founderScore})</span></> : null}
-          </div>
-          {reasons && reasons.length ? <div className="mt-1 text-[11px] text-indigo-300">matched: {reasons.join(", ")}</div> : null}
-        </div>
-        <div className="flex flex-col items-end gap-1.5">
-          <DecisionBadge decision={o.decision} />
-          {o.timeToDecisionMs != null ? <span className="text-[11px] text-slate-500">⏱ {fmtDuration(o.timeToDecisionMs)}</span> : <Badge tone="slate">{o.status}</Badge>}
-        </div>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {o.axes.founder ? <ScorePill n={o.axes.founder.score} label="founder" /> : <Badge tone="slate">unscored</Badge>}
-        {o.axes.market ? <ScorePill n={o.axes.market.score} label="market" /> : null}
-        {o.axes.idea_vs_market ? <ScorePill n={o.axes.idea_vs_market.score} label="idea/mkt" /> : null}
-        {!o.axes.founder ? <span className="text-xs text-slate-500">→ open to run 3-axis scoring</span> : null}
-      </div>
-    </Link>
-  );
-}
-
-function EmptyState({ onApply, onScout }: { onApply: () => void; onScout: () => void }) {
-  return (
-    <div className="rounded-xl border border-dashed border-slate-700 py-16 text-center">
-      <p className="text-slate-400">No opportunities yet.</p>
-      <p className="mt-1 text-sm text-slate-500">Scout founders from the open web, or add an application.</p>
-      <div className="mt-4 flex justify-center gap-2">
-        <button onClick={onScout} className="rounded-md bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-400">⚡ Scout all sources</button>
-        <button onClick={onApply} className="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800">+ New application</button>
-      </div>
-    </div>
-  );
-}
-
-function QueryBar({ onResult, onClear, active }: { onResult: (r: QueryResult[], parsed: unknown) => void; onClear: () => void; active: boolean }) {
-  const [q, setQ] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  async function run() {
-    if (!q.trim()) return;
-    setLoading(true);
-    setErr(null);
-    try {
-      const r = await api<{ parsed: unknown; results: QueryResult[] }>("/api/query", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q }) });
-      onResult(r.results, r.parsed);
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
+    );
   }
+
   return (
-    <div className="mt-5">
-      <div className="flex gap-2">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && run()}
-          placeholder='Ask: "technical founder, EU, AI infra, no prior VC backing"'
-          className="flex-1 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+    <div>
+      {/* Command header */}
+      <div className="border-b border-line px-6 py-6 md:px-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <Eyebrow>
+              Command center ·{" "}
+              {new Date(now).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} local
+            </Eyebrow>
+            <h1 className="mt-2 font-mono text-[26px] font-bold tracking-tight">
+              Good {daypart}
+              {firstName ? `, ${firstName}` : ""}.
+            </h1>
+            <p className="mt-1.5 max-w-2xl text-[13px] text-muted">
+              {undecided.length} opportunit{undecided.length === 1 ? "y" : "ies"} on the clock
+              {awaiting.length > 0 ? ` — ${awaiting.length} memo${awaiting.length === 1 ? "" : "s"} awaiting your decision` : ""}.{" "}
+              {crossed24h.length > 0 ? `${crossed24h.length} strong matches found in the last 24h. ` : ""}
+              {calibratedDays != null
+                ? `Thesis last calibrated ${calibratedDays === 0 ? "today" : `${calibratedDays}d ago`}.`
+                : ""}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex gap-2">
+              <GhostButton onClick={() => setShowApply(true)}>+ New application</GhostButton>
+              <PrimaryButton onClick={scoutAll} disabled={sweep.running}>⚡ Find founders</PrimaryButton>
+            </div>
+            {urgent.length > 0 ? (
+              <Link
+                href="/pipeline"
+                className="flex items-center gap-1.5 border border-warn/40 bg-warnwash px-2.5 py-1 font-mono text-[11px] text-warn"
+              >
+                ⏱ {urgent.length} under 4h · action required
+              </Link>
+            ) : null}
+            {overdue.length > 0 ? (
+              <Link
+                href="/diligence"
+                className="flex items-center gap-1.5 border border-bad/40 bg-badwash px-2.5 py-1 font-mono text-[11px] text-bad"
+              >
+                ⚑ {overdue.length} past the 24h window — decide or extend
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 py-6 md:px-8">
+        {sweep.channels.length > 0 ? (
+          <div className="mb-5">
+            <SweepLoader channels={sweep.channels} running={sweep.running} total={sweep.total} />
+          </div>
+        ) : null}
+        {auto && (auto.working > 0 || (auto.queued > 0 && auto.ready + auto.decided < target)) ? (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2 border border-line bg-card px-3.5 py-2.5">
+            <span className="flex items-center gap-2.5 font-mono text-[12px] text-muted">
+              <Spinner />
+              Agents working in the background — {auto.ready} ready for you · {auto.working} being checked · {auto.queued} waiting
+            </span>
+            <span className="font-mono text-[10.5px] text-faint">
+              full check: background → screen → 3 scores → memo → verify
+            </span>
+          </div>
+        ) : null}
+        {(busy || status) && (
+          <div className="mb-5 border border-line bg-card px-3 py-2 text-[12.5px]">
+            {busy ? <Spinner label={busy} /> : <span className="text-muted">{status}</span>}
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          <Stat
+            label="In pipeline"
+            value={undecided.length}
+            sub={`${awaiting.length} awaiting your decision · 24h clock running`}
+          />
+          <Stat label="New finds · 24h" value={signals24h} sub={channelBits || "run a search"} />
+          <Stat
+            label="Founders in memory"
+            value={founderCount?.total ?? "—"}
+            sub={founderCount ? `+${founderCount.week} this week` : undefined}
+          />
+          <Stat label="Avg time to decision" value={fmtDuration(avgTtd)} sub="first signal → human decision" />
+        </div>
+
+        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_300px]">
+          <div className="min-w-0">
+            {/* Fully checked — the finished results */}
+            <section className="border border-accent/50 bg-card">
+              <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+                <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-accent">
+                  Ready for your decision · fully checked by the agents
+                </span>
+                {auto && auto.queued > 0 && auto.ready + auto.decided >= target ? (
+                  <button onClick={processMore} className="font-mono text-[11px] text-accent hover:underline">
+                    Check {AUTOPILOT_DEFAULT_TARGET} more →
+                  </button>
+                ) : null}
+              </div>
+              {awaiting.length === 0 ? (
+                <p className="px-4 py-6 text-center text-[12.5px] text-faint">
+                  {auto && (auto.working > 0 || auto.queued > 0)
+                    ? "Agents are running the first full checks — results appear here."
+                    : "Nothing waiting on you. Find more founders or take an application."}
+                </p>
+              ) : (
+                awaiting
+                  .sort((a, b) => (b.axes.founder?.score ?? 0) - (a.axes.founder?.score ?? 0))
+                  .slice(0, 10)
+                  .map((o) => (
+                    <Link
+                      key={o.id}
+                      href={`/opportunity/${o.id}`}
+                      className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 hover:bg-paper"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-baseline gap-x-2">
+                          <span className="font-mono text-[13px] font-semibold">{o.company}</span>
+                          <span className="text-[12px] text-muted">{o.founders[0]?.name ?? ""}</span>
+                          {o.recommendation ? (
+                            <Badge tone={o.recommendation === "invest" ? "ok" : o.recommendation === "watch" ? "warn" : "bad"}>
+                              memo says {o.recommendation === "invest" ? "deploy" : o.recommendation}
+                            </Badge>
+                          ) : null}
+                          {o.flags > 0 ? <Badge tone="warn">⚠ {o.flags} flagged</Badge> : null}
+                        </div>
+                        <div className="truncate text-[11.5px] text-faint">{o.oneLiner ?? o.convictionReason}</div>
+                      </div>
+                      <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                        {o.axes.founder ? <ScorePill n={o.axes.founder.score} label="F" /> : null}
+                        {o.axes.market ? <ScorePill n={o.axes.market.score} label="M" /> : null}
+                        {o.axes.idea_vs_market ? <ScorePill n={o.axes.idea_vs_market.score} label="I" /> : null}
+                      </div>
+                      <Countdown deadline={o.deadlineAt} decided={!!o.decision} />
+                      <span className="text-faint">→</span>
+                    </Link>
+                  ))
+              )}
+            </section>
+
+            {/* Strong matches still queued */}
+            <section className="mt-5 border border-line bg-card">
+              <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+                <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+                  Strong matches from your search (score {threshold}+)
+                </span>
+                <Link href="/radar" className="font-mono text-[11px] text-accent hover:underline">
+                  See all finds →
+                </Link>
+              </div>
+              {crossed.length === 0 ? (
+                <p className="px-4 py-6 text-center text-[12.5px] text-faint">
+                  No strong matches yet — run a search.
+                </p>
+              ) : (
+                crossed.slice(0, 5).map((o, i) => (
+                  <Link
+                    key={o.id}
+                    href={`/opportunity/${o.id}`}
+                    className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 hover:bg-paper"
+                  >
+                    <span className="tnum shrink-0 font-mono text-[11px] text-faint">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="font-mono text-[13px] font-semibold">
+                          {o.founders[0]?.name ?? "Unknown"}
+                        </span>
+                        <span className="text-[12px] text-muted">· {o.company}</span>
+                        {o.screenResult ? (
+                          <Badge tone={o.screenResult === "pass" ? "ok" : "bad"}>
+                            {o.screenResult === "pass" ? "passed first check" : "screened out"}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <div className="truncate text-[11.5px] text-faint">{o.convictionReason}</div>
+                    </div>
+                    <div className="hidden items-center gap-1 sm:flex">
+                      <TrendArrow trend={o.axes.founder?.trend} title="founder axis" />
+                      <TrendArrow trend={o.axes.market?.trend} title="market axis" />
+                      <TrendArrow trend={o.axes.idea_vs_market?.trend} title="idea axis" />
+                    </div>
+                    <span className="tnum shrink-0 font-mono text-xl font-bold text-accent">{o.convictionScore}</span>
+                  </Link>
+                ))
+              )}
+            </section>
+
+            {/* Agent activity */}
+            <section className="mt-5 border border-line bg-card">
+              <div className="border-b border-line px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+                Agent activity · reasoning trace
+              </div>
+              <div className="grid gap-x-6 gap-y-1.5 px-4 py-3 xl:grid-cols-2">
+                {activity.length === 0 ? (
+                  <p className="py-3 text-center text-[12.5px] text-faint xl:col-span-2">
+                    No agent activity yet — run diligence on a deal.
+                  </p>
+                ) : (
+                  activity.map((a) => (
+                    <TraceLine
+                      key={a.id}
+                      at={a.createdAt}
+                      agent={`${a.agent}Agent`}
+                      text={`${a.company}: ${a.outputSummary ?? ""}`}
+                    />
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
+
+          {/* Quick actions */}
+          <aside className="flex flex-col gap-2.5">
+            <QuickAction
+              href="/thesis"
+              title="Edit your thesis"
+              sub="Change what you invest in — every future check uses the new profile."
+            />
+            <QuickAction
+              href="/radar"
+              title="Find founders"
+              sub={`${crossed.length} strong matches so far · we look before they start raising.`}
+            />
+            <QuickAction
+              href="/pipeline"
+              title="Open pipeline"
+              sub={`${undecided.length} deals in play · ${urgent.length} with less than 4h on the clock.`}
+            />
+            <QuickAction
+              href="/diligence"
+              title="Review memos"
+              sub={`${awaiting.length} fully checked · waiting on your yes or no.`}
+            />
+            {/* Top pipeline snapshot */}
+            <div className="mt-2 border border-line bg-card">
+              <div className="border-b border-line px-3.5 py-2 font-mono text-[10.5px] uppercase tracking-[0.15em] text-muted">
+                Next on the clock
+              </div>
+              {undecided
+                .filter((o) => o.deadlineAt && new Date(o.deadlineAt).getTime() > now)
+                .sort((a, b) => new Date(a.deadlineAt!).getTime() - new Date(b.deadlineAt!).getTime())
+                .slice(0, 4)
+                .map((o) => (
+                  <Link key={o.id} href={`/opportunity/${o.id}`} className="flex items-center justify-between gap-2 border-b border-line px-3.5 py-2 last:border-b-0 hover:bg-paper">
+                    <div className="min-w-0">
+                      <div className="truncate font-mono text-[12px] font-semibold">{o.company}</div>
+                      <div className="truncate text-[10.5px] text-faint">{o.founders[0]?.name}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {o.axes.founder ? <ScorePill n={o.axes.founder.score} /> : null}
+                      <Countdown deadline={o.deadlineAt} decided={!!o.decision} />
+                    </div>
+                  </Link>
+                ))}
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      {showApply && (
+        <ApplyModal
+          onClose={() => setShowApply(false)}
+          onDone={(id) => {
+            setShowApply(false);
+            router.push(`/opportunity/${id}`);
+          }}
         />
-        <button onClick={run} disabled={loading} className="rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-white disabled:opacity-50">
-          {loading ? "Searching…" : "Search"}
-        </button>
-        {active ? <button onClick={() => { setQ(""); onClear(); }} className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800">Clear</button> : null}
-      </div>
-      {err ? <p className="mt-1 text-xs text-rose-400">{err}</p> : null}
+      )}
     </div>
   );
 }
 
-function ApplyModal({ onClose, onDone }: { onClose: () => void; onDone: (id: string) => void }) {
-  const [companyName, setCompanyName] = useState("");
-  const [text, setText] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function submit() {
-    if (!companyName && !text && !file) { setErr("Add a company name and a deck (file or pasted text)."); return; }
-    setLoading(true);
-    setErr(null);
-    try {
-      const fd = new FormData();
-      fd.set("companyName", companyName);
-      if (text) fd.set("text", text);
-      if (file) fd.set("deck", file);
-      const r = await api<{ opportunityId: string }>("/api/apply", { method: "POST", body: fd });
-      onDone(r.opportunityId);
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
+function QuickAction({ href, title, sub }: { href: string; title: string; sub: string }) {
   return (
-    <Modal title="New application — deck + company name" onClose={onClose}>
-      <label className="block text-xs text-slate-400">Company name</label>
-      <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm" placeholder="Acme AI" />
-      <label className="mt-3 block text-xs text-slate-400">Deck (PDF or image)</label>
-      <input type="file" accept=".pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="mt-1 w-full text-sm text-slate-300 file:mr-3 file:rounded file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-slate-200" />
-      <label className="mt-3 block text-xs text-slate-400">…or paste deck text</label>
-      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={5} className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm" placeholder="Problem, product, team, traction…" />
-      {err ? <p className="mt-2 text-xs text-rose-400">{err}</p> : null}
-      <div className="mt-4 flex justify-end gap-2">
-        <button onClick={onClose} className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-300">Cancel</button>
-        <button onClick={submit} disabled={loading} className="rounded-md bg-indigo-500 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50">
-          {loading ? "Parsing + screening…" : "Submit application"}
-        </button>
+    <Link href={href} className="group border border-line bg-card px-4 py-3.5 transition-colors hover:border-linestrong">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[13px] font-semibold">{title}</span>
+        <span className="text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-accent">→</span>
       </div>
-    </Modal>
-  );
-}
-
-function ThesisModal({ current, onClose, onDone }: { current: Thesis | null; onClose: () => void; onDone: () => void }) {
-  const [name, setName] = useState(current?.name ?? "Pre-seed / seed AI infra (US + EU)");
-  const [sectors, setSectors] = useState((current?.sectors ?? ["AI infrastructure", "developer tools"]).join(", "));
-  const [stages, setStages] = useState((current?.stages ?? ["pre-seed", "seed"]).join(", "));
-  const [geographies, setGeographies] = useState((current?.geographies ?? ["USA", "EU"]).join(", "));
-  const [risk, setRisk] = useState(current?.riskAppetite ?? "high");
-  const [notes, setNotes] = useState(current?.notes ?? "");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function save() {
-    setLoading(true);
-    setErr(null);
-    try {
-      await api("/api/thesis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          sectors: sectors.split(",").map((s) => s.trim()).filter(Boolean),
-          stages: stages.split(",").map((s) => s.trim()).filter(Boolean),
-          geographies: geographies.split(",").map((s) => s.trim()).filter(Boolean),
-          riskAppetite: risk,
-          notes,
-        }),
-      });
-      onDone();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const field = "mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm";
-  return (
-    <Modal title="Fund thesis" onClose={onClose}>
-      <label className="block text-xs text-slate-400">Name</label>
-      <input value={name} onChange={(e) => setName(e.target.value)} className={field} />
-      <label className="mt-3 block text-xs text-slate-400">Sectors (comma-separated)</label>
-      <input value={sectors} onChange={(e) => setSectors(e.target.value)} className={field} />
-      <label className="mt-3 block text-xs text-slate-400">Stages</label>
-      <input value={stages} onChange={(e) => setStages(e.target.value)} className={field} />
-      <label className="mt-3 block text-xs text-slate-400">Geographies</label>
-      <input value={geographies} onChange={(e) => setGeographies(e.target.value)} className={field} />
-      <label className="mt-3 block text-xs text-slate-400">Risk appetite</label>
-      <select value={risk} onChange={(e) => setRisk(e.target.value)} className={field}>
-        <option value="low">low</option>
-        <option value="medium">medium</option>
-        <option value="high">high</option>
-      </select>
-      <label className="mt-3 block text-xs text-slate-400">Notes</label>
-      <input value={notes} onChange={(e) => setNotes(e.target.value)} className={field} />
-      {err ? <p className="mt-2 text-xs text-rose-400">{err}</p> : null}
-      <div className="mt-4 flex justify-end gap-2">
-        <button onClick={onClose} className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-300">Cancel</button>
-        <button onClick={save} disabled={loading} className="rounded-md bg-indigo-500 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50">{loading ? "Saving…" : "Save thesis"}</button>
-      </div>
-    </Modal>
-  );
-}
-
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-16" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-xl border border-slate-700 bg-slate-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-100">{title}</h2>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-300">✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
+      <p className="mt-1 text-[11.5px] text-muted">{sub}</p>
+    </Link>
   );
 }

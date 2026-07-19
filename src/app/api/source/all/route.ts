@@ -11,3 +11,13 @@ export async function POST() {
     return fail(errMessage(e));
   }
 }
+
+// Vercel cron hits GET hourly (vercel.json) — "continuously scan", not
+// button-triggered. Same sweep + conviction-threshold auto-screen.
+export async function GET() {
+  try {
+    return ok(await sourceAll());
+  } catch (e) {
+    return fail(errMessage(e));
+  }
+}

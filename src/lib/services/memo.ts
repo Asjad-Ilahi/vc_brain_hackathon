@@ -67,10 +67,11 @@ export async function buildMemo(opportunityId: string) {
         .returning()
     : [];
 
-  // Decision + time-to-decision instrumentation.
+  // The memo only RECOMMENDS. The decision (and decidedAt) belongs to the human —
+  // "one human in the loop for oversight". See /api/opportunities/[id]/decide.
   await db
     .update(opportunities)
-    .set({ status: "decided", decision: memo.recommendation, decidedAt: new Date() })
+    .set({ status: "awaiting_decision" })
     .where(eq(opportunities.id, opportunityId));
 
   await db.insert(reasoningSteps).values({
