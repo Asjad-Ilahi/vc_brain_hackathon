@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import DarkVeilClient from "./_components/DarkVeilClient";
 
@@ -145,6 +146,26 @@ function StepBadge({ n }: { n: string }) {
 
 /** Public landing page — VC.Brain */
 export default function LandingPage() {
+  const [showModal, setShowModal] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [pitchText, setPitchText] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  const HUD_STEPS = [
+    "Uploading and reading pitch deck contents...",
+    "Parsing metadata and structuring core claims...",
+    "Cross-referencing signals and founder footprints...",
+    "Evaluating Founder, Market, and Idea axes...",
+    "Finalizing recommendation for the 24-hour queue..."
+  ];
+
   const TICKER_ITEMS = [
     "Investment Intelligence",
     "Rapid Decisions",
@@ -226,6 +247,90 @@ export default function LandingPage() {
     },
   ];
 
+  function handleDrag(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0];
+      if (droppedFile.type.includes("pdf") || droppedFile.type.startsWith("image/")) {
+        setFile(droppedFile);
+      } else {
+        alert("Please drop a valid PDF or Image file.");
+      }
+    }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!companyName.trim()) {
+      setError("Company name is required.");
+      return;
+    }
+    if (!email.trim()) {
+      setError("Contact email is required.");
+      return;
+    }
+    if (!file && !pitchText.trim()) {
+      setError("Please upload a pitch deck file or write a brief text pitch.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    // Simulate HUD loader progression
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      if (currentStep < HUD_STEPS.length - 1) {
+        currentStep++;
+        setLoadingStep(currentStep);
+      }
+    }, 1400);
+
+    try {
+      const formData = new FormData();
+      formData.append("companyName", companyName);
+      formData.append("text", pitchText);
+      if (file) {
+        formData.append("deck", file);
+      }
+
+      const res = await fetch("/api/apply", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to submit application.");
+      }
+
+      clearInterval(interval);
+      setSubmitted(true);
+    } catch (err) {
+      clearInterval(interval);
+      setError((err as Error).message || "An unexpected error occurred.");
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-paper text-ink">
 
@@ -281,8 +386,8 @@ export default function LandingPage() {
 
           {/* CTA */}
           <div style={{ display: "flex", gap: "2px" }}>
-            <Link
-              href="/signup"
+            <button
+              onClick={() => { setSubmitted(false); setError(null); setShowModal(true); }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -293,14 +398,15 @@ export default function LandingPage() {
                 fontFamily: "var(--font-mono)",
                 fontSize: "13px",
                 fontWeight: 600,
-                textDecoration: "none",
+                border: "none",
+                cursor: "pointer",
                 borderRadius: "4px",
               }}
             >
-              Get Started
-            </Link>
-            <Link
-              href="/signup"
+              Apply Now
+            </button>
+            <button
+              onClick={() => { setSubmitted(false); setError(null); setShowModal(true); }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -308,14 +414,15 @@ export default function LandingPage() {
                 padding: "0 14px",
                 background: "#fff",
                 color: "#0045FF",
+                border: "none",
+                cursor: "pointer",
                 borderRadius: "4px",
-                textDecoration: "none",
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
-            </Link>
+            </button>
           </div>
         </div>
       </header>
@@ -448,7 +555,7 @@ export default function LandingPage() {
           {/* CTAs */}
           <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
             <Link
-              href="/signin"
+              href="/admin"
               style={{
                 padding: "14px 28px",
                 border: "1.5px solid rgba(255,255,255,0.85)",
@@ -465,8 +572,8 @@ export default function LandingPage() {
             </Link>
 
             <div style={{ display: "flex", gap: "6px" }}>
-              <Link
-                href="/signup"
+              <button
+                onClick={() => { setSubmitted(false); setError(null); setShowModal(true); }}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -477,14 +584,15 @@ export default function LandingPage() {
                   fontFamily: "var(--font-sans)",
                   fontSize: "15px",
                   fontWeight: 600,
-                  textDecoration: "none",
+                  border: "none",
+                  cursor: "pointer",
                   borderRadius: "6px",
                 }}
               >
-                Start Onboarding
-              </Link>
-              <Link
-                href="/signup"
+                Apply for Funding
+              </button>
+              <button
+                onClick={() => { setSubmitted(false); setError(null); setShowModal(true); }}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -492,14 +600,15 @@ export default function LandingPage() {
                   padding: "0 18px",
                   background: "#fff",
                   color: "#000",
+                  border: "none",
+                  cursor: "pointer",
                   borderRadius: "6px",
-                  textDecoration: "none",
                 }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -879,8 +988,8 @@ export default function LandingPage() {
             Answer a few questions. Walk out with a live pipeline.
           </p>
           <div style={{ display: "inline-flex", gap: "6px", alignItems: "stretch", justifyContent: "center" }}>
-            <Link
-              href="/signup"
+            <button
+              onClick={() => { setSubmitted(false); setError(null); setShowModal(true); }}
               className="cta-btn-main"
               style={{
                 display: "flex",
@@ -892,14 +1001,15 @@ export default function LandingPage() {
                 fontFamily: "var(--font-sans)",
                 fontSize: "18px",
                 fontWeight: 600,
-                textDecoration: "none",
+                border: "none",
+                cursor: "pointer",
                 borderRadius: "4px",
               }}
             >
-              Start Onboarding
-            </Link>
-            <Link
-              href="/signup"
+              Apply for Funding
+            </button>
+            <button
+              onClick={() => { setSubmitted(false); setError(null); setShowModal(true); }}
               className="cta-btn-arrow"
               style={{
                 display: "flex",
@@ -908,14 +1018,15 @@ export default function LandingPage() {
                 padding: "0 22px",
                 background: "#fff",
                 color: "#000",
+                border: "none",
+                cursor: "pointer",
                 borderRadius: "4px",
-                textDecoration: "none",
               }}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
-            </Link>
+            </button>
           </div>
         </div>
       </section>
@@ -942,7 +1053,7 @@ export default function LandingPage() {
             color: "#9E9E9E",
           }}
         >
-          © VC.Brain · v0.9
+          © VC.Brain · v0.9 · <Link href="/admin" style={{ textDecoration: "underline", color: "#666" }}>Investor Command Center</Link>
         </span>
         <span
           style={{
@@ -954,6 +1065,344 @@ export default function LandingPage() {
           Sourcing → Screening → Diligence → Decision · one human in the loop
         </span>
       </footer>
+
+      {/* ─────────────────── PITCH APPLICATION MODAL ─────────────────── */}
+      {showModal && (
+        <div 
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            background: "rgba(7, 9, 14, 0.8)",
+            backdropFilter: "blur(12px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            color: "#fff",
+            fontFamily: "var(--font-sans)",
+          }}
+        >
+          <div 
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: "540px",
+              background: "rgba(255, 255, 255, 0.02)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "24px",
+              padding: "36px",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.5)",
+              overflow: "hidden"
+            }}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setShowModal(false)}
+              style={{
+                position: "absolute",
+                top: "24px",
+                right: "24px",
+                background: "none",
+                border: "none",
+                color: "rgba(255, 255, 255, 0.4)",
+                fontSize: "20px",
+                cursor: "pointer",
+                padding: "4px"
+              }}
+            >
+              ✕
+            </button>
+
+            {!submitted ? (
+              <>
+                <div style={{ textAlign: "center", marginBottom: "28px" }}>
+                  <span style={{
+                    background: "rgba(0, 69, 255, 0.12)",
+                    border: "1px solid rgba(0, 69, 255, 0.3)",
+                    borderRadius: "9999px",
+                    padding: "4px 12px",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    color: "#3B71FE"
+                  }}>
+                    Zero-Friction Submission
+                  </span>
+                  <h3 style={{ fontSize: "22px", fontWeight: 700, marginTop: "12px" }}>Submit Pitch Deck</h3>
+                  <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.5)", marginTop: "6px" }}>
+                    Get a data-backed screening decision within 24 hours.
+                  </p>
+                </div>
+
+                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {error && (
+                    <div style={{
+                      background: "rgba(239, 68, 68, 0.1)",
+                      border: "1px solid rgba(239, 68, 68, 0.2)",
+                      borderRadius: "12px",
+                      padding: "12px",
+                      fontSize: "12.5px",
+                      color: "#f87171",
+                      textAlign: "center"
+                    }}>
+                      {error}
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: "12px" }}>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <label style={{ fontSize: "11.5px", fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Company Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="e.g. Cursor"
+                        style={{
+                          background: "#F8F8F8",
+                          border: "none",
+                          borderRadius: "9999px",
+                          padding: "14px 24px",
+                          fontSize: "13.5px",
+                          color: "#000000",
+                          outline: "none"
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <label style={{ fontSize: "11.5px", fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Contact Email</label>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="founder@fund.group"
+                        style={{
+                          background: "#F8F8F8",
+                          border: "none",
+                          borderRadius: "9999px",
+                          padding: "14px 24px",
+                          fontSize: "13.5px",
+                          color: "#000000",
+                          outline: "none"
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={{ fontSize: "11.5px", fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Founder Name</label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Lena Chen"
+                      style={{
+                        background: "#F8F8F8",
+                        border: "none",
+                        borderRadius: "9999px",
+                        padding: "14px 24px",
+                        fontSize: "13.5px",
+                        color: "#000000",
+                        outline: "none"
+                      }}
+                    />
+                  </div>
+
+                  {/* Drag/Drop */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={{ fontSize: "11.5px", fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Deck PDF / Image</label>
+                    <div
+                      onDragEnter={handleDrag}
+                      onDragOver={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDrop={handleDrop}
+                      style={{
+                        background: dragActive ? "rgba(0,69,255,0.05)" : "rgba(255,255,255,0.01)",
+                        border: dragActive ? "1px dashed #0045FF" : "1px dashed rgba(255,255,255,0.1)",
+                        borderRadius: "24px",
+                        padding: "24px",
+                        textAlign: "center",
+                        cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      <input
+                        type="file"
+                        id="deck-file-modal"
+                        accept=".pdf,image/*"
+                        onChange={handleFileChange}
+                        style={{ display: "none" }}
+                      />
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" style={{ margin: "0 auto 8px" }}>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                      </svg>
+                      {file ? (
+                        <div>
+                          <p style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>{file.name}</p>
+                          <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", marginTop: "2px" }}>
+                            {(file.size / 1024 / 1024).toFixed(2)} MB · Ready to parse
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <p style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.8)" }}>
+                            Drag and drop your pitch deck file here, or{" "}
+                            <label htmlFor="deck-file-modal" style={{ color: "#0045FF", fontWeight: 600, cursor: "pointer" }}>
+                              browse
+                            </label>
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={{ fontSize: "11.5px", fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Or paste pitch details</label>
+                    <textarea
+                      value={pitchText}
+                      onChange={(e) => setPitchText(e.target.value)}
+                      placeholder="One-liner, sector, stage, problem, product, and founder background details..."
+                      rows={3}
+                      style={{
+                        background: "#F8F8F8",
+                        border: "none",
+                        borderRadius: "20px",
+                        padding: "16px 24px",
+                        fontSize: "13.5px",
+                        color: "#000000",
+                        outline: "none",
+                        resize: "none"
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    style={{
+                      background: "linear-gradient(90deg, #0045FF 0%, #002999 100%)",
+                      border: "none",
+                      borderRadius: "12px",
+                      padding: "14px 0",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      color: "#fff",
+                      cursor: "pointer",
+                      marginTop: "8px",
+                      boxShadow: "0 4px 15px rgba(0,69,255,0.3)"
+                    }}
+                  >
+                    Submit Pitch Deck
+                  </button>
+                </form>
+              </>
+            ) : (
+              <div style={{ textAlign: "center", padding: "16px 0" }}>
+                <div style={{
+                  display: "inline-flex",
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "50%",
+                  background: "rgba(16, 185, 129, 0.1)",
+                  border: "1px solid rgba(16, 185, 129, 0.2)",
+                  color: "#10B981",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: "24px"
+                }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <h4 style={{ fontSize: "20px", fontWeight: 700 }}>Pitch Submitted</h4>
+                <p style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.5)", marginTop: "10px", lineHeight: 1.6 }}>
+                  Your details have been successfully queued for screening. Our automated systems will review your alignment and deliver our decision to <strong style={{ color: "#fff" }}>{email}</strong> within 24 hours.
+                </p>
+                <button
+                  onClick={() => setShowModal(false)}
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "10px",
+                    padding: "10px 24px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#fff",
+                    cursor: "pointer",
+                    marginTop: "28px"
+                  }}
+                >
+                  Close Window
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Holographic Loader Overlay */}
+      {loading && !submitted && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 200,
+          background: "rgba(7, 9, 14, 0.95)",
+          backdropFilter: "blur(6px)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center"
+        }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", maxWidth: "400px", textAlign: "center", padding: "20px" }}>
+            <div style={{ position: "relative", width: "64px", height: "64px", marginBottom: "32px" }}>
+              <div style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "50%",
+                border: "4px solid #0045FF",
+                borderTopColor: "transparent",
+                animation: "spin 1s linear infinite"
+              }}></div>
+              <div style={{
+                position: "absolute",
+                inset: "-8px",
+                borderRadius: "50%",
+                border: "1px solid rgba(0, 194, 255, 0.3)",
+                animation: "ping 1s cubic-bezier(0, 0, 0.2, 1) infinite"
+              }}></div>
+            </div>
+            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#fff", letterSpacing: "0.08em", textTransform: "uppercase" }}>VC Brain Screening</h3>
+            <p style={{ fontSize: "13px", fontFamily: "var(--font-mono)", color: "rgba(255,255,255,0.6)", marginTop: "8px", height: "40px" }}>
+              {HUD_STEPS[loadingStep]}
+            </p>
+            <div style={{ width: "192px", height: "6px", background: "rgba(255,255,255,0.05)", borderRadius: "9999px", overflow: "hidden", marginTop: "32px" }}>
+              <div 
+                style={{
+                  height: "100%",
+                  background: "linear-gradient(90deg, #0045FF, #00C2FF)",
+                  width: `${((loadingStep + 1) / HUD_STEPS.length) * 100}%`,
+                  transition: "width 1s ease"
+                }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSS Animation Keyframes Inject */}
+      <style jsx global>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes ping {
+          75%, 100% {
+            transform: scale(2);
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 }

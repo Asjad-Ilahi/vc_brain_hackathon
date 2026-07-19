@@ -16,7 +16,7 @@ const NAV = [
 ];
 
 // Pages that render without the workspace chrome.
-const PUBLIC_PATHS = ["/signin", "/signup", "/onboarding"];
+const PUBLIC_PATHS = ["/signin", "/signup", "/onboarding", "/admin"];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

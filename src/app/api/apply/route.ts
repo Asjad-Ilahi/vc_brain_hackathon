@@ -4,7 +4,7 @@
  * Flow: parse deck -> build company/founders/signals -> create opportunity -> screen.
  */
 import { db } from "@/db/client";
-import { opportunities } from "@/db/schema";
+import { opportunities, theses, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { parseDeck, pdfToText } from "@/lib/services/deck";
 import { createOpportunity } from "@/lib/services/opportunity";
@@ -45,24 +45,39 @@ export async function POST(req: Request) {
       deckText = b?.text;
     }
 
-    const url = new URL(req.url);
-    const ref = url.searchParams.get("ref");
-
-    const user = await userFromRequest(req).catch(() => null);
-
     if (!companyName && !deckText && !imageDataUrl)
       return fail("Provide at least a company name and a deck (file or text).", 400);
 
+    const url = new URL(req.url);
+    const ref = url.searchParams.get("ref") || undefined;
+
+    const user = await userFromRequest(req).catch(() => null);
+    let thesisId: string | null = null;
+
+    if (user) {
+      const thesis = await getActiveThesis(user.id);
+      thesisId = thesis?.id ?? null;
+    } else {
+      // Public submission: use the first active thesis globally
+      const activeThesis = await db
+        .select({ id: theses.id })
+        .from(theses)
+        .where(eq(theses.isActive, true))
+        .limit(1);
+      if (activeThesis.length > 0) {
+        thesisId = activeThesis[0].id;
+      }
+    }
+
     // 1) Intake -> structured spec
     const extraction = await parseDeck({ companyName, text: deckText, imageDataUrl });
-    const thesis = user ? await getActiveThesis(user.id) : await getActiveThesis();
 
     // 2) Create opportunity (Memory ingestion happens inside)
     const { opportunityId, returningFounders } = await createOpportunity({
       existingOpportunityId: ref,
       source: "inbound",
       sourceChannel: "application",
-      thesisId: thesis?.id ?? null,
+      thesisId,
       company: {
         name: extraction.companyName || companyName || "Unnamed",
         sector: extraction.sector,

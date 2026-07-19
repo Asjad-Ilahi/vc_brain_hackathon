@@ -6,12 +6,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
-const PUBLIC_PAGES = new Set(["/", "/signin", "/signup"]);
+const PUBLIC_PAGES = new Set(["/", "/admin", "/signin", "/signup"]);
 
 function isPublic(req: NextRequest): boolean {
   const { pathname } = req.nextUrl;
   if (PUBLIC_PAGES.has(pathname)) return true;
   if (pathname.startsWith("/api/auth/")) return true;
+  if (pathname === "/api/apply" && req.method === "POST") return true;
   // Vercel cron fires GET /api/source/all on a schedule (no session). With
   // CRON_SECRET set, Vercel sends it as a Bearer token — require it, since a
   // user-agent alone is spoofable (and this endpoint spends API credits).
@@ -32,10 +33,10 @@ export default async function proxy(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.json({ ok: false, error: "Not signed in." }, { status: 401 });
   }
-  const signin = req.nextUrl.clone();
-  signin.pathname = "/signin";
-  signin.search = `?next=${encodeURIComponent(req.nextUrl.pathname)}`;
-  return NextResponse.redirect(signin);
+  const adminUrl = req.nextUrl.clone();
+  adminUrl.pathname = "/admin";
+  adminUrl.search = `?next=${encodeURIComponent(req.nextUrl.pathname)}`;
+  return NextResponse.redirect(adminUrl);
 }
 
 export const config = {

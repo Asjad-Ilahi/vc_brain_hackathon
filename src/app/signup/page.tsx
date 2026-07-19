@@ -1,9 +1,12 @@
-import CalibrationWizard from "../_components/CalibrationWizard";
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-/**
- * Sign up IS the calibration: account + identity + fund + lens + founder lens
- * + signals, reviewed and launched atomically (account → thesis → first sweep).
- */
-export default function SignUpPage() {
-  return <CalibrationWizard mode="signup" />;
+export default function SignUpRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/admin");
+  }, [router]);
+
+  return null;
 }

@@ -204,7 +204,7 @@ export function Modal({ title, children, onClose }: { title: string; children: R
 }
 
 export const inputCls =
-  "mt-1.5 w-full rounded-2xl border border-line bg-cardalt px-4 py-3 text-[14px] text-ink outline-none transition-colors placeholder:text-faint focus:border-brand focus:bg-white";
+  "mt-1.5 w-full rounded-full border-none bg-[#F8F8F8] px-6 py-4.5 text-[14px] text-ink outline-none transition-colors placeholder:text-faint focus:bg-[#f0f0f0]";
 export const labelCls = "block text-[12.5px] font-bold text-ink";
 
 /* -------------------------------- axis card -------------------------------- */

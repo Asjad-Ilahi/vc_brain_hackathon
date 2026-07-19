@@ -95,6 +95,10 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
+input, textarea {
+  border: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;

@@ -59,24 +59,14 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
   const [existing, setExisting] = useState<{ workspaceName?: string; calibratedBy?: string | null } | null>(null);
   const joinMode = mode === "signup" && existing !== null;
 
-  const STEPS = mode === "signup"
-    ? [
-        { id: "you",     n: "01", label: "You" },
-        { id: "fund",    n: "02", label: "Fund" },
-        { id: "lens",    n: "03", label: "Lens" },
-        { id: "founder", n: "04", label: "Founders" },
-        { id: "signals", n: "05", label: "Signals" },
-        { id: "account", n: "06", label: "Account" },
-        { id: "launch",  n: "07", label: "Launch" },
-      ] as const
-    : [
-        { id: "you",     n: "01", label: "You" },
-        { id: "fund",    n: "02", label: "Fund" },
-        { id: "lens",    n: "03", label: "Lens" },
-        { id: "founder", n: "04", label: "Founders" },
-        { id: "signals", n: "05", label: "Signals" },
-        { id: "launch",  n: "06", label: "Launch" },
-      ] as const;
+  const STEPS = [
+    { id: "you", n: "01", label: "You" },
+    { id: "fund", n: "02", label: "Fund" },
+    { id: "lens", n: "03", label: "Lens" },
+    { id: "founder", n: "04", label: "Founders" },
+    { id: "signals", n: "05", label: "Signals" },
+    { id: "launch", n: "06", label: "Launch" },
+  ] as const;
 
   /* ------------------------------ persistence ------------------------------ */
   // Draft autosaves locally — the password NEVER touches storage.
@@ -190,11 +180,6 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
         case "signals":
           if (draft.enabledSources.length === 0) return "Turn on at least one source.";
           return null;
-        case "account":
-          if (!EMAIL_RE.test(account.email.trim())) return "A valid work email is required.";
-          if (account.password.length < 8) return "Password must be at least 8 characters.";
-          if (account.password !== confirmPassword) return "Passwords do not match.";
-          return null;
         case "launch":
           if (!confirmed) return "Tick the confirmation box to launch.";
           return null;
@@ -222,15 +207,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
     setLaunching(true);
     setErr(null);
     try {
-      // Step 1: Create the account (signup mode only)
-      if (mode === "signup") {
-        await postJson("/api/auth/signup", {
-          name: account.name.trim(),
-          email: account.email.trim(),
-          password: account.password,
-        });
-      }
-      // Step 2: Save the thesis calibration
+      // Save the thesis calibration
       if (!joinMode) {
         const name =
           identity.fundName.trim() ||
@@ -607,58 +584,6 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
                     </div>
                   </div>
                 </div>
-              </div>
-            </StepShell>
-          )}
-
-          {STEPS[step].id === "account" && (
-            <StepShell
-              n={STEPS[step].n}
-              total={STEPS.length}
-              title="Secure your account."
-              sub="Your credentials are never stored in plain text. The session is cryptographically signed and expires automatically."
-            >
-              <div className="grid gap-8 md:grid-cols-2">
-                <Field label="Work Email" hint="Prefilled from Step 1">
-                  <input
-                    value={account.email}
-                    onChange={(e) => setAccount({ ...account, email: e.target.value })}
-                    className={inputCls}
-                    placeholder="lena@fund.group"
-                    type="email"
-                    autoComplete="email"
-                  />
-                </Field>
-                <div />
-                <Field label="Password" hint="8+ characters">
-                  <div className="relative">
-                    <input
-                      value={account.password}
-                      onChange={(e) => setAccount({ ...account, password: e.target.value })}
-                      className={`${inputCls} pr-14`}
-                      type={showPw ? "text" : "password"}
-                      autoComplete="new-password"
-                      placeholder="Enter password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPw((v) => !v)}
-                      className="absolute right-5 top-1/2 -translate-y-1/2 font-sans text-[10px] font-bold uppercase text-[#6E6E6E] hover:text-[#000000]"
-                    >
-                      {showPw ? "hide" : "show"}
-                    </button>
-                  </div>
-                </Field>
-                <Field label="Confirm Password">
-                  <input
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={inputCls}
-                    type={showPw ? "text" : "password"}
-                    autoComplete="new-password"
-                    placeholder="Confirm password"
-                  />
-                </Field>
               </div>
             </StepShell>
           )}
