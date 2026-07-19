@@ -353,10 +353,18 @@ export default function OpportunityDetail({ id }: { id: string }) {
             )}
           </StripCell>
           <StripCell label="Market">
-            {s.axes.market ? <TrendArrow trend={s.axes.market.trend} /> : <span className="text-[13px] text-faint">—</span>}
+            {s.axes.market ? (
+              <span className={`tnum text-[24px] font-bold ${scoreTone(s.axes.market.score)}`}>{s.axes.market.score}</span>
+            ) : (
+              <span className="text-[13px] text-faint">—</span>
+            )}
           </StripCell>
           <StripCell label="Idea vs market">
-            {s.axes.idea_vs_market ? <TrendArrow trend={s.axes.idea_vs_market.trend} /> : <span className="text-[13px] text-faint">—</span>}
+            {s.axes.idea_vs_market ? (
+              <span className={`tnum text-[24px] font-bold ${scoreTone(s.axes.idea_vs_market.score)}`}>{s.axes.idea_vs_market.score}</span>
+            ) : (
+              <span className="text-[13px] text-faint">—</span>
+            )}
           </StripCell>
           <StripCell label="Contradictions">
             <span className={`tnum text-[24px] font-bold ${contradictions.length > 0 ? "text-bad" : "text-ok"}`}>
@@ -392,7 +400,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 {s.source === "outbound" && !s.decision ? (
                   <GhostButton onClick={draftOutreach} disabled={running}>⚡ Draft outreach</GhostButton>
                 ) : null}
-                {!s.decision ? (
+                {!s.decision && !memo ? (
                   rejected ? (
                     <PrimaryButton tone="ink" onClick={() => runDiligence({ force: true })} disabled={running}>
                       {running ? "Running…" : "Override gate → full diligence"}
