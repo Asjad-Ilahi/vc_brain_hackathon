@@ -2,9 +2,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-
-const IN = "w-full rounded-2xl border border-[#e6e8ee] bg-white px-4 py-3 text-[13.5px] text-ink outline-none transition-colors placeholder:text-faint focus:border-[#0045FF]";
-const LBL = "text-[10.5px] font-bold uppercase tracking-wider text-muted";
+import { inputCls, labelCls } from "../_components/ui";
 
 function ApplyPageContent() {
   const searchParams = useSearchParams();
@@ -131,35 +129,35 @@ function ApplyPageContent() {
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="flex flex-col gap-1.5">
-                    <label className={LBL}>Company name *</label>
-                    <input className={IN} required value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g. Cursor" />
+                    <label className={labelCls}>Company name *</label>
+                    <input className={inputCls} required value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g. Cursor" />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className={LBL}>Contact email *</label>
-                    <input className={IN} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="founder@company.com" />
+                    <label className={labelCls}>Contact email *</label>
+                    <input className={inputCls} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="founder@company.com" />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className={LBL}>Founder name</label>
-                  <input className={IN} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Lena Chen" />
+                  <label className={labelCls}>Founder name</label>
+                  <input className={inputCls} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Lena Chen" />
                 </div>
 
                 <div className="border-t border-[#eceef3] pt-4">
-                  <label className={`${LBL} mb-2.5 block`}>Public footprint handles <span className="normal-case text-faint">(for enrichment)</span></label>
+                  <label className={`${labelCls} mb-2.5 block`}>Public footprint handles <span className="normal-case text-faint">(for enrichment)</span></label>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <div className="flex flex-col gap-1"><span className="text-[10px] text-faint">GitHub</span><input className={IN} value={github} onChange={(e) => setGithub(e.target.value)} placeholder="github_login" /></div>
-                    <div className="flex flex-col gap-1"><span className="text-[10px] text-faint">Twitter / X</span><input className={IN} value={twitter} onChange={(e) => setTwitter(e.target.value)} placeholder="handle" /></div>
-                    <div className="flex flex-col gap-1"><span className="text-[10px] text-faint">LinkedIn URL</span><input className={IN} value={linkedin} onChange={(e) => setLinkedin(e.target.value)} placeholder="in/username" /></div>
+                    <div className="flex flex-col gap-1"><span className="text-[10px] text-faint">GitHub</span><input className={inputCls} value={github} onChange={(e) => setGithub(e.target.value)} placeholder="github_login" /></div>
+                    <div className="flex flex-col gap-1"><span className="text-[10px] text-faint">Twitter / X</span><input className={inputCls} value={twitter} onChange={(e) => setTwitter(e.target.value)} placeholder="handle" /></div>
+                    <div className="flex flex-col gap-1"><span className="text-[10px] text-faint">LinkedIn URL</span><input className={inputCls} value={linkedin} onChange={(e) => setLinkedin(e.target.value)} placeholder="in/username" /></div>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className={LBL}>Pitch deck PDF / image *</label>
+                  <label className={labelCls}>Pitch deck PDF / image *</label>
                   <div
                     onDragEnter={handleDrag} onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop}
                     onClick={() => document.getElementById("deck-file-apply")?.click()}
-                    className={`cursor-pointer rounded-2xl border border-dashed p-6 text-center transition-colors ${dragActive ? "border-[#0045FF] bg-[#EBF0FF]" : "border-[#d7dbe4] bg-[#fafbfd] hover:border-[#0045FF]/50"}`}
+                    className={`cursor-pointer rounded-2xl border border-dashed p-6 text-center transition-colors ${dragActive ? "border-[#0045FF] bg-[#EBF0FF]" : "border-[#e6e8ee] bg-[#F8F8F8] hover:border-[#0045FF]/50"}`}
                   >
                     <input type="file" id="deck-file-apply" accept=".pdf,image/*" onChange={handleFileChange} className="hidden" />
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0045FF" strokeWidth="1.6" className="mx-auto mb-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
@@ -172,13 +170,13 @@ function ApplyPageContent() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className={LBL}>Or paste pitch details</label>
-                  <textarea className={`${IN} resize-none`} rows={4} value={pitchText} onChange={(e) => setPitchText(e.target.value)} placeholder="One-liner, sector, stage, problem, product details, or co-founder background…" />
+                  <label className={labelCls}>Or paste pitch details</label>
+                  <textarea className={`${inputCls} resize-none`} rows={4} value={pitchText} onChange={(e) => setPitchText(e.target.value)} placeholder="One-liner, sector, stage, problem, product details, or co-founder background…" />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className={LBL}>Interview / call notes <span className="normal-case text-faint">(optional)</span></label>
-                  <textarea className={`${IN} resize-none`} rows={3} value={interviewText} onChange={(e) => setInterviewText(e.target.value)} placeholder="Paste notes from a call or interview — they become a separate evidence source the validator cross-checks against your deck." />
+                  <label className={labelCls}>Interview / call notes <span className="normal-case text-faint">(optional)</span></label>
+                  <textarea className={`${inputCls} resize-none`} rows={3} value={interviewText} onChange={(e) => setInterviewText(e.target.value)} placeholder="Paste notes from a call or interview — they become a separate evidence source the validator cross-checks against your deck." />
                 </div>
 
                 <button type="submit" className="u-btn-primary mt-1 w-full justify-center py-3.5 text-[14px]">Submit application</button>
