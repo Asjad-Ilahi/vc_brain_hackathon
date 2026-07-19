@@ -31,6 +31,26 @@ function Pipeline() {
   const [filter, setFilter] = useState<"all" | "under8" | "flagged" | "inbound" | "outbound" | "screened" | "pending" | "screened_out">("all");
   const [sort, setSort] = useState<"arrangement" | "countdown" | "score" | "sector">("arrangement");
   const [showApply, setShowApply] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+
+  const filterLabels: Record<string, string> = {
+    all: "All Opportunities",
+    under8: "Urgent (< 8h)",
+    flagged: "Flagged",
+    inbound: "Applied",
+    outbound: "Found by us",
+    screened: "Screened",
+    pending: "Pending",
+    screened_out: "Screened Out",
+  };
+
+  const sortLabels: Record<string, string> = {
+    arrangement: "Arrangement",
+    countdown: "Countdown ↑",
+    score: "Score ↓",
+    sector: "Sector",
+  };
 
   const load = useCallback(async () => {
     try {
@@ -165,28 +185,92 @@ function Pipeline() {
           </div>
         ) : null}
 
-        {/* Filters + sort */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Chip active={filter === "all"} onClick={() => setFilter("all")}>All · {inboundN + outboundN}</Chip>
-          <Chip active={filter === "under8"} onClick={() => setFilter("under8")}>&lt; 8h · {under8}</Chip>
-          <Chip active={filter === "flagged"} onClick={() => setFilter("flagged")}>Flagged · {flagged}</Chip>
-          <Chip active={filter === "inbound"} onClick={() => setFilter("inbound")}>Applied · {inboundN}</Chip>
-          <Chip active={filter === "outbound"} onClick={() => setFilter("outbound")}>Found by us · {outboundN}</Chip>
-          <div className="h-4 w-px bg-line mx-1" />
-          <Chip active={filter === "screened"} onClick={() => setFilter("screened")}>Screened · {screenedN}</Chip>
-          <Chip active={filter === "pending"} onClick={() => setFilter("pending")}>Pending · {pendingN}</Chip>
-          <Chip active={filter === "screened_out"} onClick={() => setFilter("screened_out")}>Screened Out · {screenedOutN}</Chip>
-          <div className="ml-auto flex items-center gap-1 text-[11px] text-faint">
-            Sort:
-            {(["arrangement", "countdown", "score", "sector"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setSort(s)}
-                className={`px-1.5 py-0.5 font-sans font-semibold ${sort === s ? "text-[#0045FF]" : "hover:text-ink"}`}
-              >
-                {s === "arrangement" ? "Arrangement" : s === "countdown" ? "Countdown ↑" : s === "score" ? "Score ↓" : "Sector"}
-              </button>
-            ))}
+        {/* Filters + sort drop-downs */}
+        <div className="flex flex-wrap items-center gap-3 relative z-30">
+          {/* Filter Dropdown Button */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setFilterOpen(!filterOpen);
+                setSortOpen(false);
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-[13px] font-semibold bg-card border border-line rounded-lg hover:bg-paper hover:border-linestrong transition-all cursor-pointer"
+            >
+              <span>🔍 Filter: <strong className="text-[#0045FF]">{filterLabels[filter]}</strong></span>
+              <span className="text-faint text-[9px] transition-transform duration-200">▼</span>
+            </button>
+            {filterOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setFilterOpen(false)} />
+                <div className="absolute left-0 mt-1.5 w-60 bg-card border border-line rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-100">
+                  {(Object.keys(filterLabels) as Array<typeof filter>).map((key) => {
+                    const active = filter === key;
+                    const count =
+                      key === "all" ? inboundN + outboundN :
+                      key === "under8" ? under8 :
+                      key === "flagged" ? flagged :
+                      key === "inbound" ? inboundN :
+                      key === "outbound" ? outboundN :
+                      key === "screened" ? screenedN :
+                      key === "pending" ? pendingN :
+                      screenedOutN;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setFilter(key);
+                          setFilterOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-4 py-2 text-[12.5px] text-left hover:bg-paper transition-all cursor-pointer ${
+                          active ? "text-[#0045FF] font-bold bg-wash" : "text-muted font-medium"
+                        }`}
+                      >
+                        <span>{filterLabels[key]}</span>
+                        <span className="font-mono text-[11px] text-faint">{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Sort Dropdown Button */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setSortOpen(!sortOpen);
+                setFilterOpen(false);
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-[13px] font-semibold bg-card border border-line rounded-lg hover:bg-paper hover:border-linestrong transition-all cursor-pointer"
+            >
+              <span>⇅ Sort: <strong className="text-[#0045FF]">{sortLabels[sort]}</strong></span>
+              <span className="text-faint text-[9px]">▼</span>
+            </button>
+            {sortOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setSortOpen(false)} />
+                <div className="absolute left-0 mt-1.5 w-48 bg-card border border-line rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-100">
+                  {(Object.keys(sortLabels) as Array<typeof sort>).map((key) => {
+                    const active = sort === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setSort(key);
+                          setSortOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-4 py-2 text-[12.5px] text-left hover:bg-paper transition-all cursor-pointer ${
+                          active ? "text-[#0045FF] font-bold bg-wash" : "text-muted font-medium"
+                        }`}
+                      >
+                        <span>{sortLabels[key]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
