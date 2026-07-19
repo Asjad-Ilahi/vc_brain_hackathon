@@ -309,6 +309,16 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 <Badge key={x as string}>{x}</Badge>
               ))}
               {isCold ? <Badge tone="warn">new founder</Badge> : null}
+              {s.deckUrl ? (
+                <a
+                  href={s.deckUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-accent border border-accent/20 bg-accent/5 px-2 py-0.5 rounded hover:bg-accent/10 transition-colors"
+                >
+                  📂 View Pitch Deck
+                </a>
+              ) : null}
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">

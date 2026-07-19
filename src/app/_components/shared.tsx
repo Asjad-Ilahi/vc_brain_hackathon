@@ -92,6 +92,7 @@ export function GhostButton({
 export function ApplyModal({ onClose, onDone }: { onClose: () => void; onDone: (id: string) => void }) {
   const [companyName, setCompanyName] = useState("");
   const [text, setText] = useState("");
+  const [email, setEmail] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -108,6 +109,7 @@ export function ApplyModal({ onClose, onDone }: { onClose: () => void; onDone: (
       fd.set("companyName", companyName);
       if (text) fd.set("text", text);
       if (file) fd.set("deck", file);
+      if (email) fd.set("email", email);
       const r = await api<{ opportunityId: string }>("/api/apply", { method: "POST", body: fd });
       onDone(r.opportunityId);
     } catch (e) {
@@ -122,6 +124,10 @@ export function ApplyModal({ onClose, onDone }: { onClose: () => void; onDone: (
       <p className="-mt-2 mb-4 text-[12.5px] text-muted">Deck + company name is all we need to start.</p>
       <label className={labelCls}>Company name</label>
       <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} className={inputCls} placeholder="Acme AI" />
+      
+      <label className={`mt-4 ${labelCls}`}>Founder Email (optional)</label>
+      <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={inputCls} placeholder="founder@acme.ai" />
+
       <label className={`mt-4 ${labelCls}`}>Deck (PDF or image)</label>
       <input
         type="file"

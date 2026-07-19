@@ -63,6 +63,15 @@ export const env = {
   get mailFrom() {
     return optional("MAIL_FROM") || optional("SMTP_USER");
   },
+  get cloudinaryCloudName() {
+    return optional("CLOUDINARY_CLOUD_NAME");
+  },
+  get cloudinaryApiKey() {
+    return optional("CLOUDINARY_API_KEY");
+  },
+  get cloudinaryApiSecret() {
+    return optional("CLOUDINARY_API_SECRET");
+  },
   /** Model used for extraction, scoring, memo, query parsing. */
   openaiModel: process.env.OPENAI_MODEL || "gpt-4o",
 };
