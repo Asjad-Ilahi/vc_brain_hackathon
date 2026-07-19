@@ -104,6 +104,24 @@ export default function Dashboard() {
     });
   };
 
+  const renderAgentLink = (key: string, label: string) => {
+    const activeDeals = getActiveDealsForAgent(key);
+    const isActive = key === "scouter"
+      ? (sweep.running || (auto && auto.ready + auto.decided < target))
+      : activeDeals.length > 0;
+    return (
+      <button
+        onClick={() => setSelectedAgent(key)}
+        className={`hover:underline font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
+          isActive ? "text-[#12A150]" : "text-faint hover:text-[#0045FF]"
+        }`}
+      >
+        {isActive && <span className="w-1.5 h-1.5 rounded-full bg-[#12A150] animate-ping shrink-0" />}
+        {label}
+      </button>
+    );
+  };
+
   const load = useCallback(async () => {
     try {
       const [o, t, a, c, f] = await Promise.all([
@@ -228,7 +246,7 @@ export default function Dashboard() {
     return p?.expired;
   });
   const crossed = opps
-    .filter((o) => o.source === "outbound" && !o.decision && o.status !== "awaiting_decision" && (o.convictionScore ?? 0) >= threshold)
+    .filter((o) => o.source === "outbound" && !o.decision && o.status !== "awaiting_decision" && o.screenResult === "pass" && (o.convictionScore ?? 0) >= threshold)
     .sort((a, b) => (b.convictionScore ?? 0) - (a.convictionScore ?? 0));
   const crossed24h = crossed.filter((o) => now - new Date(o.firstSignalAt).getTime() < 24 * 3600_000);
   const signals24h = opps.filter((o) => now - new Date(o.firstSignalAt).getTime() < 24 * 3600_000).length;
@@ -326,8 +344,19 @@ export default function Dashboard() {
                 <span className="animate-pulse text-accent">Autonomous Agent active — continuously scanning channels for new founders...</span>
               )}
             </span>
-            <span className="font-mono text-[10.5px] text-faint">
-              full check: background → screen → 3 scores → memo → verify
+            <span className="flex items-center gap-1.5 font-mono text-[10.5px] text-faint">
+              <span>full check:</span>
+              {renderAgentLink("scouter", "scouter")}
+              <span>→</span>
+              {renderAgentLink("screener", "screen")}
+              <span>→</span>
+              {renderAgentLink("sourcing", "background")}
+              <span>→</span>
+              {renderAgentLink("scorer", "scores")}
+              <span>→</span>
+              {renderAgentLink("memo", "memo")}
+              <span>→</span>
+              {renderAgentLink("validator", "verify")}
             </span>
           </div>
         ) : null}
@@ -337,44 +366,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Agent Fleet Control Room */}
-        <div className="mb-6">
-          <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted font-bold mb-3 flex items-center justify-between">
-            <span>Agent Fleet Status Room (Interactive)</span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {AGENTS.map((agent) => {
-              const activeDeals = getActiveDealsForAgent(agent.key);
-              const isActive = agent.key === "scouter"
-                ? (sweep.running || (auto && auto.ready + auto.decided < target))
-                : activeDeals.length > 0;
-              return (
-                <button
-                  key={agent.key}
-                  onClick={() => setSelectedAgent(agent.key)}
-                  className="flex flex-col text-left p-4 rounded-xl border border-line bg-card hover:bg-paper hover:border-linestrong transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center justify-between gap-2 w-full">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-ink group-hover:text-accent transition-colors">
-                      {agent.name.split(" ")[0]}
-                    </span>
-                    <span
-                      className={`w-2.5 h-2.5 rounded-full ${
-                        isActive ? "bg-ok animate-pulse" : "bg-accent"
-                      }`}
-                    />
-                  </div>
-                  <span className="text-[10px] text-faint font-semibold uppercase mt-1">
-                    {agent.role}
-                  </span>
-                  <span className="text-[11px] text-muted line-clamp-2 mt-2 leading-relaxed">
-                    {isActive ? `Working on ${activeDeals.length} deal(s)` : "Idle / Ready"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
