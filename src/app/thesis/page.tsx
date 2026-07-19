@@ -42,7 +42,7 @@ export default function ThesisPage() {
 
   if (loading || !draft)
     return (
-      <div className="px-8 py-24 text-center">
+      <div className="py-24 text-center">
         <Spinner label="Loading thesis…" />
       </div>
     );
@@ -99,7 +99,7 @@ export default function ThesisPage() {
 
       <div className="grid gap-8 px-6 py-6 md:px-8 lg:grid-cols-[1fr_280px]">
         <div className="min-w-0 space-y-8">
-          {msg ? <div className="border border-line bg-card px-3 py-2 text-[12.5px] text-muted">{msg}</div> : null}
+          {msg ? <div className="u-card px-3 py-2 text-[12.5px] text-muted">{msg}</div> : null}
 
           <Section n="1.1" title="Sector focus" sub="Multi-select. Recommendations outside these sectors surface as adjacent only.">
             <div className="flex flex-wrap gap-1.5">
@@ -197,9 +197,9 @@ export default function ThesisPage() {
                   ["storytelling", "Storytelling"],
                 ] as const
               ).map(([k, label]) => (
-                <div key={k} className="border border-line bg-card p-3">
+                <div key={k} className="u-card p-3">
                   <div className={labelCls}>{label}</div>
-                  <div className="tnum mt-1 font-mono text-[22px] font-bold text-accent">{draft.traits[k]}</div>
+                  <div className="tnum mt-1 text-[22px] font-bold text-accent">{draft.traits[k]}</div>
                   <input
                     type="range"
                     min={0}
@@ -248,7 +248,7 @@ export default function ThesisPage() {
                 ] as const
               ).map(([label, w]) => (
                 <div key={label}>
-                  <div className="flex items-center justify-between font-mono text-[11.5px]">
+                  <div className="flex items-center justify-between text-[11.5px]">
                     <span>{label}</span>
                     <span className="tnum">{w.toFixed(2)}</span>
                   </div>
@@ -259,10 +259,10 @@ export default function ThesisPage() {
               ))}
             </div>
           ) : null}
-          <div className="mt-4 border-t border-line pt-3 font-mono text-[11px] text-muted">
+          <div className="mt-4 border-t border-line pt-3 text-[11px] text-muted">
             Deploy button: ${(draft.checkSizeMinUsd / 1000).toFixed(0)}K for {draft.ownershipTargetPct}%
           </div>
-          <div className="mt-1 font-mono text-[11px] text-muted">Auto-check founders scoring ≥ {draft.convictionThreshold}</div>
+          <div className="mt-1 text-[11px] text-muted">Auto-check founders scoring ≥ {draft.convictionThreshold}</div>
         </aside>
       </div>
     </div>
@@ -273,8 +273,8 @@ function Section({ n, title, sub, children }: { n: string; title: string; sub: s
   return (
     <section>
       <div className="flex items-baseline gap-2.5">
-        <span className="font-mono text-[11px] font-bold text-accent">{n}</span>
-        <h2 className="font-mono text-[16px] font-bold">{title}</h2>
+        <span className="text-[11px] font-bold text-accent">{n}</span>
+        <h2 className="text-[16px] font-bold">{title}</h2>
       </div>
       <p className="mt-1 max-w-xl text-[12px] text-muted">{sub}</p>
       <div className="mt-3">{children}</div>
@@ -293,7 +293,7 @@ function Slider({ value, onChange, left, right }: { value: number; onChange: (v:
         onChange={(e) => onChange(Number(e.target.value))}
         className="w-full accent-[#c44e1c]"
       />
-      <div className="flex items-center justify-between font-mono text-[11px] text-faint">
+      <div className="flex items-center justify-between text-[11px] text-faint">
         <span>{left}</span>
         <span className="tnum text-[13px] font-bold text-accent">{value}</span>
         <span>{right}</span>

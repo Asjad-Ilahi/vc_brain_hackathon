@@ -208,15 +208,15 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
   if (loading)
     return (
-      <div className="px-8 py-24 text-center">
+      <div className="py-24 text-center">
         <Spinner label="Loading opportunity…" />
       </div>
     );
   if (err && !d)
     return (
-      <div className="px-8 py-16">
+      <div className="py-16">
         <p className="text-[13px] text-bad">{err}</p>
-        <Link href="/pipeline" className="font-mono text-[12px] text-accent hover:underline">← Pipeline</Link>
+        <Link href="/pipeline" className="text-[12px] text-accent hover:underline">← Pipeline</Link>
       </div>
     );
   if (!d) return null;
@@ -242,14 +242,14 @@ export default function OpportunityDetail({ id }: { id: string }) {
   return (
     <div>
       {/* Header */}
-      <div className="border-b border-line px-6 py-5 md:px-8">
-        <Link href="/pipeline" className="font-mono text-[11px] text-accent hover:underline">← Pipeline</Link>
+      <div className="mb-5">
+        <Link href="/pipeline" className="text-[11px] text-accent hover:underline">← Pipeline</Link>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <Eyebrow>
               Module 05 · Diligence{s.sourceChannel ? ` · ${CHANNEL_SIGNAL[s.sourceChannel] ?? s.sourceChannel}` : ""}
             </Eyebrow>
-            <h1 className="mt-1.5 font-mono text-[24px] font-bold tracking-tight">
+            <h1 className="mt-1.5 text-[24px] font-bold tracking-tight">
               {s.company}
               {founderName ? <span className="text-muted"> · {founderName}</span> : null}
             </h1>
@@ -270,20 +270,20 @@ export default function OpportunityDetail({ id }: { id: string }) {
           <div className="flex flex-col items-end gap-2">
             {s.decision ? (
               <div className="border border-ok/40 bg-okwash px-3 py-1.5 text-right">
-                <div className="font-mono text-[12px] font-bold text-ok">
+                <div className="text-[12px] font-bold text-ok">
                   {s.decision === "invest" ? `✓ Deployed $${checkK}K` : s.decision === "watch" ? "◎ Watching" : "✕ Passed"}
                 </div>
                 {s.timeToDecisionMs != null ? (
-                  <div className="tnum font-mono text-[10.5px] text-muted">
+                  <div className="tnum text-[10.5px] text-muted">
                     decided by {s.decidedBy ?? "human"} in {fmtDuration(s.timeToDecisionMs)}
                   </div>
                 ) : null}
               </div>
             ) : (
               <div className="flex items-center gap-1.5 border border-bad/40 bg-badwash px-3 py-1.5">
-                <span className="font-mono text-[11px] text-bad">⏱</span>
+                <span className="text-[11px] text-bad">⏱</span>
                 <Countdown deadline={s.deadlineAt} className="text-[13px]" />
-                <span className="font-mono text-[11px] text-bad">left</span>
+                <span className="text-[11px] text-bad">left</span>
               </div>
             )}
           </div>
@@ -293,7 +293,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
         <div className="mt-4 grid grid-cols-2 gap-px border border-line bg-line sm:grid-cols-4">
           <StripCell label="Founder">
             {s.axes.founder ? (
-              <span className={`tnum font-mono text-[24px] font-bold ${scoreTone(s.axes.founder.score)}`}>{s.axes.founder.score}</span>
+              <span className={`tnum text-[24px] font-bold ${scoreTone(s.axes.founder.score)}`}>{s.axes.founder.score}</span>
             ) : (
               <span className="text-[13px] text-faint">—</span>
             )}
@@ -305,7 +305,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
             {s.axes.idea_vs_market ? <TrendArrow trend={s.axes.idea_vs_market.trend} /> : <span className="text-[13px] text-faint">—</span>}
           </StripCell>
           <StripCell label="Contradictions">
-            <span className={`tnum font-mono text-[24px] font-bold ${contradictions.length > 0 ? "text-bad" : "text-ok"}`}>
+            <span className={`tnum text-[24px] font-bold ${contradictions.length > 0 ? "text-bad" : "text-ok"}`}>
               {contradictions.length}
             </span>
           </StripCell>
@@ -315,9 +315,9 @@ export default function OpportunityDetail({ id }: { id: string }) {
       <div className="grid gap-6 px-6 py-6 md:px-8 xl:grid-cols-[1fr_290px]">
         <div className="min-w-0">
           {/* Pipeline runner */}
-          <section className="border border-line bg-card p-4">
+          <section className="u-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-wide">
+              <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] uppercase tracking-wide">
                 <StageChip label="Screen" state={screened} note={s.screenResult ?? undefined} />
                 <span className="text-faint">→</span>
                 {isCold ? (
@@ -359,7 +359,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
             {err ? <p className="mt-2.5 text-[12px] text-bad">{err}</p> : null}
             {outreach ? (
               <div className="mt-3 border border-ok/40 bg-okwash p-3">
-                <div className="mb-1 font-mono text-[10.5px] uppercase tracking-wide text-ok">
+                <div className="mb-1 text-[10.5px] uppercase tracking-wide text-ok">
                   Draft outreach — not sent · activation triggers an application, not an investment
                 </div>
                 <p className="whitespace-pre-wrap text-[12.5px] leading-relaxed">{outreach}</p>
@@ -385,8 +385,8 @@ export default function OpportunityDetail({ id }: { id: string }) {
                   ] as const
                 ).map(([label, v]) => (
                   <div key={label} className="border border-line bg-paper p-3">
-                    <div className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">{label}</div>
-                    <div className={`tnum mt-1 font-mono text-[22px] font-bold ${scoreTone(v)}`}>{v}</div>
+                    <div className="text-[10.5px] uppercase tracking-wide text-muted">{label}</div>
+                    <div className={`tnum mt-1 text-[22px] font-bold ${scoreTone(v)}`}>{v}</div>
                     <div className="mt-1 h-1 bg-line">
                       <div className={`h-full ${v >= 60 ? "bg-ok" : v >= 40 ? "bg-warn" : "bg-bad"}`} style={{ width: `${v}%` }} />
                     </div>
@@ -403,7 +403,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 {predictor.gaps.map((x, i) => (
                   <li key={i} className="flex gap-2 text-[12px] text-faint">
                     <span className="text-warn">·</span>
-                    {x} <span className="font-mono text-[10.5px]">(gap — stated, not guessed)</span>
+                    {x} <span className="text-[10.5px]">(gap — stated, not guessed)</span>
                   </li>
                 ))}
               </ul>
@@ -428,7 +428,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
           {/* 3-axis */}
           <section className="mt-5" id="diligence">
-            <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+            <div className="mb-2 text-[10.5px] uppercase tracking-wide text-muted">
               3-axis screening · scored independently, never averaged
             </div>
             <div className="grid gap-2.5 sm:grid-cols-3">
@@ -440,7 +440,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
           {/* Memo */}
           {memo ? (
-            <section className="mt-6 border border-line bg-card" id="memo">
+            <section className="mt-6 u-card" id="memo">
               <div className="border-b border-line px-5 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <Eyebrow>Investment memo · v1 · auto-drafted</Eyebrow>
@@ -448,8 +448,8 @@ export default function OpportunityDetail({ id }: { id: string }) {
                     recommends {memo.recommendation === "invest" ? "deploy" : memo.recommendation}
                   </Badge>
                 </div>
-                <h2 className="mt-2 font-mono text-[20px] font-bold">{s.company}</h2>
-                <p className="mt-0.5 font-mono text-[11.5px] text-muted">
+                <h2 className="mt-2 text-[20px] font-bold">{s.company}</h2>
+                <p className="mt-0.5 text-[11.5px] text-muted">
                   {[founderName, s.geography, s.stage, `$${checkK}K for ${ownPct}%`].filter(Boolean).join(" · ")}
                 </p>
               </div>
@@ -478,7 +478,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 </div>
                 {sections.gaps && sections.gaps.length ? (
                   <div className="border border-warn/40 bg-warnwash p-3">
-                    <div className="font-mono text-[10.5px] uppercase tracking-wide text-warn">Flagged gaps — stated, never fabricated</div>
+                    <div className="text-[10.5px] uppercase tracking-wide text-warn">Flagged gaps — stated, never fabricated</div>
                     <ul className="mt-1.5 space-y-1">
                       {sections.gaps.map((g, i) => (
                         <li key={i} className="text-[12.5px] text-muted">· {g}</li>
@@ -493,7 +493,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
           {/* Claims & Trust */}
           {claims.length ? (
             <section className="mt-6">
-              <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+              <div className="mb-2 text-[10.5px] uppercase tracking-wide text-muted">
                 Validated evidence · per-claim Trust Score + external verification
               </div>
               <div className="grid gap-2">
@@ -506,8 +506,8 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
           {/* Trace */}
           {d.reasoningSteps.length ? (
-            <section className="mt-6 border border-line bg-card">
-              <div className="border-b border-line px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+            <section className="mt-6 u-card">
+              <div className="border-b border-line px-4 py-2.5 text-[10.5px] uppercase tracking-wide text-muted">
                 Agent reasoning trace · every conclusion cites its evidence
               </div>
               <div className="space-y-1.5 px-4 py-3">
@@ -525,16 +525,16 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
           {/* Founders */}
           <section className="mt-6">
-            <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+            <div className="mb-2 text-[10.5px] uppercase tracking-wide text-muted">
               Founders · persistent Founder Score (never resets)
             </div>
             <div className="grid gap-2.5 sm:grid-cols-2">
               {s.founders.map((f) => {
                 const h = histories[f.id];
                 return (
-                  <div key={f.id} className="border border-line bg-card p-4">
+                  <div key={f.id} className="u-card p-4">
                     <div className="flex items-center justify-between">
-                      <Link href={`/founder/${f.id}`} className="font-mono text-[13px] font-semibold hover:text-accent">
+                      <Link href={`/founder/${f.id}`} className="text-[13px] font-semibold hover:text-accent">
                         {f.name} {f.isColdStart ? <Badge tone="warn">new founder</Badge> : null}{" "}
                         <span className="font-normal text-faint">→ profile</span>
                       </Link>
@@ -543,7 +543,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                     {h && h.history.length ? (
                       <div className="mt-2.5 space-y-1">
                         {h.history.slice(0, 5).map((e) => (
-                          <div key={e.id} className="flex items-baseline gap-2 font-mono text-[11px] text-muted">
+                          <div key={e.id} className="flex items-baseline gap-2 text-[11px] text-muted">
                             <span className={`tnum ${e.delta > 0 ? "text-ok" : e.delta < 0 ? "text-bad" : "text-faint"}`}>
                               {e.delta >= 0 ? "+" : ""}
                               {e.delta}
@@ -563,17 +563,17 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
           {/* Signals */}
           <section className="mt-6">
-            <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+            <div className="mb-2 text-[10.5px] uppercase tracking-wide text-muted">
               Memory · signals ({signals.length}) — timestamped, source-tagged, deduped
             </div>
             <div className="grid gap-2">
               {signals.map((sg) => (
-                <div key={sg.id} className="border border-line bg-card p-3">
+                <div key={sg.id} className="u-card p-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge>{sg.sourceType}</Badge>
-                    {sg.title ? <span className="font-mono text-[12px] font-semibold">{sg.title}</span> : null}
+                    {sg.title ? <span className="text-[12px] font-semibold">{sg.title}</span> : null}
                     {sg.sourceUrl ? (
-                      <a href={sg.sourceUrl} target="_blank" rel="noreferrer" className="font-mono text-[11px] text-accent hover:underline">
+                      <a href={sg.sourceUrl} target="_blank" rel="noreferrer" className="text-[11px] text-accent hover:underline">
                         Source ↗
                       </a>
                     ) : null}
@@ -588,8 +588,8 @@ export default function OpportunityDetail({ id }: { id: string }) {
         {/* Right rail */}
         <aside className="flex h-fit flex-col gap-4 xl:sticky xl:top-4">
           {/* Axis scores */}
-          <div className="border border-line bg-card p-4">
-            <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">Axis scores</div>
+          <div className="u-card p-4">
+            <div className="text-[10.5px] uppercase tracking-wide text-muted">Axis scores</div>
             <div className="mt-3 space-y-2.5">
               {(
                 [
@@ -599,7 +599,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 ] as const
               ).map(([label, v]) => (
                 <div key={label}>
-                  <div className="flex justify-between font-mono text-[11.5px]">
+                  <div className="flex justify-between text-[11.5px]">
                     <span>{label}</span>
                     <span className={`tnum font-bold ${v != null ? scoreTone(v) : "text-faint"}`}>{v ?? "—"}</span>
                   </div>
@@ -610,7 +610,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
               ))}
               {medianClaimTrust != null ? (
                 <div>
-                  <div className="flex justify-between font-mono text-[11.5px]">
+                  <div className="flex justify-between text-[11.5px]">
                     <span title="Trust Score is per-claim; this is only the median rollup">Claim trust · median</span>
                     <span className={`tnum font-bold ${scoreTone(medianClaimTrust)}`}>{medianClaimTrust}</span>
                   </div>
@@ -624,17 +624,17 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
           {/* Decision */}
           <div className={`border p-4 ${s.decision ? "border-line bg-card" : "border-accent bg-card"}`}>
-            <div className={`font-mono text-[10.5px] uppercase tracking-[0.16em] ${s.decision ? "text-muted" : "text-accent"}`}>
+            <div className={`text-[10.5px] uppercase tracking-wide ${s.decision ? "text-muted" : "text-accent"}`}>
               Your decision
             </div>
             {s.decision ? (
               <div className="mt-3">
-                <div className="font-mono text-[14px] font-bold">
+                <div className="text-[14px] font-bold">
                   {s.decision === "invest" ? `✓ Deployed $${checkK}K` : s.decision === "watch" ? "◎ Watching" : "✕ Passed"}
                 </div>
                 {s.decisionNote ? <p className="mt-1.5 text-[12px] text-muted">“{s.decisionNote}”</p> : null}
                 {s.timeToDecisionMs != null ? (
-                  <p className="tnum mt-1.5 font-mono text-[11px] text-faint">
+                  <p className="tnum mt-1.5 text-[11px] text-faint">
                     first signal → decision: {fmtDuration(s.timeToDecisionMs)}
                   </p>
                 ) : null}
@@ -644,28 +644,28 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 <button
                   onClick={() => decide("invest")}
                   disabled={deciding || !memo}
-                  className="bg-ok px-3 py-2.5 font-mono text-[12px] font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                  className="bg-ok px-3 py-2.5 text-[12px] font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                 >
                   ✓ Deploy ${checkK}K
                 </button>
                 <button
                   onClick={() => decide("watch")}
                   disabled={deciding || !memo}
-                  className="border border-line bg-paper px-3 py-2 font-mono text-[11.5px] uppercase tracking-wide text-muted hover:text-ink disabled:opacity-40"
+                  className="border border-line bg-paper px-3 py-2 text-[11.5px] uppercase tracking-wide text-muted hover:text-ink disabled:opacity-40"
                 >
                   ◎ Watch — track in Memory
                 </button>
                 <button
                   onClick={extendClock}
                   disabled={deciding}
-                  className="border border-line bg-paper px-3 py-2 font-mono text-[11.5px] uppercase tracking-wide text-muted hover:text-ink disabled:opacity-40"
+                  className="border border-line bg-paper px-3 py-2 text-[11.5px] uppercase tracking-wide text-muted hover:text-ink disabled:opacity-40"
                 >
                   ⏱ Extend clock 24h
                 </button>
                 <button
                   onClick={() => decide("pass")}
                   disabled={deciding}
-                  className="border border-bad/40 bg-badwash px-3 py-2 font-mono text-[11.5px] uppercase tracking-wide text-bad hover:opacity-90 disabled:opacity-40"
+                  className="border border-bad/40 bg-badwash px-3 py-2 text-[11.5px] uppercase tracking-wide text-bad hover:opacity-90 disabled:opacity-40"
                 >
                   ✕ Reject with feedback
                 </button>
@@ -676,7 +676,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
             )}
           </div>
 
-          <a href="#diligence" className="border border-line bg-card px-4 py-2.5 text-center font-mono text-[11px] uppercase tracking-wide text-muted hover:text-ink">
+          <a href="#diligence" className="u-card px-4 py-2.5 text-center text-[11px] uppercase tracking-wide text-muted hover:text-ink">
             ← Review diligence
           </a>
         </aside>
@@ -689,7 +689,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
 function StripCell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="bg-card px-4 py-3">
-      <div className="font-mono text-[10.5px] uppercase tracking-[0.15em] text-muted">{label}</div>
+      <div className="text-[10.5px] uppercase tracking-wide text-muted">{label}</div>
       <div className="mt-1.5 flex items-center">{children}</div>
     </div>
   );
@@ -713,7 +713,7 @@ function StageChip({ label, state, note }: { label: string; state: string; note?
 }
 
 function MemoTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-accent">{children}</h3>;
+  return <h3 className="text-[11px] font-bold uppercase tracking-wide text-accent">{children}</h3>;
 }
 
 function WarningCallouts({ warnings }: { warnings?: { id: string; contradictionNote: string | null; claimText: string }[] }) {
@@ -721,7 +721,7 @@ function WarningCallouts({ warnings }: { warnings?: { id: string; contradictionN
   return (
     <div className="mt-2 space-y-1.5">
       {warnings.map((w) => (
-        <div key={w.id} className="border border-warn/50 bg-warnwash px-3 py-2 font-mono text-[11.5px] text-warn">
+        <div key={w.id} className="border border-warn/50 bg-warnwash px-3 py-2 text-[11.5px] text-warn">
           ⚠ {w.contradictionNote ?? `Contradicted: ${w.claimText}`}
         </div>
       ))}
@@ -780,7 +780,7 @@ function Quad({ title, items, tone }: { title: string; items?: string[]; tone: "
   };
   return (
     <div className={`border ${border[tone]} bg-paper p-3`}>
-      <div className="font-mono text-[10.5px] font-bold uppercase tracking-wide">{title}</div>
+      <div className="text-[10.5px] font-bold uppercase tracking-wide">{title}</div>
       <ul className="mt-1.5 space-y-1">
         {(items ?? []).map((it, i) => (
           <li key={i} className="text-[12px] leading-snug text-muted">· {it}</li>
@@ -798,26 +798,26 @@ function ClaimRow({ c, evidence }: { c: Claim; evidence: Signal[] }) {
     <div className={`border p-3 ${contradicted ? "border-bad/40 bg-badwash" : "border-line bg-card"}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 gap-2">
-          <span className={`mt-0.5 font-mono text-[13px] ${contradicted ? "text-bad" : corroborated ? "text-ok" : "text-faint"}`}>
+          <span className={`mt-0.5 text-[13px] ${contradicted ? "text-bad" : corroborated ? "text-ok" : "text-faint"}`}>
             {contradicted ? "⚠" : corroborated ? "✓" : "•"}
           </span>
           <div className="min-w-0">
-            <div className="font-mono text-[10.5px] uppercase tracking-wide text-faint">{c.section}</div>
+            <div className="text-[10.5px] uppercase tracking-wide text-faint">{c.section}</div>
             <p className="text-[13px]">{c.claimText}</p>
-            {c.contradictionNote ? <p className="mt-1 font-mono text-[11.5px] text-bad">⚠ {c.contradictionNote}</p> : null}
+            {c.contradictionNote ? <p className="mt-1 text-[11.5px] text-bad">⚠ {c.contradictionNote}</p> : null}
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <TrustBadge trustLevel={c.trustLevel} verification={c.externalVerification} />
-          <span className="tnum font-mono text-[10.5px] text-faint">conf {Math.round(c.confidence * 100)}%</span>
+          <span className="tnum text-[10.5px] text-faint">conf {Math.round(c.confidence * 100)}%</span>
         </div>
       </div>
       {evidence.length ? (
-        <button onClick={() => setOpen((v) => !v)} className="mt-1.5 font-mono text-[11px] text-accent hover:underline">
+        <button onClick={() => setOpen((v) => !v)} className="mt-1.5 text-[11px] text-accent hover:underline">
           {open ? "hide" : "show"} evidence ({evidence.length})
         </button>
       ) : (
-        <span className="mt-1.5 block font-mono text-[10.5px] text-faint">no linked evidence</span>
+        <span className="mt-1.5 block text-[10.5px] text-faint">no linked evidence</span>
       )}
       {open ? (
         <div className="mt-2 space-y-1.5 border-t border-line pt-2">
@@ -827,7 +827,7 @@ function ClaimRow({ c, evidence }: { c: Claim; evidence: Signal[] }) {
               <span className="font-semibold">{e.title}</span>
               <span className="text-faint">{(e.rawText ?? "").slice(0, 160)}</span>
               {e.sourceUrl ? (
-                <a href={e.sourceUrl} target="_blank" rel="noreferrer" className="font-mono text-accent hover:underline">
+                <a href={e.sourceUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">
                   Source ↗
                 </a>
               ) : null}

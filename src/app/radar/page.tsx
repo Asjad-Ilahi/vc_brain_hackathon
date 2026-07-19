@@ -138,22 +138,22 @@ export default function RadarPage() {
         title="Founders you haven't met yet."
         sub="We scan 8 public sources for people building things that fit your thesis. Every card is backed by real, linked evidence. Activate writes a draft intro — it never sends money."
         right={
-          <span className="flex items-center gap-1.5 border border-line bg-card px-2.5 py-1 font-mono text-[11px] text-muted">
+          <span className="flex items-center gap-1.5 u-card px-2.5 py-1 text-[11px] text-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-ok" /> {SOURCEABLE.length} sources · scans daily + on demand
           </span>
         }
       />
 
-      <div className="px-6 py-5 md:px-8">
+      <div className="space-y-4">
         {/* Deep Manual Search Box */}
-        <div className="mb-6 border border-line bg-card p-4 rounded-sm">
-          <h2 className="font-mono text-[11.5px] uppercase tracking-[0.14em] text-accent mb-2">Deep search for new founders</h2>
+        <div className="mb-6 u-card p-4 rounded-sm">
+          <h2 className="text-[11.5px] uppercase tracking-wide text-accent mb-2">Deep search for new founders</h2>
           <form onSubmit={handleManualSearch} className="flex gap-2">
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               disabled={searching}
-              className="flex-1 bg-paper border border-line px-3 py-2 font-mono text-[12.5px] text-ink focus:border-accent focus:outline-none placeholder-faint"
+              className="flex-1 bg-paper border border-line px-3 py-2 text-[12.5px] text-ink focus:border-accent focus:outline-none placeholder-faint"
               placeholder="Enter founder name, GitHub login, research paper title, or project keywords..."
             />
             <PrimaryButton type="submit" disabled={searching || !searchQuery.trim()}>
@@ -161,7 +161,7 @@ export default function RadarPage() {
             </PrimaryButton>
           </form>
           {searchStatus && (
-            <div className="mt-3 flex items-center gap-2 font-mono text-[11.5px] text-accent animate-pulse">
+            <div className="mt-3 flex items-center gap-2 text-[11.5px] text-accent animate-pulse">
               <Spinner />
               <span>{searchStatus} (This runs real audits across GitHub, arXiv, LinkedIn, and Web - may take up to 45s)</span>
             </div>
@@ -184,7 +184,7 @@ export default function RadarPage() {
                 {k} · {n}
               </Chip>
             ))}
-          <span className="ml-auto font-mono text-[11px] text-faint">Sort: signal strength ↓</span>
+          <span className="ml-auto text-[11px] text-faint">Sort: signal strength ↓</span>
         </div>
 
         {sweep.channels.length > 0 ? (
@@ -193,7 +193,7 @@ export default function RadarPage() {
           </div>
         ) : null}
         {(busy || status) && (
-          <div className="mt-4 border border-line bg-card px-3 py-2 text-[12.5px]">
+          <div className="mt-4 u-card px-3 py-2 text-[12.5px]">
             {busy && !busy.startsWith("activate") ? (
               <Spinner label={`Searching ${busy}…`} />
             ) : busy?.startsWith("activate") ? (
@@ -208,7 +208,7 @@ export default function RadarPage() {
           {/* Cards */}
           <div className="min-w-0">
             {shown.length === 0 ? (
-              <div className="border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
+              <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
                 Nothing here{filter !== "all" ? " for this filter" : ""} yet — run a search from the panel on the right.
               </div>
             ) : (
@@ -222,8 +222,8 @@ export default function RadarPage() {
 
           {/* Channel rail */}
           <aside className="flex flex-col gap-4">
-            <div className="border border-line bg-card p-4">
-              <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">Sweep a channel</div>
+            <div className="u-card p-4">
+              <div className="text-[10.5px] uppercase tracking-wide text-muted">Sweep a channel</div>
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {SOURCEABLE.map((k) => (
                   <Chip key={k} onClick={() => source(k)} disabled={!!busy}>
@@ -237,8 +237,8 @@ export default function RadarPage() {
             </div>
 
             {channels && (
-              <div className="border border-line bg-card p-4">
-                <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">Channel intelligence</div>
+              <div className="u-card p-4">
+                <div className="text-[10.5px] uppercase tracking-wide text-muted">Channel intelligence</div>
                 <p className="mt-0.5 text-[11px] text-faint">Which sources find your best founders — learns from your decisions.</p>
                 <div className="mt-3 space-y-2.5">
                   {channels.channels.length === 0 ? (
@@ -248,7 +248,7 @@ export default function RadarPage() {
                       const max = Math.max(1, ...channels.channels.map((x) => x.quality));
                       return (
                         <div key={c.name}>
-                          <div className="flex items-center justify-between font-mono text-[11px]">
+                          <div className="flex items-center justify-between text-[11px]">
                             <span>{c.name}</span>
                             <span className="tnum text-faint">
                               q{c.quality} · {c.found} found · {c.converted} converted
@@ -264,7 +264,7 @@ export default function RadarPage() {
                 </div>
                 {channels.suggestions.length > 0 && (
                   <div className="mt-4 border-t border-line pt-3">
-                    <div className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-warn">Underexplored</div>
+                    <div className="text-[10.5px] uppercase tracking-wide text-warn">Underexplored</div>
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {channels.suggestions.map((s) => (
                         <Badge key={s.channel} tone="warn" title={s.why}>
@@ -282,7 +282,7 @@ export default function RadarPage() {
 
       {outreach && (
         <Modal title={`Draft outreach — ${outreach.company}`} onClose={() => setOutreach(null)}>
-          <div className="border border-ok/40 bg-okwash px-3 py-1.5 font-mono text-[11px] text-ok">
+          <div className="border border-ok/40 bg-okwash px-3 py-1.5 text-[11px] text-ok">
             Drafted, not sent — activation triggers a real application, never an investment.
           </div>
           <p className="mt-3 whitespace-pre-wrap text-[13px] leading-relaxed">{outreach.draft}</p>
@@ -310,14 +310,14 @@ function RadarCard({
   const cold = o.founders.some((x) => x.isColdStart);
   const signal = CHANNEL_SIGNAL[o.sourceChannel ?? ""] ?? "Signal";
   return (
-    <div className="flex flex-col border border-line bg-card">
+    <div className="flex flex-col u-card">
       <div className="flex items-start gap-3 border-b border-line p-3.5">
-        <span className="grid h-9 w-9 shrink-0 place-items-center border border-line bg-paper font-mono text-[12px] font-bold">
+        <span className="grid h-9 w-9 shrink-0 place-items-center border border-line bg-paper text-[12px] font-bold">
           {f && !cold ? initialsOf(f.name) : cold ? "??" : "—"}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate font-mono text-[13.5px] font-semibold">{f?.name ?? o.company}</span>
+            <span className="truncate text-[13.5px] font-semibold">{f?.name ?? o.company}</span>
             {o.sector ? <Badge>{o.sector}</Badge> : null}
           </div>
           <div className="truncate text-[11.5px] text-faint">
@@ -327,22 +327,22 @@ function RadarCard({
         </div>
       </div>
       <div className="flex-1 p-3.5">
-        <div className={`font-mono text-[10.5px] uppercase tracking-[0.14em] ${cold ? "text-warn" : "text-accent"}`}>
+        <div className={`text-[10.5px] uppercase tracking-wide ${cold ? "text-warn" : "text-accent"}`}>
           {cold ? `New founder · ${signal}` : signal}
         </div>
         <p className="mt-1.5 line-clamp-2 text-[12.5px] text-muted">{o.oneLiner ?? o.convictionReason}</p>
-        <p className="mt-1 line-clamp-1 font-mono text-[11px] text-faint">why now: {o.convictionReason ?? "—"}</p>
+        <p className="mt-1 line-clamp-1 text-[11px] text-faint">why now: {o.convictionReason ?? "—"}</p>
         <div className="mt-3 flex items-end justify-between">
           <div className="flex items-center gap-4">
             <div>
-              <div className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">Match</div>
-              <div className={`tnum font-mono text-[24px] font-bold leading-none ${(o.convictionScore ?? 0) >= threshold ? "text-accent" : ""}`}>
+              <div className="text-[10.5px] uppercase tracking-wide text-faint">Match</div>
+              <div className={`tnum text-[24px] font-bold leading-none ${(o.convictionScore ?? 0) >= threshold ? "text-accent" : ""}`}>
                 {o.convictionScore ?? "—"}
               </div>
             </div>
             {f ? (
               <div>
-                <div className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">Founder</div>
+                <div className="text-[10.5px] uppercase tracking-wide text-faint">Founder</div>
                 <div className="mt-0.5"><ScorePill n={f.founderScore} /></div>
               </div>
             ) : null}
@@ -362,13 +362,13 @@ function RadarCard({
         <button
           onClick={onActivate}
           disabled={busy}
-          className="border-r border-line px-3 py-2 font-mono text-[10.5px] font-semibold uppercase tracking-wide text-accent transition-colors hover:bg-wash disabled:opacity-50"
+          className="border-r border-line px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wide text-accent transition-colors hover:bg-wash disabled:opacity-50"
         >
           {busy ? "Drafting…" : "⚡ Activate → outreach"}
         </button>
         <Link
           href={`/opportunity/${o.id}`}
-          className="px-3 py-2 text-center font-mono text-[10.5px] font-semibold uppercase tracking-wide text-muted transition-colors hover:bg-paper hover:text-ink"
+          className="px-3 py-2 text-center text-[10.5px] font-semibold uppercase tracking-wide text-muted transition-colors hover:bg-paper hover:text-ink"
         >
           Assess →
         </Link>

@@ -64,8 +64,8 @@ export function SweepLoader({ channels, running, total }: { channels: SweepChann
   return (
     <div className="border border-accent/40 bg-wash px-3.5 py-2.5">
       <div className="flex flex-wrap items-center gap-2">
-        {running ? <Spinner /> : <span className="font-mono text-[12px] text-ok">✓</span>}
-        <span className="font-mono text-[12px] text-accent">
+        {running ? <Spinner /> : <span className="text-[12px] text-ok">✓</span>}
+        <span className="text-[12px] text-accent">
           {running
             ? `Searching ${channels.length} sources — results appear below as each one finishes (${total} so far)`
             : `Search finished — ${total} matching founder${total === 1 ? "" : "s"} found`}
@@ -75,7 +75,7 @@ export function SweepLoader({ channels, running, total }: { channels: SweepChann
         {channels.map((c) => (
           <span
             key={c.id}
-            className={`inline-flex items-center gap-1.5 border px-2 py-0.5 font-mono text-[10.5px] ${
+            className={`inline-flex items-center gap-1.5 border px-2 py-0.5 text-[10.5px] ${
               c.state === "done"
                 ? "border-ok/40 bg-okwash text-ok"
                 : c.state === "searching"

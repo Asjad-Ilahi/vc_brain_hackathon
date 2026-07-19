@@ -11,7 +11,7 @@ type QueryResult = OpportunitySummary & { matchScore: number; matchReasons: stri
 
 export default function PipelinePage() {
   return (
-    <Suspense fallback={<div className="px-8 py-24 text-center"><Spinner label="Loading pipeline…" /></div>}>
+    <Suspense fallback={<div className="py-24 text-center"><Spinner label="Loading pipeline…" /></div>}>
       <Pipeline />
     </Suspense>
   );
@@ -116,7 +116,7 @@ function Pipeline() {
           <div className="flex flex-col items-end gap-2">
             <GhostButton onClick={() => setShowApply(true)}>+ New application</GhostButton>
             {under4 > 0 ? (
-              <span className="flex items-center gap-1.5 border border-warn/40 bg-warnwash px-2.5 py-1 font-mono text-[11px] text-warn">
+              <span className="flex items-center gap-1.5 border border-warn/40 bg-warnwash px-2.5 py-1 text-[11px] text-warn">
                 ⏱ {under4} under 4h · action required
               </span>
             ) : null}
@@ -124,20 +124,20 @@ function Pipeline() {
         }
       />
 
-      <div className="px-6 py-5 md:px-8">
+      <div className="space-y-4">
         {/* NL query state */}
         {q ? (
           <div className="mb-4 border border-accent/40 bg-wash px-3.5 py-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-mono text-[12px] text-accent">
+              <span className="text-[12px] text-accent">
                 {querying ? "Resolving query…" : `Query: "${q}" — ${queryResults?.length ?? 0} ranked matches`}
               </span>
-              <button onClick={() => router.push("/pipeline")} className="font-mono text-[11px] text-muted hover:text-ink">
+              <button onClick={() => router.push("/pipeline")} className="text-[11px] text-muted hover:text-ink">
                 ✕ Clear
               </button>
             </div>
             {parsed != null && (
-              <div className="mt-1 truncate font-mono text-[10.5px] text-muted">
+              <div className="mt-1 truncate text-[10.5px] text-muted">
                 parsed filter: {JSON.stringify(parsed)}
               </div>
             )}
@@ -151,7 +151,7 @@ function Pipeline() {
           <Chip active={filter === "flagged"} onClick={() => setFilter("flagged")}>Flagged · {flagged}</Chip>
           <Chip active={filter === "inbound"} onClick={() => setFilter("inbound")}>Applied · {inboundN}</Chip>
           <Chip active={filter === "outbound"} onClick={() => setFilter("outbound")}>Found by us · {outboundN}</Chip>
-          <div className="ml-auto flex items-center gap-1 font-mono text-[11px] text-faint">
+          <div className="ml-auto flex items-center gap-1 text-[11px] text-faint">
             Sort:
             {(["countdown", "score", "sector"] as const).map((s) => (
               <button
@@ -169,7 +169,7 @@ function Pipeline() {
         {loading ? (
           <div className="py-20 text-center"><Spinner label="Loading pipeline…" /></div>
         ) : (
-          <div className="mt-4 overflow-x-auto border border-line bg-card">
+          <div className="mt-4 overflow-x-auto u-card">
             <table className="w-full min-w-[980px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-linestrong">
@@ -200,7 +200,7 @@ function Pipeline() {
         {/* Decided */}
         {decidedRows.length > 0 && !q ? (
           <div className="mt-6">
-            <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+            <div className="text-[10.5px] uppercase tracking-wide text-muted">
               Decided · {decidedRows.length}
             </div>
             <div className="mt-2 grid gap-1.5">
@@ -208,10 +208,10 @@ function Pipeline() {
                 <Link
                   key={o.id}
                   href={`/opportunity/${o.id}`}
-                  className="flex items-center justify-between gap-3 border border-line bg-card px-3.5 py-2 hover:border-linestrong"
+                  className="flex items-center justify-between gap-3 u-card px-3.5 py-2 hover:border-linestrong"
                 >
                   <div className="flex min-w-0 items-baseline gap-2">
-                    <span className="truncate font-mono text-[12.5px] font-semibold">{o.company}</span>
+                    <span className="truncate text-[12.5px] font-semibold">{o.company}</span>
                     <span className="truncate text-[11.5px] text-faint">{o.founders[0]?.name}</span>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -219,7 +219,7 @@ function Pipeline() {
                       {o.decision === "invest" ? "✓ deployed" : o.decision}
                     </Badge>
                     {o.timeToDecisionMs != null ? (
-                      <span className="tnum font-mono text-[11px] text-faint">
+                      <span className="tnum text-[11px] text-faint">
                         decided in {Math.round(o.timeToDecisionMs / 60000)}m
                       </span>
                     ) : null}
@@ -246,7 +246,7 @@ function Pipeline() {
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="whitespace-nowrap px-3.5 py-2.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted">
+    <th className="whitespace-nowrap px-3.5 py-2.5 text-[10.5px] font-semibold uppercase tracking-wide text-muted">
       {children}
     </th>
   );
@@ -271,18 +271,18 @@ function Row({ o, i, reasons }: { o: OpportunitySummary; i: number; reasons?: st
       <td className="px-3.5 py-3">
         <Link href={`/opportunity/${o.id}`} className="block">
           <div className="flex items-center gap-2.5">
-            <span className="tnum font-mono text-[10.5px] text-faint">{String(i + 1).padStart(2, "0")}</span>
+            <span className="tnum text-[10.5px] text-faint">{String(i + 1).padStart(2, "0")}</span>
             <Badge tone={o.source === "outbound" ? "accent" : "neutral"}>
               {o.source === "outbound" ? "⚡ out" : "▸ in"}
             </Badge>
             <div className="min-w-0">
-              <div className="truncate font-mono text-[13px] font-semibold group-hover:text-accent">{o.company}</div>
+              <div className="truncate text-[13px] font-semibold group-hover:text-accent">{o.company}</div>
               <div className="truncate text-[11px] text-faint">
                 {f?.name ?? "—"} · {o.sector ?? "—"}
                 {f?.isColdStart ? " · new founder" : ""}
               </div>
               {reasons?.length ? (
-                <div className="mt-0.5 truncate font-mono text-[10.5px] text-accent">matched: {reasons.join(", ")}</div>
+                <div className="mt-0.5 truncate text-[10.5px] text-accent">matched: {reasons.join(", ")}</div>
               ) : null}
               {/* On narrow screens the countdown column scrolls off — surface it here. */}
               <div className="mt-0.5 flex items-center gap-1.5 lg:hidden">

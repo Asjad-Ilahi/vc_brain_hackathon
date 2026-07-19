@@ -35,11 +35,11 @@ export default function DiligencePage() {
         title="Deep-dive queue."
         sub="Every claim is checked against public evidence. Anything that doesn't add up gets flagged before it reaches you."
       />
-      <div className="px-6 py-5 md:px-8">
+      <div className="space-y-4">
         {loading ? (
           <div className="py-20 text-center"><Spinner label="Loading queue…" /></div>
         ) : queue.length === 0 ? (
-          <div className="border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
+          <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
             Queue is clear — source founders on the Radar or take an application.
           </div>
         ) : (
@@ -50,17 +50,17 @@ export default function DiligencePage() {
                 <Link
                   key={o.id}
                   href={`/opportunity/${o.id}`}
-                  className="group flex flex-wrap items-center gap-x-4 gap-y-2 border border-line bg-card px-4 py-3 transition-colors hover:border-linestrong"
+                  className="group flex flex-wrap items-center gap-x-4 gap-y-2 u-card px-4 py-3 transition-colors hover:border-linestrong"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="truncate font-mono text-[13.5px] font-semibold group-hover:text-accent">{o.company}</span>
+                      <span className="truncate text-[13.5px] font-semibold group-hover:text-accent">{o.company}</span>
                       <span className="truncate text-[11.5px] text-faint">
                         {o.founders[0]?.name} · {o.sector ?? "—"}
                       </span>
                       {o.founders.some((f) => f.isColdStart) ? <Badge tone="warn">new founder</Badge> : null}
                     </div>
-                    <div className="mt-1.5 flex items-center gap-1 font-mono text-[10.5px] uppercase tracking-wide text-faint">
+                    <div className="mt-1.5 flex items-center gap-1 text-[10.5px] uppercase tracking-wide text-faint">
                       <StageDot done={stage >= 2} label="screen" />
                       <span>→</span>
                       <StageDot done={stage >= 3} label="3-axis" />

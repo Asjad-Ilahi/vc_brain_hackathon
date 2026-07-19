@@ -51,14 +51,14 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
 
   if (err)
     return (
-      <div className="px-8 py-16">
+      <div className="py-16">
         <p className="text-[13px] text-bad">{err}</p>
-        <Link href="/memory" className="font-mono text-[12px] text-accent hover:underline">← Memory</Link>
+        <Link href="/memory" className="text-[12px] text-accent hover:underline">← Memory</Link>
       </div>
     );
   if (!p)
     return (
-      <div className="px-8 py-24 text-center">
+      <div className="py-24 text-center">
         <Spinner label="Loading profile…" />
       </div>
     );
@@ -69,17 +69,17 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
 
   return (
     <div>
-      <div className="border-b border-line px-6 py-6 md:px-8">
-        <Link href="/memory" className="font-mono text-[11px] text-accent hover:underline">← Founder database</Link>
+      <div className="mb-5">
+        <Link href="/memory" className="text-[11px] text-accent hover:underline">← Founder database</Link>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-4">
-            <span className="grid h-14 w-14 shrink-0 place-items-center border border-linestrong bg-card font-mono text-[18px] font-bold">
+            <span className="grid h-14 w-14 shrink-0 place-items-center border border-linestrong bg-card text-[18px] font-bold">
               {initialsOf(f.fullName)}
             </span>
             <div className="min-w-0">
               <Eyebrow>Living profile · persists across ventures · never resets</Eyebrow>
-              <h1 className="mt-1 font-mono text-[24px] font-bold tracking-tight">{f.fullName}</h1>
-              <p className="mt-0.5 font-mono text-[12px] text-muted">
+              <h1 className="mt-1 text-[24px] font-bold tracking-tight">{f.fullName}</h1>
+              <p className="mt-0.5 text-[12px] text-muted">
                 @{f.canonicalHandle}
                 {f.location ? ` · ${f.location}` : ""} · first seen {fmtAgo(f.firstSeenAt)}
               </p>
@@ -94,12 +94,12 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
               </div>
             </div>
           </div>
-          <div className="border border-line bg-card px-5 py-4 text-center">
-            <div className="font-mono text-[10.5px] uppercase tracking-[0.15em] text-muted">Founder score</div>
-            <div className={`tnum mt-1 font-mono text-[40px] font-bold leading-none ${scoreTone(f.founderScore)}`}>
+          <div className="u-card px-5 py-4 text-center">
+            <div className="text-[10.5px] uppercase tracking-wide text-muted">Founder score</div>
+            <div className={`tnum mt-1 text-[40px] font-bold leading-none ${scoreTone(f.founderScore)}`}>
               ★ {f.founderScore}
             </div>
-            <div className="mt-1 font-mono text-[10.5px] text-faint">
+            <div className="mt-1 text-[10.5px] text-faint">
               confidence {Math.round(f.founderScoreConfidence * 100)}%
             </div>
           </div>
@@ -109,8 +109,8 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
       <div className="grid gap-6 px-6 py-6 md:px-8 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0">
           {/* Score trajectory */}
-          <section className="border border-line bg-card">
-            <div className="border-b border-line px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+          <section className="u-card">
+            <div className="border-b border-line px-4 py-2.5 text-[10.5px] uppercase tracking-wide text-muted">
               Score trajectory · every milestone appended, nothing discarded
             </div>
             {chrono.length === 0 ? (
@@ -130,7 +130,7 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
                 </div>
                 <div className="mt-4 space-y-1.5 border-t border-line pt-3">
                   {history.map((h) => (
-                    <div key={h.id} className="flex items-baseline gap-2.5 font-mono text-[11.5px]">
+                    <div key={h.id} className="flex items-baseline gap-2.5 text-[11.5px]">
                       <span className="tnum shrink-0 text-faint">{fmtAgo(h.createdAt)}</span>
                       <span className={`tnum shrink-0 ${h.delta > 0 ? "text-ok" : h.delta < 0 ? "text-bad" : "text-faint"}`}>
                         {h.delta >= 0 ? "+" : ""}
@@ -148,12 +148,12 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
 
           {/* Ventures */}
           <section className="mt-6">
-            <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+            <div className="mb-2 text-[10.5px] uppercase tracking-wide text-muted">
               Ventures · the score follows the person across all of them
             </div>
             <div className="grid gap-2">
               {ventures.length === 0 ? (
-                <p className="border border-dashed border-linestrong py-8 text-center text-[12.5px] text-faint">
+                <p className="rounded-2xl border border-dashed border-linestrong py-8 text-center text-[12.5px] text-faint">
                   No ventures linked yet.
                 </p>
               ) : (
@@ -161,11 +161,11 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
                   <Link
                     key={v.opportunityId}
                     href={`/opportunity/${v.opportunityId}`}
-                    className="group flex flex-wrap items-center justify-between gap-3 border border-line bg-card px-4 py-3 hover:border-linestrong"
+                    className="group flex flex-wrap items-center justify-between gap-3 u-card px-4 py-3 hover:border-linestrong"
                   >
                     <div className="min-w-0">
                       <div className="flex items-baseline gap-2">
-                        <span className="font-mono text-[13.5px] font-semibold group-hover:text-accent">{v.company}</span>
+                        <span className="text-[13.5px] font-semibold group-hover:text-accent">{v.company}</span>
                         {v.sector ? <Badge>{v.sector}</Badge> : null}
                         <Badge tone={v.source === "outbound" ? "accent" : "neutral"}>
                           {CHANNEL_SIGNAL[v.sourceChannel ?? ""] ?? v.source}
@@ -192,8 +192,8 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
 
         {/* Signals rail */}
         <aside>
-          <div className="border border-line bg-card">
-            <div className="border-b border-line px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+          <div className="u-card">
+            <div className="border-b border-line px-4 py-2.5 text-[10.5px] uppercase tracking-wide text-muted">
               Memory · latest signals ({signals.length})
             </div>
             <div className="max-h-[560px] space-y-2.5 overflow-y-auto px-4 py-3">
@@ -204,14 +204,14 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
                   <div key={sg.id} className="border-b border-line pb-2.5 last:border-b-0">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Badge>{sg.sourceType}</Badge>
-                      <span className="font-mono text-[10.5px] text-faint">{fmtAgo(sg.ingestedAt)}</span>
+                      <span className="text-[10.5px] text-faint">{fmtAgo(sg.ingestedAt)}</span>
                       {sg.sourceUrl ? (
-                        <a href={sg.sourceUrl} target="_blank" rel="noreferrer" className="font-mono text-[10.5px] text-accent hover:underline">
+                        <a href={sg.sourceUrl} target="_blank" rel="noreferrer" className="text-[10.5px] text-accent hover:underline">
                           Source ↗
                         </a>
                       ) : null}
                     </div>
-                    {sg.title ? <div className="mt-1 font-mono text-[11.5px] font-semibold">{sg.title}</div> : null}
+                    {sg.title ? <div className="mt-1 text-[11.5px] font-semibold">{sg.title}</div> : null}
                     <p className="mt-0.5 line-clamp-3 text-[11.5px] leading-snug text-muted">{sg.rawText}</p>
                   </div>
                 ))

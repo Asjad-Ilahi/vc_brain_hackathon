@@ -35,20 +35,20 @@ export default function MemosPage() {
         title="Investment memos."
         sub="Auto-drafted from diligence. Every claim linked to evidence. The recommendation is the system's — the decision is yours."
       />
-      <div className="px-6 py-5 md:px-8">
+      <div className="space-y-4">
         {loading ? (
           <div className="py-20 text-center"><Spinner label="Loading memos…" /></div>
         ) : rows.length === 0 ? (
-          <div className="border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
+          <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
             No memos yet — run diligence on a pipeline deal.
           </div>
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
             {rows.map((m) => (
-              <Link key={m.id} href={`/opportunity/${m.opportunityId}`} className="group border border-line bg-card p-4 transition-colors hover:border-linestrong">
+              <Link key={m.id} href={`/opportunity/${m.opportunityId}`} className="group u-card p-4 transition-colors hover:border-linestrong">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate font-mono text-[14px] font-bold group-hover:text-accent">{m.company}</span>
-                  <span className="shrink-0 font-mono text-[10.5px] text-faint">{fmtAgo(m.createdAt)}</span>
+                  <span className="truncate text-[14px] font-bold group-hover:text-accent">{m.company}</span>
+                  <span className="shrink-0 text-[10.5px] text-faint">{fmtAgo(m.createdAt)}</span>
                 </div>
                 {m.oneLiner ? <p className="mt-0.5 truncate text-[11.5px] text-faint">{m.oneLiner}</p> : null}
                 <p className="mt-2 line-clamp-3 text-[12.5px] leading-relaxed text-muted">{m.summary}</p>

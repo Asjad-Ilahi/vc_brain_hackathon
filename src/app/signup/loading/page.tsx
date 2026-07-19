@@ -75,7 +75,7 @@ function StarfieldCanvas({ auditedCount, phase }: { auditedCount: number; phase:
       size: number;
     }> = [];
 
-    const colors = ["#fcfbf7", "#f3d9cb", "#c44e1c", "#e4e0d4", "#a87614", "#2ea44f"];
+    const colors = ["#ffffff", "#cdd9ff", "#0045FF", "#dfe7ff", "#4d7fff", "#12a150"];
 
     for (let i = 0; i < numStars; i++) {
       stars.push({
@@ -106,7 +106,7 @@ function StarfieldCanvas({ auditedCount, phase }: { auditedCount: number; phase:
       // Draw light radar scan rings during sourcing
       if (phase === "sourcing") {
         const time = Date.now() * 0.0015;
-        ctx.strokeStyle = "rgba(196, 78, 28, 0.03)";
+        ctx.strokeStyle = "rgba(0, 69, 255, 0.03)";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(centerX, centerY, (time % 1) * Math.max(width, height) * 0.5, 0, Math.PI * 2);
@@ -148,8 +148,8 @@ function StarfieldCanvas({ auditedCount, phase }: { auditedCount: number; phase:
             ctx.fill();
 
             // Glow aura for accent colors
-            if (radius > 1.2 && (star.color === "#c44e1c" || star.color === "#2ea44f")) {
-              ctx.fillStyle = star.color === "#c44e1c" ? "rgba(196, 78, 28, 0.12)" : "rgba(46, 164, 79, 0.12)";
+            if (radius > 1.2 && (star.color === "#0045FF" || star.color === "#2ea44f")) {
+              ctx.fillStyle = star.color === "#0045FF" ? "rgba(0, 69, 255, 0.12)" : "rgba(46, 164, 79, 0.12)";
               ctx.beginPath();
               ctx.arc(x, y, radius * 3.5, 0, Math.PI * 2);
               ctx.fill();
@@ -256,13 +256,13 @@ export default function SignupLoadingPage() {
       `}</style>
 
       {/* Holographic Glowing Dashboard Container */}
-      <div className="relative z-10 w-full max-w-2xl border border-white/10 bg-[#12161f]/85 backdrop-blur-lg p-8 rounded-xl shadow-[0_0_50px_rgba(196,78,28,0.15)] transition-all duration-300">
+      <div className="relative z-10 w-full max-w-2xl border border-white/10 bg-[#12161f]/85 backdrop-blur-lg p-8 rounded-xl shadow-[0_0_50px_rgba(0,69,255,0.15)] transition-all duration-300">
         <div className="crt-overlay" />
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
           <div className="flex items-center gap-3">
-            <span className="relative flex h-9 w-9 items-center justify-center bg-[#c44e1c] text-[#fff] rounded-full shadow-[0_0_15px_rgba(196,78,28,0.5)]">
+            <span className="relative flex h-9 w-9 items-center justify-center bg-[#0045FF] text-[#fff] rounded-full shadow-[0_0_15px_rgba(0,69,255,0.5)]">
               <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
                 <path d="M9 1 3 9h4l-1 6 6-8H8l1-6z" />
               </svg>
@@ -275,7 +275,7 @@ export default function SignupLoadingPage() {
           
           <div className="text-right font-mono text-[10px] text-[#8b949e]">
             {phase === "sourcing" ? (
-              <span className="text-[#c44e1c] animate-pulse">SOURCING ACTIVE</span>
+              <span className="text-[#0045FF] animate-pulse">SOURCING ACTIVE</span>
             ) : phase === "auditing" ? (
               <span className="text-[#e4e0d4] animate-pulse">AUDITING QUEUE</span>
             ) : (
@@ -288,11 +288,11 @@ export default function SignupLoadingPage() {
         <div className="mb-8">
           <div className="flex justify-between font-mono text-[10px] uppercase text-[#8b949e] mb-2">
             <span>engine load & calibrate</span>
-            <span className="text-[#c44e1c] font-bold">{progressPercent}%</span>
+            <span className="text-[#0045FF] font-bold">{progressPercent}%</span>
           </div>
           <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
             <div 
-              className="h-full bg-gradient-to-r from-[#c44e1c] via-[#e4e0d4] to-[#2ea44f] transition-all duration-500 ease-out shadow-[0_0_8px_#c44e1c]" 
+              className="h-full bg-gradient-to-r from-[#0045FF] via-[#e4e0d4] to-[#2ea44f] transition-all duration-500 ease-out shadow-[0_0_8px_#0045FF]" 
               style={{ width: `${progressPercent}%` }} 
             />
           </div>
@@ -304,8 +304,8 @@ export default function SignupLoadingPage() {
             <div className="mt-0.5">
               {phase === "sourcing" ? (
                 <div className="relative flex h-5 w-5 items-center justify-center">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#c44e1c]/45 opacity-75" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#c44e1c]" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0045FF]/45 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#0045FF]" />
                 </div>
               ) : (
                 <span className="flex h-5 w-5 items-center justify-center text-[#2ea44f] font-mono font-bold text-sm bg-[#2ea44f]/10 border border-[#2ea44f]/20 rounded-full">✓</span>
@@ -346,7 +346,7 @@ export default function SignupLoadingPage() {
                       className="log-item flex justify-between items-center py-1.5 border-b border-white/5 last:border-b-0"
                     >
                       <span className="text-[#c9d1d9] text-[11px] font-mono truncate mr-4">
-                        <span className="text-[#c44e1c]/80 mr-1.5 font-bold">{(i + 1).toString().padStart(2, "0")}.</span>
+                        <span className="text-[#0045FF]/80 mr-1.5 font-bold">{(i + 1).toString().padStart(2, "0")}.</span>
                         <strong className="text-white font-medium">{r.founder}</strong>
                         <span className="text-[#8b949e] ml-2">@{r.company}</span>
                       </span>
@@ -361,9 +361,9 @@ export default function SignupLoadingPage() {
                   ))}
                   
                   {phase === "auditing" && currentChecking && (
-                    <div className="flex items-center justify-between py-1.5 text-[#c44e1c] font-mono text-[11px] animate-pulse">
+                    <div className="flex items-center justify-between py-1.5 text-[#0045FF] font-mono text-[11px] animate-pulse">
                       <div className="flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#c44e1c] animate-ping" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#0045FF] animate-ping" />
                         <span>{currentChecking}</span>
                       </div>
                       <span className="text-[10px] uppercase text-[#8b949e]">analyzing...</span>
@@ -393,7 +393,7 @@ export default function SignupLoadingPage() {
               )}
               <button
                 onClick={() => router.push("/dashboard")}
-                className="bg-[#c44e1c] px-6 py-2.5 font-mono text-[12px] font-bold uppercase tracking-wide text-white hover:bg-[#a93f14] transition-all rounded shadow-[0_0_15px_rgba(196,78,28,0.3)] hover:shadow-[0_0_22px_rgba(196,78,28,0.5)] active:scale-[0.98]"
+                className="bg-[#0045FF] px-6 py-2.5 font-mono text-[12px] font-bold uppercase tracking-wide text-white hover:bg-[#0033CC] transition-all rounded shadow-[0_0_15px_rgba(0,69,255,0.3)] hover:shadow-[0_0_22px_rgba(0,69,255,0.5)] active:scale-[0.98]"
               >
                 ⚡ Enter Command Center
               </button>

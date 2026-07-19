@@ -722,7 +722,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
                 />
                 <ReviewRow
                   label="Signals"
-                  value={`${draft.enabledSources.length} sources · ~8400 signals/mo`}
+                  value={`${draft.enabledSources.length} of 8 sources enabled`}
                   onEdit={() => go(STEPS.findIndex(s => s.id === "signals"))}
                 />
                 <ReviewRow
