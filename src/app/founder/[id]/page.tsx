@@ -21,6 +21,7 @@ type Founder = {
   founderScoreConfidence: number;
   isColdStart: boolean;
   firstSeenAt: string;
+  email: string | null;
 };
 type HistoryRow = { id: string; score: number; delta: number; reason: string; milestone: string | null; createdAt: string };
 type Venture = {
@@ -84,13 +85,20 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
                 {f.location ? ` · ${f.location}` : ""} · first seen {fmtAgo(f.firstSeenAt)}
               </p>
               {f.bio ? <p className="mt-2 max-w-xl text-[13px] text-muted">{f.bio}</p> : null}
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="mt-2 flex flex-wrap gap-1.5 items-center">
                 {f.isColdStart ? <Badge tone="warn">cold-start</Badge> : null}
                 {f.githubLogin ? (
                   <a href={`https://github.com/${f.githubLogin}`} target="_blank" rel="noreferrer">
                     <Badge>github ↗</Badge>
                   </a>
                 ) : null}
+                {f.email ? (
+                  <a href={`mailto:${f.email}`}>
+                    <Badge tone="accent">✉️ {f.email}</Badge>
+                  </a>
+                ) : (
+                  <Badge tone="neutral">✉️ Extracting contact email...</Badge>
+                )}
               </div>
             </div>
           </div>
@@ -192,6 +200,52 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
 
         {/* Signals rail */}
         <aside>
+          {/* Sourcing & Contact Details */}
+          <div className="bg-[#F8F8F8] rounded-[28px] p-6 border-0 shadow-none mb-6">
+            <div className="border-b border-[#eceef3] pb-3 mb-4 text-[10px] font-bold uppercase tracking-wider text-[#9E9E9E] font-sans">
+              Diligence Profile Details
+            </div>
+            <div className="space-y-3.5 text-[12.5px] font-sans text-muted">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-ink">Contact Email:</span>
+                {f.email ? (
+                  <a href={`mailto:${f.email}`} className="text-[#0045FF] font-bold hover:underline">
+                    {f.email}
+                  </a>
+                ) : (
+                  <span className="text-faint italic">Searching public sources...</span>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-ink">Github Username:</span>
+                {f.githubLogin ? (
+                  <a
+                    href={`https://github.com/${f.githubLogin}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#0045FF] font-bold hover:underline"
+                  >
+                    @{f.githubLogin}
+                  </a>
+                ) : (
+                  <span className="text-faint">Not linked</span>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-ink">Total Ventures:</span>
+                <span className="font-bold text-ink">{ventures.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-ink">Primary Location:</span>
+                <span className="text-ink font-medium">{f.location ?? "Global / Remote"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-ink">First Spotted:</span>
+                <span className="text-ink font-medium">{new Date(f.firstSeenAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-[#F8F8F8] rounded-[28px] p-6 border-0 shadow-none">
             <div className="border-b border-[#eceef3] pb-3 mb-3 text-[10px] font-bold uppercase tracking-wider text-[#9E9E9E] font-sans">
               Memory · latest signals ({signals.length})

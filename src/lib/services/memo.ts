@@ -47,6 +47,9 @@ export async function buildMemo(opportunityId: string) {
 
   const validSignalIds = new Set(ctx.signals.map((s) => s.id));
 
+  // Delete existing memo + associated claims (via cascade) for this opportunity to prevent duplicates!
+  await db.delete(memos).where(eq(memos.opportunityId, opportunityId));
+
   const [memoRow] = await db
     .insert(memos)
     .values({

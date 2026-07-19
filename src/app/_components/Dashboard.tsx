@@ -167,23 +167,34 @@ export default function Dashboard() {
 
   // Worker pump: keep up to N parallel background checks running until the
   // target is met or the queue is empty.
-  useEffect(() => {
-    const tick = setInterval(() => {
-      if (!auto) return;
-      const finished = auto.ready + auto.decided;
-      if (finished >= target) return;
-      if (inFlight.current >= AUTOPILOT_CONCURRENCY) return;
-      inFlight.current += 1;
-      postJson<{ processed: string | null }>("/api/autopilot/next")
-        .catch(() => null)
-        .finally(() => {
-          inFlight.current -= 1;
-          refreshAuto();
-          load();
-        });
-    }, 4000);
-    return () => clearInterval(tick);
+  const pump = useCallback(() => {
+    if (!auto) return;
+    const finished = auto.ready + auto.decided;
+    if (finished >= target) return;
+    if (inFlight.current >= AUTOPILOT_CONCURRENCY) return;
+
+    inFlight.current += 1;
+    postJson<{ processed: string | null }>("/api/autopilot/next")
+      .then((res) => {
+        // If a deal/step was successfully processed, queue another step immediately!
+        if (res && res.processed) {
+          setTimeout(pump, 50);
+        }
+      })
+      .catch(() => null)
+      .finally(() => {
+        inFlight.current -= 1;
+        refreshAuto();
+        load();
+      });
   }, [auto, target, refreshAuto, load]);
+
+  // Run the pump when auto/target changes, plus a safety tick every 2 seconds
+  useEffect(() => {
+    pump();
+    const t = setInterval(pump, 2000);
+    return () => clearInterval(t);
+  }, [pump]);
 
   function processMore() {
     const next = (auto ? auto.ready + auto.decided : 0) + AUTOPILOT_DEFAULT_TARGET;
@@ -229,7 +240,13 @@ export default function Dashboard() {
     return p?.expired;
   });
   const crossed = opps
-    .filter((o) => o.source === "outbound" && !o.decision && o.status !== "awaiting_decision" && o.screenResult === "pass" && (o.convictionScore ?? 0) >= threshold)
+    .filter(
+      (o) =>
+        o.source === "outbound" &&
+        !o.decision &&
+        o.status === "awaiting_decision" &&
+        (o.recommendation === "invest" || o.recommendation === "watch")
+    )
     .sort((a, b) => (b.convictionScore ?? 0) - (a.convictionScore ?? 0));
   const crossed24h = crossed.filter((o) => now - new Date(o.firstSignalAt).getTime() < 24 * 3600_000);
   const signals24h = opps.filter((o) => now - new Date(o.firstSignalAt).getTime() < 24 * 3600_000).length;
@@ -247,6 +264,23 @@ export default function Dashboard() {
     .slice(0, 3)
     .map((c) => `${c.name} ${c.found}`)
     .join(" · ");
+
+  const isAgentActive = (agentKey: string): boolean => {
+    if (agentKey === "scouter") {
+      return sweep.running || (auto != null && (auto.working > 0 || auto.queued > 0 || auto.ready + auto.decided < target));
+    }
+    return getActiveDealsForAgent(agentKey).length > 0;
+  };
+
+  const renderBannerStep = (agentKey: string, label: string) => {
+    const active = isAgentActive(agentKey);
+    return (
+      <span className={`font-bold flex items-center gap-1 ${active ? "text-[#12A150]" : "text-faint"}`}>
+        {active && <span className="w-1.5 h-1.5 rounded-full bg-[#12A150] animate-ping shrink-0" />}
+        {label}
+      </span>
+    );
+  };
 
   if (loading && !thesis) return null;
 
@@ -279,7 +313,7 @@ export default function Dashboard() {
   return (
     <div>
       {/* Command header */}
-      <div className="mb-6 px-6 md:px-8 pt-6">
+      <div className="px-6 md:px-8 pt-6">
         <div className="bg-[#F8F8F8] rounded-[28px] p-8 flex flex-wrap items-center justify-between gap-6 border-0 shadow-none">
           <div>
             <h1 className="font-sans text-[32px] tracking-tight text-ink font-light">
@@ -311,42 +345,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="px-6 py-6 md:px-8">
+      <div className="px-6 py-4 md:px-8">
         {sweep.channels.length > 0 ? (
           <div className="mb-5">
             <SweepLoader channels={sweep.channels} running={sweep.running} total={sweep.total} />
-          </div>
-        ) : null}
-        {auto && (auto.working > 0 || auto.queued > 0 || auto.ready + auto.decided < target) ? (
-          <div
-            onClick={() => setSelectedAgent("scouter")}
-            className="mb-5 flex flex-wrap items-center justify-between gap-2 border border-line bg-card px-3.5 py-2.5 hover:border-[#0045FF] hover:bg-paper cursor-pointer transition-all rounded-lg group select-none"
-          >
-            <span className="flex items-center gap-2.5 font-mono text-[12px] text-muted group-hover:text-ink">
-              <Spinner />
-              {auto.working > 0 || auto.queued > 0 ? (
-                <span>Agents working in the background — <strong className="text-ink">{auto.ready}</strong> ready for you · {auto.working} being checked · {auto.queued} waiting</span>
-              ) : (
-                <span className="animate-pulse text-accent">Autonomous Agent active — continuously scanning channels for new founders...</span>
-              )}
-            </span>
-            <span className="flex items-center gap-1.5 font-mono text-[10.5px] text-faint">
-              <span>full check:</span>
-              <span className="text-[#12A150] font-bold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#12A150] animate-ping shrink-0" />
-                scouter
-              </span>
-              <span>→</span>
-              <span>screen</span>
-              <span>→</span>
-              <span>background</span>
-              <span>→</span>
-              <span>scores</span>
-              <span>→</span>
-              <span>memo</span>
-              <span>→</span>
-              <span>verify</span>
-            </span>
           </div>
         ) : null}
         {(busy || status) && (
@@ -384,6 +386,36 @@ export default function Dashboard() {
             icon={<IconClock />}
           />
         </div>
+
+        {auto && (auto.working > 0 || auto.queued > 0 || auto.ready + auto.decided < target) ? (
+          <div
+            onClick={() => setSelectedAgent("scouter")}
+            className="mt-6 flex flex-wrap items-center justify-between gap-2 border border-line bg-card px-3.5 py-2.5 hover:border-[#0045FF] hover:bg-paper cursor-pointer transition-all rounded-lg group select-none"
+          >
+            <span className="flex items-center gap-2.5 font-mono text-[12px] text-muted group-hover:text-ink">
+              <Spinner />
+              {auto.working > 0 || auto.queued > 0 ? (
+                <span>Agents working in the background — <strong className="text-ink">{auto.ready}</strong> ready for you · {auto.working} being checked · {auto.queued} waiting</span>
+              ) : (
+                <span className="animate-pulse text-accent">Autonomous Agent active — continuously scanning channels for new founders...</span>
+              )}
+            </span>
+            <span className="flex items-center gap-1.5 font-mono text-[10.5px] text-faint">
+              <span>full check:</span>
+              {renderBannerStep("scouter", "scouter")}
+              <span>→</span>
+              {renderBannerStep("screener", "screen")}
+              <span>→</span>
+              {renderBannerStep("sourcing", "background")}
+              <span>→</span>
+              {renderBannerStep("scorer", "scores")}
+              <span>→</span>
+              {renderBannerStep("memo", "memo")}
+              <span>→</span>
+              {renderBannerStep("validator", "verify")}
+            </span>
+          </div>
+        ) : null}
 
         {/* Main Dashboard Layout */}
         <div className="mt-6 flex flex-col gap-6">
@@ -480,7 +512,7 @@ export default function Dashboard() {
                 View All <span className="text-[14px]">→</span>
               </Link>
             </div>
-            
+
             <div className="border-t border-[#eceef3] pt-4 space-y-4">
               {crossed.length === 0 ? (
                 <p className="py-8 text-center text-[13px] text-muted font-sans">
@@ -545,7 +577,7 @@ export default function Dashboard() {
 
       {selectedAgent && (
         <Modal
-          title={`${AGENTS.find((a) => a.key === selectedAgent)?.name} Panel`}
+          title={`Autonomous Agent Fleet`}
           onClose={() => setSelectedAgent(null)}
         >
           {(() => {
@@ -555,8 +587,7 @@ export default function Dashboard() {
             const isActive = selectedAgent === "scouter"
               ? (sweep.running || (auto && auto.ready + auto.decided < target))
               : activeDeals.length > 0;
-            
-            // Map agent keys to the activity model values
+
             const activityKeys: Record<string, string[]> = {
               scouter: ["scouter"],
               screener: ["screener"],
@@ -570,7 +601,6 @@ export default function Dashboard() {
 
             return (
               <div className="space-y-4">
-                {/* Agent Tab Switcher */}
                 <div className="flex flex-wrap border-b border-line pb-2.5 gap-1.5">
                   {AGENTS.map((a) => {
                     const active = a.key === selectedAgent;
@@ -582,11 +612,10 @@ export default function Dashboard() {
                       <button
                         key={a.key}
                         onClick={() => setSelectedAgent(a.key)}
-                        className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
-                          active
-                            ? "bg-[#0045FF] border-[#0045FF] text-white"
-                            : "bg-paper hover:bg-wash hover:border-linestrong text-muted border-line"
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${active
+                          ? "bg-[#0045FF] border-[#0045FF] text-white"
+                          : "bg-paper hover:bg-wash hover:border-linestrong text-muted border-line"
+                          }`}
                       >
                         {aActive && a.key === "scouter" && (
                           <span className="w-1.5 h-1.5 rounded-full bg-[#12A150] animate-ping shrink-0" />
@@ -602,6 +631,20 @@ export default function Dashboard() {
                   <p className="mt-1 text-[13px] leading-relaxed text-muted">{agentDef.description}</p>
                 </div>
 
+                {(selectedAgent === "scouter" || selectedAgent === "screener") && thesis && (
+                  <div className="bg-[#F8F9FA] p-3.5 rounded-xl border border-line text-[12.5px] text-muted space-y-1.5">
+                    <div className="font-semibold text-ink">Active Sourcing Thesis Targets:</div>
+                    <div className="grid grid-cols-2 gap-2 mt-1 text-[12px]">
+                      <div>Sectors: <strong className="text-ink">{thesis.sectors.join(", ")}</strong></div>
+                      <div>Stages: <strong className="text-ink">{thesis.stages.join(", ")}</strong></div>
+                      <div>Geographies: <strong className="text-ink">{thesis.geographies.join(", ")}</strong></div>
+                      {thesis.checkSizeMinUsd && (
+                        <div>Check Size: <strong className="text-ink">${thesis.checkSizeMinUsd.toLocaleString()} - ${thesis.checkSizeMaxUsd?.toLocaleString()}</strong></div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="border-t border-line pt-3">
                   <div className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2">
                     Current Status: <span className={isActive ? "text-ok" : "text-accent"}>{isActive ? "🟢 Active" : "🔵 Idle / Standby"}</span>
@@ -612,17 +655,24 @@ export default function Dashboard() {
                     </div>
                   )}
                   {activeDeals.length > 0 ? (
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-semibold text-ink">Active Workload ({activeDeals.length}):</div>
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-muted">Active Workload ({activeDeals.length}):</div>
                       {activeDeals.map((o) => (
                         <Link
                           key={o.id}
                           href={`/opportunity/${o.id}`}
                           onClick={() => setSelectedAgent(null)}
-                          className="flex items-center justify-between p-2 rounded bg-paper border border-line hover:border-linestrong text-[12.5px] text-muted"
+                          className="flex flex-col p-3 rounded-xl bg-paper border border-line hover:border-linestrong text-[12.5px] text-muted space-y-1 hover:bg-slate-50 transition-colors"
                         >
-                          <span className="font-semibold text-ink">{o.company}</span>
-                          <span>{o.founders[0]?.name}</span>
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-bold text-ink">{o.company}</span>
+                            <span className="text-[10px] bg-wash px-2 py-0.5 rounded-full text-accent font-semibold uppercase">{o.sourceChannel || o.source}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-[12px]">
+                            <span>Founder: <strong className="text-ink">{o.founders.map(f => f.name).join(", ") || "Unknown"}</strong></span>
+                            {o.convictionScore && <span>Conviction: <strong className="text-ok font-bold">{o.convictionScore}</strong></span>}
+                          </div>
+                          {o.oneLiner && <p className="text-[11.5px] text-faint line-clamp-1 italic">"{o.oneLiner}"</p>}
                         </Link>
                       ))}
                     </div>
@@ -701,7 +751,7 @@ function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
   // Distinct institutions
   const institutions = Array.from(new Set(uniqueNodes.map((n) => n.institutionName)));
   const instCoords = new Map<string, { x: number; y: number }>();
-  
+
   institutions.forEach((inst, index) => {
     const angle = (index * 2 * Math.PI) / institutions.length;
     const r = 55;
@@ -739,7 +789,7 @@ function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
           {/* Central Hub */}
           <circle cx={cx} cy={cy} r="14" fill="#0045ff" className="animate-pulse opacity-15" />
           <circle cx={cx} cy={cy} r="8" fill="#0045ff" />
-          
+
           {/* Edges from Center to Institutions */}
           {Array.from(instCoords.entries()).map(([name, coords]) => (
             <line
@@ -758,7 +808,7 @@ function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
           {nodeCoords.map((n, i) => (
             <path
               key={`edge-${n.id}-${i}`}
-              d={`M ${n.ix} ${n.iy} Q ${(n.ix + n.x)/2} ${(n.iy + n.y)/2 - 15} ${n.x} ${n.y}`}
+              d={`M ${n.ix} ${n.iy} Q ${(n.ix + n.x) / 2} ${(n.iy + n.y) / 2 - 15} ${n.x} ${n.y}`}
               fill="none"
               stroke="rgba(0, 69, 255, 0.15)"
               strokeWidth="1.5"

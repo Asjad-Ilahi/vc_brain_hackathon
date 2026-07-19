@@ -84,19 +84,29 @@ export async function sourceFromGithub(userId: string, limit = 5): Promise<strin
   const repos = await githubSearchRepos(githubQueryFromThesis(thesis), Math.max(limit * 3, 12));
   const created: string[] = [];
 
-  for (const repo of repos) {
+  const candidateRepos = repos.filter(repo => repo.owner.type !== "Organization");
+
+  // Fetch all user profiles and emails in parallel!
+  const userResults = await Promise.allSettled(
+    candidateRepos.map(async (repo) => {
+      const user = await githubUser(repo.owner.login);
+      let email = user.email || null;
+      if (!email && user.login) {
+        try {
+          email = await githubUserEmailFromCommits(user.login);
+        } catch {}
+      }
+      return { repo, user, email };
+    })
+  );
+
+  for (const res of userResults) {
     if (created.length >= limit) break;
-    // Org-owned repos are companies, not discoverable founders.
-    if (repo.owner.type === "Organization") continue;
-    let user;
-    try {
-      user = await githubUser(repo.owner.login);
-    } catch {
-      continue;
-    }
+    if (res.status !== "fulfilled") continue;
+    const { repo, user, email } = res.value;
     if (user.type === "Organization") continue;
-    // Off-thesis repos are never shown — match against the whole description.
     if (!matches(`${repo.full_name} ${repo.description ?? ""} ${repo.language ?? ""}`, thesis?.sectors)) continue;
+    
     const conviction = computeConviction({
       githubStars: repo.stargazers_count,
       githubFollowers: user.followers,
@@ -105,6 +115,7 @@ export async function sourceFromGithub(userId: string, limit = 5): Promise<strin
       thesisSectorMatch: matches(repo.description, thesis?.sectors),
       thesisGeoMatch: matches(user.location, thesis?.geographies),
     });
+
     const { opportunityId, deduped } = await createOpportunity({
       source: "outbound",
       sourceChannel: "github",
@@ -115,7 +126,6 @@ export async function sourceFromGithub(userId: string, limit = 5): Promise<strin
         name: repo.full_name.split("/")[1] ?? repo.full_name,
         domain: user.blog || null,
         sector: thesis?.sectors?.[0] ?? repo.language,
-        // No stage asserted — funding stage is unknown until evidenced.
         stage: null,
         geography: user.location,
         oneLiner: repo.description,
@@ -123,8 +133,6 @@ export async function sourceFromGithub(userId: string, limit = 5): Promise<strin
       },
       founders: [
         {
-          // Real name if GitHub has one; else the login, rendered as "@login" by
-          // the display layer (a real, linkable handle — never a fake full name).
           fullName: cleanPersonName(user.name) ?? user.login,
           handleSeed: user.login,
           githubLogin: user.login,
@@ -145,8 +153,8 @@ export async function sourceFromGithub(userId: string, limit = 5): Promise<strin
         },
       ],
     });
-    const email = user.email || (await githubUserEmailFromCommits(user.login));
-    if (email) {
+
+    if (email && !deduped) {
       await db
         .update(opportunities)
         .set({ applicantEmail: email })
@@ -535,44 +543,57 @@ async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: 
   });
 
   const created: string[] = [];
-  for (const c of candidates) {
+  const resultsList = await Promise.allSettled(
+    candidates.map(async (c) => {
+      if (c.isEstablished || isDenylisted(c.companyName)) return null;
+      if (!c.thesisFit) return null;
+      
+      const match = results.find(
+        (r) => c.companyName && r.title.toLowerCase().includes(c.companyName.toLowerCase().slice(0, 6))
+      );
+      
+      const conviction = computeConviction({
+        hasPatentFiling: spec.channel === "patents",
+        inAcceleratorCohort: spec.channel === "accelerators",
+        hackathonWin: spec.channel === "hackathons",
+        productHuntLaunch: spec.channel === "producthunt",
+        llmAssertedFit: true,
+        thesisSectorMatch: matches(`${c.sector} ${c.oneLiner} ${c.whyRelevant}`, thesis?.sectors),
+        thesisGeoMatch: matches(c.geography, thesis?.geographies),
+      });
+
+      const resolvedName = await resolveFounderName(c.companyName, c.founderName);
+      const mined = mineContacts(match ? `${match.url}\n${match.content}` : "");
+      const email = normEmail(c.founderEmail) ?? mined.email;
+      const linkedinUrl = normLinkedin(c.linkedinUrl) ?? mined.linkedinUrl;
+      const twitterHandle = normTwitter(c.twitterHandle) ?? mined.twitterHandle;
+      const ghLogin =
+        (c.founderHandle && !c.founderHandle.includes("/") && !c.founderHandle.includes("@")
+          ? c.founderHandle.replace(/^@/, "")
+          : null) ?? mined.githubLogin;
+      const foundersArr = buildOutboundFounder(resolvedName, c.founderHandle, {
+        role: "founder",
+        linkedinUrl,
+        twitterHandle,
+        githubLogin: ghLogin,
+        location: cleanPlaceholderField(c.geography),
+      });
+
+      return {
+        c,
+        conviction,
+        foundersArr,
+        email,
+        match,
+      };
+    })
+  );
+
+  // Write candidate opportunities sequentially to prevent DB transactional conflicts
+  for (const res of resultsList) {
     if (created.length >= limit) break;
-    // Gates: no established companies, no off-thesis candidates — if it
-    // doesn't match what the investor looks for, it is never shown.
-    if (c.isEstablished || isDenylisted(c.companyName)) continue;
-    if (!c.thesisFit) continue;
-    const match = results.find(
-      (r) => c.companyName && r.title.toLowerCase().includes(c.companyName.toLowerCase().slice(0, 6))
-    );
-    const conviction = computeConviction({
-      // Channel-specific evidence — every antenna carries its own weight.
-      hasPatentFiling: spec.channel === "patents",
-      inAcceleratorCohort: spec.channel === "accelerators",
-      hackathonWin: spec.channel === "hackathons",
-      productHuntLaunch: spec.channel === "producthunt",
-      llmAssertedFit: true, // the extractor only returns candidates it can justify
-      thesisSectorMatch: matches(`${c.sector} ${c.oneLiner} ${c.whyRelevant}`, thesis?.sectors),
-      thesisGeoMatch: matches(c.geography, thesis?.geographies),
-    });
-    
-    const resolvedName = await resolveFounderName(c.companyName, c.founderName);
-    // Broad, evidence-based contact resolution — prefer the LLM's candidate-
-    // specific extraction, fall back to mining the result matched to this founder.
-    const mined = mineContacts(match ? `${match.url}\n${match.content}` : "");
-    const email = normEmail(c.founderEmail) ?? mined.email;
-    const linkedinUrl = normLinkedin(c.linkedinUrl) ?? mined.linkedinUrl;
-    const twitterHandle = normTwitter(c.twitterHandle) ?? mined.twitterHandle;
-    const ghLogin =
-      (c.founderHandle && !c.founderHandle.includes("/") && !c.founderHandle.includes("@")
-        ? c.founderHandle.replace(/^@/, "")
-        : null) ?? mined.githubLogin;
-    const foundersArr = buildOutboundFounder(resolvedName, c.founderHandle, {
-      role: "founder",
-      linkedinUrl,
-      twitterHandle,
-      githubLogin: ghLogin,
-      location: cleanPlaceholderField(c.geography),
-    });
+    if (res.status !== "fulfilled" || !res.value) continue;
+    const { c, conviction, foundersArr, email, match } = res.value;
 
     const { opportunityId, deduped } = await createOpportunity({
       source: "outbound",
@@ -583,7 +604,6 @@ async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: 
       company: {
         name: c.companyName,
         sector: cleanPlaceholderField(c.sector),
-        // Stage only when the source explicitly said it — never simulated.
         stage: cleanPlaceholderField(c.stage),
         geography: cleanPlaceholderField(c.geography),
         oneLiner: c.oneLiner,
@@ -600,11 +620,13 @@ async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: 
         },
       ],
     });
+
     if (email && !deduped) {
       await db.update(opportunities).set({ applicantEmail: email }).where(eq(opportunities.id, opportunityId));
     }
     if (!deduped) created.push(opportunityId);
   }
+
   await bumpChannel(spec.channel, created.length);
   return created;
 }

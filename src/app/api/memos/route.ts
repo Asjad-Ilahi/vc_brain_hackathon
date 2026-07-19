@@ -25,7 +25,16 @@ export async function GET() {
       .innerJoin(opportunities, eq(memos.opportunityId, opportunities.id))
       .innerJoin(companies, eq(opportunities.companyId, companies.id))
       .orderBy(desc(memos.createdAt));
-    return ok(rows);
+
+    // Deduplicate by opportunityId, keeping the first occurrence (newest due to desc order)
+    const seen = new Set<string>();
+    const deduped = rows.filter((r) => {
+      if (seen.has(r.opportunityId)) return false;
+      seen.add(r.opportunityId);
+      return true;
+    });
+
+    return ok(deduped);
   } catch (e) {
     return fail(errMessage(e));
   }
