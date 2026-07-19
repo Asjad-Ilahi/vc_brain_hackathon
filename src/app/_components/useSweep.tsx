@@ -15,6 +15,7 @@ export type SweepChannel = {
   label: string;
   state: "pending" | "searching" | "done" | "empty" | "failed";
   count: number;
+  createdIds: string[];
 };
 
 export function useSweep(onData: () => void) {
@@ -31,7 +32,7 @@ export function useSweep(onData: () => void) {
       const enabled = SOURCE_OPTIONS.filter((s) => !enabledIds?.length || enabledIds.includes(s.id));
       runningRef.current = true;
       setRunning(true);
-      setChannels(enabled.map((s) => ({ id: s.id, label: s.label, state: "pending", count: 0 })));
+      setChannels(enabled.map((s) => ({ id: s.id, label: s.label, state: "pending", count: 0, createdIds: [] })));
 
       // Stream: refresh the page data every few seconds while sources work.
       const poll = setInterval(onData, 3000);
@@ -40,7 +41,7 @@ export function useSweep(onData: () => void) {
           setCh(s.id, { state: "searching" });
           try {
             const r = await postJson<{ created: string[] }>(`/api/source/${s.id}`);
-            setCh(s.id, { state: r.created.length > 0 ? "done" : "empty", count: r.created.length });
+            setCh(s.id, { state: r.created.length > 0 ? "done" : "empty", count: r.created.length, createdIds: r.created });
           } catch {
             setCh(s.id, { state: "failed" });
           }
@@ -56,7 +57,8 @@ export function useSweep(onData: () => void) {
   );
 
   const total = channels.reduce((n, c) => n + c.count, 0);
-  return { channels, running, total, start };
+  const createdIds = channels.flatMap((c) => c.createdIds);
+  return { channels, running, total, createdIds, start };
 }
 
 export function SweepLoader({ channels, running, total }: { channels: SweepChannel[]; running: boolean; total: number }) {

@@ -86,24 +86,6 @@ export default function Dashboard() {
     },
   ];
 
-  const getAgentForOpp = (o: OpportunitySummary): string => {
-    if (!o.screenResult) return "screener";
-    if (!o.axes.founder) {
-      const hasCold = o.founders.some((f) => f.isColdStart);
-      return hasCold ? "sourcing" : "scorer";
-    }
-    if (!o.recommendation) return "memo";
-    return "validator";
-  };
-
-  const getActiveDealsForAgent = (agentKey: string): OpportunitySummary[] => {
-    const inDiligence = opps.filter((o) => o.status === "in_diligence" && !o.decision);
-    return inDiligence.filter((o) => {
-      const mapped = getAgentForOpp(o);
-      return mapped === agentKey;
-    });
-  };
-
 
   const load = useCallback(async () => {
     try {
@@ -207,6 +189,27 @@ export default function Dashboard() {
   // Live founder search with per-source progress; results stream in as each
   // source finishes.
   const sweep = useSweep(load);
+
+  const getAgentForOpp = (o: OpportunitySummary): string => {
+    if (!o.screenResult) return "screener";
+    if (!o.axes.founder) {
+      const hasCold = o.founders.some((f) => f.isColdStart);
+      return hasCold ? "sourcing" : "scorer";
+    }
+    if (!o.recommendation) return "memo";
+    return "validator";
+  };
+
+  const getActiveDealsForAgent = (agentKey: string): OpportunitySummary[] => {
+    if (agentKey === "scouter") {
+      return opps.filter(o => sweep.createdIds?.includes(o.id));
+    }
+    const inDiligence = opps.filter((o) => o.status === "in_diligence" && !o.decision);
+    return inDiligence.filter((o) => {
+      const mapped = getAgentForOpp(o);
+      return mapped === agentKey;
+    });
+  };
 
   function scoutAll() {
     setStatus(null);
@@ -346,18 +349,11 @@ export default function Dashboard() {
       </div>
 
       <div className="px-6 py-4 md:px-8">
-        {sweep.channels.length > 0 ? (
-          <div className="mb-5">
-            <SweepLoader channels={sweep.channels} running={sweep.running} total={sweep.total} />
-          </div>
-        ) : null}
         {(busy || status) && (
           <div className="mb-5 border border-line bg-card px-3 py-2 text-[12.5px]">
             {busy ? <Spinner label={busy} /> : <span className="text-muted">{status}</span>}
           </div>
         )}
-
-
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
@@ -386,7 +382,6 @@ export default function Dashboard() {
             icon={<IconClock />}
           />
         </div>
-
         {auto && (auto.working > 0 || auto.queued > 0 || auto.ready + auto.decided < target) ? (
           <div
             onClick={() => setSelectedAgent("scouter")}
@@ -618,7 +613,7 @@ export default function Dashboard() {
                           }`}
                       >
                         {aActive && a.key === "scouter" && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#12A150] animate-ping shrink-0" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#12A150] shrink-0" />
                         )}
                         {a.name.split(" ")[0]}
                       </button>
@@ -642,6 +637,12 @@ export default function Dashboard() {
                         <div>Check Size: <strong className="text-ink">${thesis.checkSizeMinUsd.toLocaleString()} - ${thesis.checkSizeMaxUsd?.toLocaleString()}</strong></div>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {sweep.channels && sweep.channels.length > 0 && selectedAgent === "scouter" && (
+                  <div className="mt-4">
+                    <SweepLoader channels={sweep.channels} running={sweep.running} total={sweep.total} />
                   </div>
                 )}
 

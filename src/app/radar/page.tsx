@@ -94,11 +94,22 @@ export default function RadarPage() {
     }
   }
 
+  const getStageOrder = (o: OpportunitySummary) => {
+    if (o.status === "awaiting_decision" || o.recommendation) return 0;
+    if (o.screenResult === "reject") return 2;
+    return 1;
+  };
+
   const radar = useMemo(
     () =>
       opps
         .filter((o) => o.source === "outbound" && !o.decision)
-        .sort((a, b) => (b.convictionScore ?? 0) - (a.convictionScore ?? 0)),
+        .sort((a, b) => {
+          const orderA = getStageOrder(a);
+          const orderB = getStageOrder(b);
+          if (orderA !== orderB) return orderA - orderB;
+          return (b.convictionScore ?? 0) - (a.convictionScore ?? 0);
+        }),
     [opps]
   );
   const threshold = thesis?.convictionThreshold ?? 68;

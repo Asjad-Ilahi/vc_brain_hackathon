@@ -82,8 +82,7 @@ function Pipeline() {
   }, [q]);
 
   const getStageOrder = (o: OpportunitySummary) => {
-    if (o.screenResult === "pass") return 0;
-    if (!o.screenResult) return 1;
+    if (o.status === "awaiting_decision" || o.recommendation) return 0;
     if (o.screenResult === "reject") return 2;
     return 1;
   };
