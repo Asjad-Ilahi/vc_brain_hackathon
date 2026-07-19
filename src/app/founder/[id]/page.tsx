@@ -6,9 +6,9 @@
  */
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { api, fmtAgo } from "../../_components/api";
-import { Badge, Eyebrow, Spinner, scoreTone } from "../../_components/ui";
-import { CHANNEL_SIGNAL, initialsOf } from "../../_components/shared";
+import { api, fmtAgo, postJson } from "../../_components/api";
+import { Badge, Eyebrow, Spinner, scoreTone, Modal } from "../../_components/ui";
+import { CHANNEL_SIGNAL, initialsOf, PrimaryButton, GhostButton } from "../../_components/shared";
 
 type Founder = {
   id: string;
@@ -43,6 +43,20 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
   const { id } = use(params);
   const [p, setP] = useState<Profile | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [outreach, setOutreach] = useState<{ company: string; draft: string } | null>(null);
+
+  async function activate(o: Venture) {
+    setBusy(`activate:${o.opportunityId}`);
+    try {
+      const r = await postJson<{ draftMessage: string }>(`/api/opportunities/${o.opportunityId}/outreach`);
+      setOutreach({ company: o.company, draft: r.draftMessage });
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   useEffect(() => {
     api<Profile>(`/api/founders/${id}`)
@@ -208,13 +222,24 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
             <div className="space-y-3.5 text-[12.5px] font-sans text-muted">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-ink">Contact Email:</span>
-                {f.email ? (
-                  <a href={`mailto:${f.email}`} className="text-[#0045FF] font-bold hover:underline">
-                    {f.email}
-                  </a>
-                ) : (
-                  <span className="text-faint italic">Searching public sources...</span>
-                )}
+                <div className="flex items-center gap-3">
+                  {f.email ? (
+                    <a href={`mailto:${f.email}`} className="text-[#0045FF] font-bold hover:underline">
+                      {f.email}
+                    </a>
+                  ) : (
+                    <span className="text-faint italic">Searching public sources...</span>
+                  )}
+                  {f.email && ventures.length > 0 && (
+                    <button
+                      onClick={() => activate(ventures[0])}
+                      disabled={busy != null}
+                      className="rounded bg-[#0045FF] px-2 py-1 text-[10px] font-bold text-white hover:bg-[#0033cc] disabled:opacity-50"
+                    >
+                      {busy === `activate:${ventures[0].opportunityId}` ? "Drafting..." : "Draft Outreach"}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-ink">Github Username:</span>
@@ -274,6 +299,22 @@ export default function FounderProfilePage({ params }: { params: Promise<{ id: s
           </div>
         </aside>
       </div>
+      {outreach && (
+        <Modal title={`Outreach draft for ${outreach.company}`} onClose={() => setOutreach(null)}>
+          <div className="space-y-4">
+            <p className="text-[12px] text-muted">Review the generated cold email before sending. Ensure context and tone align with your style.</p>
+            <div className="rounded-lg border border-line bg-paper p-4 whitespace-pre-wrap font-mono text-[11px] text-ink shadow-inner max-h-[400px] overflow-y-auto">
+              {outreach.draft}
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <GhostButton onClick={() => setOutreach(null)}>Cancel</GhostButton>
+              <a href={`mailto:${f.email}?subject=Catching up&body=${encodeURIComponent(outreach.draft)}`} onClick={() => setOutreach(null)}>
+                <PrimaryButton>Open in Mail Client</PrimaryButton>
+              </a>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
