@@ -398,16 +398,18 @@ export default function OpportunityDetail({ id }: { id: string }) {
               </div>
               <div className="flex gap-2">
                 {s.source === "outbound" && !s.decision ? (
-                  <GhostButton onClick={draftOutreach} disabled={running}>⚡ Draft outreach</GhostButton>
+                  <GhostButton onClick={draftOutreach} disabled={running || !!outreach}>
+                    {outreach ? "✓ Outreach drafted" : "⚡ Draft outreach"}
+                  </GhostButton>
                 ) : null}
                 {!s.decision && !memo ? (
                   rejected ? (
-                    <PrimaryButton tone="ink" onClick={() => runDiligence({ force: true })} disabled={running}>
-                      {running ? "Running…" : "Override gate → full diligence"}
+                    <PrimaryButton tone="ink" onClick={() => runDiligence({ force: true })} disabled={running || !!memo}>
+                      {running ? "Running…" : memo ? "✓ Diligence completed" : "Override gate → full diligence"}
                     </PrimaryButton>
                   ) : (
-                    <PrimaryButton onClick={() => runDiligence()} disabled={running}>
-                      {running ? "Running…" : "▶ Run full diligence"}
+                    <PrimaryButton onClick={() => runDiligence()} disabled={running || !!memo}>
+                      {running ? "Running…" : memo ? "✓ Diligence completed" : "▶ Run full diligence"}
                     </PrimaryButton>
                   )
                 ) : null}

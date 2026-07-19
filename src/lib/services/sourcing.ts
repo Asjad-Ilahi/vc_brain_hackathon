@@ -372,6 +372,35 @@ const WEB_CHANNELS: Record<string, WebChannelSpec> = {
   },
 };
 
+async function resolveFounderName(companyName: string, initialName: string): Promise<string> {
+  const cleanInitial = (initialName || "").trim();
+  if (cleanInitial && cleanInitial.toLowerCase() !== "unknown" && cleanInitial.toLowerCase() !== "unnamed") {
+    return cleanInitial;
+  }
+
+  try {
+    const query = `"${companyName}" founder OR CEO OR creator OR owner OR author OR build`;
+    const { results } = await tavilySearch(query, { maxResults: 3 });
+    if (results.length > 0) {
+      const snippets = results.map(r => r.content).join("\n\n");
+      const answer = await structured({
+        schema: z.object({ fullName: z.string().nullable().describe("The full name of the founder/creator, e.g. 'John Doe'") }),
+        schemaName: "FounderNameExtraction",
+        system: `Identify the full name of the main founder or creator of the project/company: ${companyName}. If not explicitly mentioned, return null.`,
+        user: `Search results:\n${snippets}`,
+      });
+      if (answer.fullName && answer.fullName.toLowerCase() !== "unknown") {
+        return answer.fullName.trim();
+      }
+    }
+  } catch (err) {
+    console.error(`Failed to resolve founder name for ${companyName}:`, err);
+  }
+
+  // Visual consistency - returns a clean context indicator instead of 'Unknown'
+  return `${companyName} Creator`;
+}
+
 async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: number, customQuery?: string): Promise<string[]> {
   const thesis = await getActiveThesis(userId);
   const query = customQuery || spec.query(thesis);
@@ -408,6 +437,9 @@ async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: 
       thesisSectorMatch: matches(`${c.sector} ${c.oneLiner} ${c.whyRelevant}`, thesis?.sectors),
       thesisGeoMatch: matches(c.geography, thesis?.geographies),
     });
+    
+    const resolvedName = await resolveFounderName(c.companyName, c.founderName);
+    
     const { opportunityId, deduped } = await createOpportunity({
       source: "outbound",
       sourceChannel: spec.channel,
@@ -424,7 +456,12 @@ async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: 
         description: c.whyRelevant,
       },
       founders: [
-        { fullName: c.founderName, handleSeed: c.founderHandle, role: "founder", isColdStart: true },
+        { 
+          fullName: resolvedName, 
+          handleSeed: c.founderHandle || resolvedName.toLowerCase().replace(/\s+/g, ""), 
+          role: "founder", 
+          isColdStart: true 
+        },
       ],
       signals: [
         {
@@ -664,14 +701,35 @@ export async function runDeepFounderBackgroundCheck(opportunityId: string, found
 export async function deepSearchFounder(userId: string, query: string): Promise<string[]> {
   const thesis = await getActiveThesis(userId);
   
-  // 1. Search Tavily for the query (especially looking for founder/linkedin/github info)
-  const webQuery = `"${query}" founder OR github OR linkedin OR arXiv OR papers OR startup OR bio OR resume`;
-  const { results, answer } = await tavilySearch(webQuery, { maxResults: 8, depth: "advanced" });
+  // 1. Multi-query deep search to cover all facets (founders, company profiles, social links)
+  console.log(`Starting deep manual radar search for: "${query}"`);
   
-  // 2. Search GitHub for the query
+  const [resFounders, resCompany, resSocial] = await Promise.allSettled([
+    tavilySearch(`"${query}" founder OR co-founder OR team OR executive OR CEO OR owner`, { maxResults: 8, depth: "advanced" }),
+    tavilySearch(`"${query}" startup OR company OR tech OR launch OR product OR funding`, { maxResults: 8, depth: "advanced" }),
+    tavilySearch(`"${query}" site:linkedin.com/in/ OR site:github.com/ OR site:twitter.com/`, { maxResults: 8, depth: "advanced" }),
+  ]);
+
+  const webResultsMap = new Map<string, any>();
+  let primaryAnswer: string | null = null;
+
+  [resFounders, resCompany, resSocial].forEach((res) => {
+    if (res.status === "fulfilled" && res.value) {
+      if (res.value.answer && !primaryAnswer) {
+        primaryAnswer = res.value.answer;
+      }
+      res.value.results.forEach((r) => {
+        webResultsMap.set(r.url, r);
+      });
+    }
+  });
+
+  const mergedWebResults = Array.from(webResultsMap.values());
+  
+  // 2. Search GitHub for repositories matching the query
   let ghResults: any[] = [];
   try {
-    const repos = await githubSearchRepos(query, 5);
+    const repos = await githubSearchRepos(query, 6);
     ghResults = repos;
   } catch (e) {
     console.error("GH search failed in manual search:", e);
@@ -696,8 +754,8 @@ export async function deepSearchFounder(userId: string, query: string): Promise<
   }
   
   const evidence = [
-    answer ? `Web Summary: ${answer}` : "",
-    ...results.map((r, i) => `[Web Results ${i+1}] Title: ${r.title} — Url: ${r.url} — Content: ${r.content}`),
+    primaryAnswer ? `Web Summary: ${primaryAnswer}` : "",
+    ...mergedWebResults.map((r, i) => `[Web Results ${i+1}] Title: ${r.title} — Url: ${r.url} — Content: ${r.content}`),
     ...ghResults.map((r, i) => `[GitHub Repo ${i+1}] Name: ${r.full_name} — Url: ${r.html_url} — Stars: ${r.stargazers_count} — Description: ${r.description}`),
     ...arxivResults.map((p, i) => `[arXiv Paper ${i+1}] ${p}`)
   ].filter(Boolean).join("\n\n");
@@ -718,8 +776,8 @@ Determine if the project matches the VC's investment thesis.`;
   for (const c of candidates) {
     if (c.isEstablished || isDenylisted(c.companyName)) continue;
     
-    const match = results.find(
-      (r) => (c.companyName && r.title.toLowerCase().includes(c.companyName.toLowerCase().slice(0, 6))) ||
+    const match = mergedWebResults.find(
+      (r: any) => (c.companyName && r.title.toLowerCase().includes(c.companyName.toLowerCase().slice(0, 6))) ||
              (c.founderName && r.content.toLowerCase().includes(c.founderName.toLowerCase()))
     );
     
@@ -745,12 +803,12 @@ Determine if the project matches the VC's investment thesis.`;
       },
       founders: [
         {
-          fullName: c.founderName,
+          fullName: await resolveFounderName(c.companyName || `${c.founderName}'s Project`, c.founderName),
           handleSeed: c.founderHandle || c.founderName.toLowerCase().replace(/\s+/g, ""),
           role: "founder",
           isColdStart: true,
           githubLogin: c.founderHandle?.includes("/") ? undefined : c.founderHandle,
-          linkedinUrl: results.find(r => r.url.includes("linkedin.com/in/"))?.url ?? null,
+          linkedinUrl: mergedWebResults.find((r: any) => r.url.includes("linkedin.com/in/"))?.url ?? null,
         },
       ],
       signals: [
