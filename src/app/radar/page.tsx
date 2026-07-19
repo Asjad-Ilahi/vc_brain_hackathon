@@ -58,24 +58,37 @@ export default function RadarPage() {
     setSearching(true);
     setSearchStatus("Searching deeply across GitHub, arXiv, LinkedIn and Web...");
     setStatus(null);
+    // Guard against a hung/slow request — surface a clear flag instead of a
+    // spinner that never resolves.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 120000);
     try {
-      const r = await postJson<{ created: string[]; message?: string }>("/api/founders/search", { query: q });
+      const r = await api<{ created: string[]; message?: string }>("/api/founders/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q }),
+        signal: controller.signal,
+      });
       if (r.created.length > 0) {
-        setSearchStatus("Calibrating memory and drafting verification memo...");
-        await load();
-        setSearchQuery("");
         setSearchStatus(null);
-        setStatus(`Found and deeply verified ${r.created.length} founder(s) matching "${q}"!`);
+        setSearchQuery("");
+        setStatus(`✓ Found and verified ${r.created.length} founder(s) matching "${q}".`);
+        await load();
         router.push(`/opportunity/${r.created[0]}`);
       } else {
         setSearchStatus(null);
-        setStatus(r.message || `No new founders found matching "${q}".`);
+        setStatus(r.message || `No founders found matching "${q}". Try a full name, GitHub login, or a more specific keyword.`);
       }
     } catch (err) {
       console.error(err);
       setSearchStatus(null);
-      setStatus(`Search failed: ${(err as Error).message}`);
+      setStatus(
+        (err as Error).name === "AbortError"
+          ? `The deep search for "${q}" took too long and was stopped. Try a more specific query and run it again.`
+          : `Search failed: ${(err as Error).message}. Please try again.`
+      );
     } finally {
+      clearTimeout(timer);
       setSearching(false);
     }
   }
@@ -211,17 +224,20 @@ export default function RadarPage() {
             <SweepLoader channels={sweep.channels} running={sweep.running} total={sweep.total} />
           </div>
         ) : null}
-        {(busy || status) && (
+        {busy ? (
           <div className="mt-4 u-card px-3 py-2 text-[12.5px]">
-            {busy && !busy.startsWith("activate") ? (
-              <Spinner label={`Searching ${busy}…`} />
-            ) : busy?.startsWith("activate") ? (
-              <Spinner label="Drafting the intro…" />
-            ) : (
-              <span className="text-muted">{status}</span>
-            )}
+            {busy.startsWith("activate") ? <Spinner label="Drafting the intro…" /> : <Spinner label={`Searching ${busy}…`} />}
           </div>
-        )}
+        ) : status ? (
+          <div
+            className={`mt-4 flex items-start gap-2 rounded-2xl px-4 py-3 text-[12.5px] font-semibold ${
+              status.startsWith("✓") ? "bg-okwash text-ok" : "bg-warnwash text-warn"
+            }`}
+          >
+            <span>{status.startsWith("✓") ? "" : "⚠"}</span>
+            <span>{status}</span>
+          </div>
+        ) : null}
 
         <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_290px]">
           {/* Cards */}

@@ -19,20 +19,32 @@ export async function POST(req: Request) {
 
     const createdIds = await deepSearchFounder(user.id, query);
     if (createdIds.length === 0) {
-      return ok({ created: [], message: "No new founders found matching the query." });
+      return ok({
+        created: [],
+        message: `No founders found matching "${query}". Try a full name, a GitHub login, or a more specific project or keyword.`,
+      });
     }
 
-    // Run full deep assessment on each found candidate immediately
-    for (const id of createdIds) {
+    // Verify ONLY the top match inline — running the full chain for every hit
+    // blew past the serverless time budget, so the request never returned (the
+    // "no response" bug). The rest get the fast first-pass screen; autopilot or
+    // on-demand diligence completes them.
+    const [primary, ...rest] = createdIds;
+    try {
+      const screen = await screenOpportunity(primary);
+      if (screen.result === "pass") {
+        await scoreOpportunity(primary);
+        const { memo } = await buildMemo(primary);
+        await verifyMemoClaims(primary, memo.id);
+      }
+    } catch (err) {
+      console.error(`Assessment failed on manual search founder ${primary}:`, err);
+    }
+    for (const id of rest) {
       try {
-        const screen = await screenOpportunity(id);
-        if (screen.result === "pass") {
-          await scoreOpportunity(id);
-          const { memo } = await buildMemo(id);
-          await verifyMemoClaims(id, memo.id);
-        }
+        await screenOpportunity(id);
       } catch (err) {
-        console.error(`Autopilot assessment failed on manual search founder ${id}:`, err);
+        console.error(`Screen failed on manual search founder ${id}:`, err);
       }
     }
 
