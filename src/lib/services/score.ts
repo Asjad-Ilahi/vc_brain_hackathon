@@ -5,7 +5,7 @@
  */
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { opportunities, axisScores, reasoningSteps, founders } from "@/db/schema";
+import { opportunities, axisScores, reasoningSteps, founders, theses } from "@/db/schema";
 import { structured } from "@/lib/openai";
 import { ThreeAxisSchema, type ThreeAxis } from "@/lib/schemas";
 import { getOpportunityContext, formatContext } from "./context";
@@ -23,11 +23,28 @@ INDEPENDENT axes. Critical rules:
 - COLD START: if a founder has little/no public track record (no GitHub/funding/network), DO NOT
   default them to a low score. Reason from whatever public footprint exists, mark isColdStart=true,
   and keep confidence low and honest.
-- Every rationale must cite evidence from the signals. Never invent traction or metrics.`;
+- Every rationale must cite evidence from the signals. Never invent traction or metrics.
+
+SCORING SCALES & MEANINGS:
+Scores on each axis must strictly follow this rubric:
+* 90–100: Exceptional / Outlier (proven founder with multiple successful exits, massive expanding market, clear 10x product moat).
+* 70–89: Strong Venture Grade (strong founder with relevant expertise, large/growing market, viable product differentiation).
+* 50–69: Average / Early Signal (capable founder but first-time/no major wins, moderate market size, standard product idea with low defensibility).
+* 30–49: High Risk / Major Gaps (weak domain expertise, small/crowded market, copycat product with zero defensibility).
+* 0–29: Uninvestable (critical red flags, inactive space, or deceptive claims).
+
+Ensure your scores reflect these exact meanings consistently.`;
 
 export async function scoreOpportunity(opportunityId: string): Promise<ThreeAxis> {
   const ctx = await getOpportunityContext(opportunityId);
-  const thesis = await getActiveThesis();
+  const thesis = ctx.opportunity.thesisId
+    ? await db
+        .select()
+        .from(theses)
+        .where(eq(theses.id, ctx.opportunity.thesisId))
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+    : null;
 
   const result = await structured({
     schema: ThreeAxisSchema,

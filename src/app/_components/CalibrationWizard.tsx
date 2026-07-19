@@ -33,14 +33,6 @@ export type WizardMode = "signup" | "recalibrate";
 type Account = { name: string; email: string; password: string };
 type Identity = { role: string; decisionAuthority: "sole_gp" | "ic_required" | "advisory"; fundName: string; fundSize: string };
 
-const STEPS = [
-  { id: "you", n: "01", label: "You" },
-  { id: "fund", n: "02", label: "Fund" },
-  { id: "lens", n: "03", label: "Lens" },
-  { id: "founder", n: "04", label: "Founders" },
-  { id: "signals", n: "05", label: "Signals" },
-  { id: "launch", n: "06", label: "Launch" },
-] as const;
 
 const KEY = "vcb.calibration.v2";
 const AUTHORITY: [Identity["decisionAuthority"], string, string][] = [
@@ -65,6 +57,32 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
   // members instead of overwriting the first investor's thesis.
   const [existing, setExisting] = useState<{ workspaceName?: string; calibratedBy?: string | null } | null>(null);
   const joinMode = mode === "signup" && existing !== null;
+
+  const STEPS = useMemo(() => {
+    if (joinMode) {
+      return [
+        { id: "you", n: "01", label: "You" }
+      ] as const;
+    }
+    if (mode === "signup") {
+      return [
+        { id: "fund", n: "01", label: "Fund" },
+        { id: "lens", n: "02", label: "Lens" },
+        { id: "founder", n: "03", label: "Founders" },
+        { id: "signals", n: "04", label: "Signals" },
+        { id: "you", n: "05", label: "You" },
+        { id: "launch", n: "06", label: "Launch" },
+      ] as const;
+    }
+    return [
+      { id: "you", n: "01", label: "You" },
+      { id: "fund", n: "02", label: "Fund" },
+      { id: "lens", n: "03", label: "Lens" },
+      { id: "founder", n: "04", label: "Founders" },
+      { id: "signals", n: "05", label: "Signals" },
+      { id: "launch", n: "06", label: "Launch" },
+    ] as const;
+  }, [mode, joinMode]);
 
   /* ------------------------------ persistence ------------------------------ */
   // Draft autosaves locally — the password NEVER touches storage.
@@ -224,14 +242,11 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
         ...thesisPayload({ ...draft, name }, profileExtras),
         archiveStale: mode === "recalibrate",
       });
-      // Hand off to the command center: it runs the first search visibly,
-      // with per-source progress and results streaming in one by one.
+      // Hand off to the onboarding loading page which runs sweeps and audits sequentially
       try {
         localStorage.removeItem(KEY);
-        localStorage.setItem("vcb.autopilot.target", "10"); // fully check the first 10
-        localStorage.setItem("vcb.sweep.request", "1");
       } catch {}
-      router.push("/dashboard");
+      router.push("/signup/loading");
     } catch (e) {
       setErr((e as Error).message);
       setLaunching(false);
@@ -284,7 +299,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
         </div>
         {/* Step breadcrumbs */}
         <div className="flex items-center gap-0 overflow-x-auto border-t border-line bg-paper px-4 md:px-6">
-          {(joinMode ? STEPS.slice(0, 1) : STEPS).map((s, i) => {
+          {STEPS.map((s, i) => {
             const state = i === step ? "current" : i <= maxVisited ? "done" : "todo";
             return (
               <button
@@ -313,7 +328,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
         <div className="min-w-0 max-w-2xl">
           {STEPS[step].id === "you" && (
             <StepShell
-              n="01"
+              n={STEPS[step].n}
               title={joinMode ? "Join the workspace." : mode === "signup" ? "First — who signs the checks?" : "Who signs the checks?"}
               sub={
                 joinMode
@@ -379,7 +394,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
 
           {STEPS[step].id === "fund" && (
             <StepShell
-              n="02"
+              n={STEPS[step].n}
               title="Draw the fund's boundaries."
               sub="Check size, stages and locations decide which founders we even show you."
             >
@@ -412,7 +427,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
 
           {STEPS[step].id === "lens" && (
             <StepShell
-              n="03"
+              n={STEPS[step].n}
               title="What do you invest in?"
               sub="Pick your sectors and set two dials. These become the live rules the system scores every founder against — watch your profile build on the right."
             >
@@ -453,7 +468,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
 
           {STEPS[step].id === "founder" && (
             <StepShell
-              n="04"
+              n={STEPS[step].n}
               title="Describe a fundable founder."
               sub="We use this picture to hunt — the search looks for people like this before they ever start raising."
             >
@@ -488,7 +503,7 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
 
           {STEPS[step].id === "signals" && (
             <StepShell
-              n="05"
+              n={STEPS[step].n}
               title="Choose where we look."
               sub="Eight real, public sources. Turn on the ones you trust — more is not automatically better."
             >
@@ -527,36 +542,36 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
 
           {STEPS[step].id === "launch" && (
             <StepShell
-              n="06"
+              n={STEPS[step].n}
               title="Check it. Then launch."
               sub="This is everything the system will use to find, check and score founders for you. Edit any line before you launch."
             >
               <div className="divide-y divide-line border border-line bg-card">
-                <ReviewRow label="Investor" value={`${account.name || "—"} · ${identity.role}${mode === "signup" ? ` · ${account.email || "—"}` : ""}`} onEdit={() => go(0)} />
+                <ReviewRow label="Investor" value={`${account.name || "—"} · ${identity.role}${mode === "signup" ? ` · ${account.email || "—"}` : ""}`} onEdit={() => go(STEPS.findIndex(s => s.id === "you"))} />
                 <ReviewRow
                   label="Authority"
                   value={AUTHORITY.find(([v]) => v === identity.decisionAuthority)?.[1] ?? "—"}
-                  onEdit={() => go(0)}
+                  onEdit={() => go(STEPS.findIndex(s => s.id === "you"))}
                 />
                 <ReviewRow
                   label="Fund"
                   value={`${[identity.fundName, identity.fundSize].filter(Boolean).join(" · ") || "unnamed"} · $${fmtK(draft.checkSizeMinUsd)}–$${fmtK(draft.checkSizeMaxUsd)} for ${draft.ownershipTargetPct}%`}
-                  onEdit={() => go(1)}
+                  onEdit={() => go(STEPS.findIndex(s => s.id === "fund"))}
                 />
-                <ReviewRow label="Stages · geos" value={`${draft.stages.join(", ") || "—"} · ${draft.geographies.join(", ") || "—"}`} onEdit={() => go(1)} />
-                <ReviewRow label="Sectors" value={draft.sectors.join(" · ") || "—"} onEdit={() => go(2)} />
+                <ReviewRow label="Stages · geos" value={`${draft.stages.join(", ") || "—"} · ${draft.geographies.join(", ") || "—"}`} onEdit={() => go(STEPS.findIndex(s => s.id === "fund"))} />
+                <ReviewRow label="Sectors" value={draft.sectors.join(" · ") || "—"} onEdit={() => go(STEPS.findIndex(s => s.id === "lens"))} />
                 <ReviewRow
                   label="Posture"
                   value={`risk ${draft.riskScore}/100 · auto-check founders scoring ≥ ${draft.convictionThreshold}`}
-                  onEdit={() => go(2)}
+                  onEdit={() => go(STEPS.findIndex(s => s.id === "lens"))}
                 />
-                <ReviewRow label="Non-negotiables" value={draft.notes || "none set"} onEdit={() => go(2)} />
+                <ReviewRow label="Non-negotiables" value={draft.notes || "none set"} onEdit={() => go(STEPS.findIndex(s => s.id === "lens"))} />
                 <ReviewRow
                   label="Founder lens"
                   value={`${draft.archetypes.join(", ") || "no archetypes"} · depth ${draft.traits.technicalDepth} / distribution ${draft.traits.distributionInstinct} / story ${draft.traits.storytelling}`}
-                  onEdit={() => go(3)}
+                  onEdit={() => go(STEPS.findIndex(s => s.id === "founder"))}
                 />
-                <ReviewRow label="Sources" value={`${draft.enabledSources.length}/8 on — ${draft.enabledSources.join(", ")}`} onEdit={() => go(4)} />
+                <ReviewRow label="Sources" value={`${draft.enabledSources.length}/8 on — ${draft.enabledSources.join(", ")}`} onEdit={() => go(STEPS.findIndex(s => s.id === "signals"))} />
               </div>
 
               <label className="mt-5 flex cursor-pointer items-start gap-2.5 border border-line bg-card px-3.5 py-3">

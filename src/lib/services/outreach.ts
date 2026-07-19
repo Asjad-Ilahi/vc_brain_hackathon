@@ -1,13 +1,21 @@
 /** Activate — draft (never send) cold outreach to a sourced founder. */
 import { db } from "@/db/client";
-import { outreach } from "@/db/schema";
+import { outreach, theses } from "@/db/schema";
 import { text as llmText } from "@/lib/openai";
 import { getOpportunityContext, formatContext } from "./context";
 import { getActiveThesis, formatThesis } from "./thesis";
+import { eq } from "drizzle-orm";
 
 export async function draftOutreach(opportunityId: string) {
   const ctx = await getOpportunityContext(opportunityId);
-  const thesis = await getActiveThesis();
+  const thesis = ctx.opportunity.thesisId
+    ? await db
+        .select()
+        .from(theses)
+        .where(eq(theses.id, ctx.opportunity.thesisId))
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+    : null;
   const founderName = ctx.founders[0]?.fullName ?? "there";
 
   const draft = await llmText({

@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { OpportunitySummary } from "@/lib/services/list";
 import type { Thesis } from "@/lib/services/thesis";
@@ -14,6 +15,7 @@ type ChannelIntel = { channels: ChannelStat[]; suggestions: { channel: string; w
 const SOURCEABLE = ["github", "hackernews", "arxiv", "producthunt", "hackathons", "patents", "accelerators", "web"] as const;
 
 export default function RadarPage() {
+  const router = useRouter();
   const [opps, setOpps] = useState<OpportunitySummary[]>([]);
   const [thesis, setThesis] = useState<Thesis | null>(null);
   const [channels, setChannels] = useState<ChannelIntel | null>(null);
@@ -22,6 +24,10 @@ export default function RadarPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
   const [outreach, setOutreach] = useState<{ company: string; draft: string } | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchStatus, setSearchStatus] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -41,6 +47,35 @@ export default function RadarPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  async function handleManualSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    setSearching(true);
+    setSearchStatus("Searching deeply across GitHub, arXiv, LinkedIn and Web...");
+    setStatus(null);
+    try {
+      const r = await postJson<{ created: string[]; message?: string }>("/api/founders/search", { query: q });
+      if (r.created.length > 0) {
+        setSearchStatus("Calibrating memory and drafting verification memo...");
+        await load();
+        setSearchQuery("");
+        setSearchStatus(null);
+        setStatus(`Found and deeply verified ${r.created.length} founder(s) matching "${q}"!`);
+        router.push(`/opportunity/${r.created[0]}`);
+      } else {
+        setSearchStatus(null);
+        setStatus(r.message || `No new founders found matching "${q}".`);
+      }
+    } catch (err) {
+      console.error(err);
+      setSearchStatus(null);
+      setStatus(`Search failed: ${(err as Error).message}`);
+    } finally {
+      setSearching(false);
+    }
+  }
 
   const radar = useMemo(
     () =>
@@ -110,6 +145,29 @@ export default function RadarPage() {
       />
 
       <div className="px-6 py-5 md:px-8">
+        {/* Deep Manual Search Box */}
+        <div className="mb-6 border border-line bg-card p-4 rounded-sm">
+          <h2 className="font-mono text-[11.5px] uppercase tracking-[0.14em] text-accent mb-2">Deep search for new founders</h2>
+          <form onSubmit={handleManualSearch} className="flex gap-2">
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              disabled={searching}
+              className="flex-1 bg-paper border border-line px-3 py-2 font-mono text-[12.5px] text-ink focus:border-accent focus:outline-none placeholder-faint"
+              placeholder="Enter founder name, GitHub login, research paper title, or project keywords..."
+            />
+            <PrimaryButton type="submit" disabled={searching || !searchQuery.trim()}>
+              {searching ? "Deep Searching..." : "⚡ Deep Search & Verify"}
+            </PrimaryButton>
+          </form>
+          {searchStatus && (
+            <div className="mt-3 flex items-center gap-2 font-mono text-[11.5px] text-accent animate-pulse">
+              <Spinner />
+              <span>{searchStatus} (This runs real audits across GitHub, arXiv, LinkedIn, and Web - may take up to 45s)</span>
+            </div>
+          )}
+        </div>
+
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-1.5">
           <Chip active={filter === "all"} onClick={() => setFilter("all")}>

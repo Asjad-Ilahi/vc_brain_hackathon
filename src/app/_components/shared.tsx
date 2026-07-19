@@ -51,11 +51,13 @@ export function PrimaryButton({
   onClick,
   disabled,
   tone = "accent",
+  type = "button",
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   tone?: "accent" | "ink" | "ok";
+  type?: "button" | "submit" | "reset";
 }) {
   const cls =
     tone === "ok"
@@ -65,6 +67,7 @@ export function PrimaryButton({
         : "bg-accent text-accentink hover:opacity-90";
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
       className={`px-3.5 py-2 font-mono text-[12px] font-semibold uppercase tracking-wide transition-opacity disabled:opacity-50 ${cls}`}
@@ -78,13 +81,16 @@ export function GhostButton({
   children,
   onClick,
   disabled,
+  type = "button",
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
+  type?: "button" | "submit" | "reset";
 }) {
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
       className="border border-line bg-card px-3.5 py-2 font-mono text-[12px] uppercase tracking-wide text-muted transition-colors hover:border-linestrong hover:text-ink disabled:opacity-50"

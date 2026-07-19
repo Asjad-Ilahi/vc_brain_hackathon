@@ -37,6 +37,7 @@ export const users = pgTable("users", {
 // ---------------------------------------------------------------------------
 export const theses = pgTable("theses", {
   id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   sectors: text("sectors").array().notNull().default([]),
   stages: text("stages").array().notNull().default([]),

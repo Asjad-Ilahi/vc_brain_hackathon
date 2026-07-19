@@ -8,9 +8,9 @@
  * candidates crossing the thesis conviction threshold trigger assessment on
  * their own (auto-screen) — no human click required to start the funnel.
  */
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { sourcingChannels } from "@/db/schema";
+import { sourcingChannels, founders, opportunities } from "@/db/schema";
 import { githubSearchRepos, githubUser } from "@/lib/github";
 import { tavilySearch } from "@/lib/tavily";
 import { structured } from "@/lib/openai";
@@ -22,6 +22,7 @@ import { getActiveThesis, formatThesis, getThesisProfile, type Thesis } from "./
 import { computeConviction, matchesThesisTerms } from "./conviction";
 import { screenOpportunity } from "./screen";
 import { listOpportunities } from "./list";
+import { recordSignal } from "./ingest";
 
 export const ALL_CHANNELS = [
   "github",
@@ -77,8 +78,8 @@ function githubQueryFromThesis(t: Thesis | null): string {
   return `"${sector}" stars:30..2500 created:>${cutoff} fork:false pushed:>2025-01-01`;
 }
 
-export async function sourceFromGithub(limit = 5): Promise<string[]> {
-  const thesis = await getActiveThesis();
+export async function sourceFromGithub(userId: string, limit = 5): Promise<string[]> {
+  const thesis = await getActiveThesis(userId);
   const repos = await githubSearchRepos(githubQueryFromThesis(thesis), Math.max(limit * 3, 12));
   const created: string[] = [];
 
@@ -165,8 +166,8 @@ function companyFromHNTitle(title: string): string {
   return (name.length >= 2 && !/^\d+$/.test(name) ? name : stripped).slice(0, 60);
 }
 
-export async function sourceFromHackerNews(limit = 4): Promise<string[]> {
-  const thesis = await getActiveThesis();
+export async function sourceFromHackerNews(userId: string, limit = 4): Promise<string[]> {
+  const thesis = await getActiveThesis(userId);
   const q = encodeURIComponent(pickSector(thesis, "AI"));
   // Show HN only = actual product launches by a founder (not general articles).
   const url = `https://hn.algolia.com/api/v1/search?query=${q}&tags=show_hn&hitsPerPage=${Math.max(limit * 3, 12)}`;
@@ -225,8 +226,8 @@ function tag(block: string, name: string): string | null {
   return m ? m[1].replace(/\s+/g, " ").trim() : null;
 }
 
-export async function sourceFromArxiv(limit = 3): Promise<string[]> {
-  const thesis = await getActiveThesis();
+export async function sourceFromArxiv(userId: string, limit = 3): Promise<string[]> {
+  const thesis = await getActiveThesis(userId);
   const q = encodeURIComponent(pickSector(thesis, "machine learning systems"));
   const url = `http://export.arxiv.org/api/query?search_query=all:${q}&sortBy=submittedDate&sortOrder=descending&max_results=${limit + 2}`;
   const xml = await withRetry(
@@ -260,19 +261,19 @@ export async function sourceFromArxiv(limit = 3): Promise<string[]> {
       convictionScore: conviction.score,
       convictionReason: conviction.reason,
       company: {
-        name: `${author.split(" ").slice(-1)[0]} et al. (research)`,
-        sector: thesis?.sectors?.[0] ?? null,
+        name: `${author.split(" ").slice(-1)[0] || author} et al.`,
+        sector: thesis?.sectors?.[0] ?? "machine learning",
         oneLiner: title,
-        description: (summary ?? "").slice(0, 300),
+        description: `Research paper: ${title}. Abstract: ${summary}`,
       },
-      founders: [{ fullName: author, handleSeed: author, role: "researcher", isColdStart: true }],
+      founders: [{ fullName: author, handleSeed: author.toLowerCase().replace(/\s+/g, ""), role: "author", isColdStart: true }],
       signals: [
         {
           sourceType: "arxiv",
-          sourceUrl: id,
+          sourceUrl: id || undefined,
           title,
-          rawText: `arXiv paper "${title}" by ${author}. ${(summary ?? "").slice(0, 400)}`,
-          tags: ["outbound", "arxiv", "research"],
+          rawText: `Paper "${title}" by ${author} published ${published}. Abstract: ${summary}`,
+          tags: ["outbound", "arxiv"],
           observedAt: published ? new Date(published) : null,
         },
       ],
@@ -363,8 +364,8 @@ const WEB_CHANNELS: Record<string, WebChannelSpec> = {
   },
 };
 
-async function sourceViaWebExtract(spec: WebChannelSpec, limit: number, customQuery?: string): Promise<string[]> {
-  const thesis = await getActiveThesis();
+async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: number, customQuery?: string): Promise<string[]> {
+  const thesis = await getActiveThesis(userId);
   const query = customQuery || spec.query(thesis);
   const { results, answer } = await tavilySearch(query, { maxResults: 8, depth: "advanced" });
 
@@ -433,12 +434,12 @@ async function sourceViaWebExtract(spec: WebChannelSpec, limit: number, customQu
   return created;
 }
 
-export const sourceFromWeb = (customQuery?: string, limit = 4) =>
-  sourceViaWebExtract(WEB_CHANNELS.web, limit, customQuery);
-export const sourceFromProductHunt = (limit = 3) => sourceViaWebExtract(WEB_CHANNELS.producthunt, limit);
-export const sourceFromHackathons = (limit = 3) => sourceViaWebExtract(WEB_CHANNELS.hackathons, limit);
-export const sourceFromPatents = (limit = 2) => sourceViaWebExtract(WEB_CHANNELS.patents, limit);
-export const sourceFromAccelerators = (limit = 3) => sourceViaWebExtract(WEB_CHANNELS.accelerators, limit);
+export const sourceFromWeb = (userId: string, customQuery?: string, limit = 4) =>
+  sourceViaWebExtract(userId, WEB_CHANNELS.web, limit, customQuery);
+export const sourceFromProductHunt = (userId: string, limit = 3) => sourceViaWebExtract(userId, WEB_CHANNELS.producthunt, limit);
+export const sourceFromHackathons = (userId: string, limit = 3) => sourceViaWebExtract(userId, WEB_CHANNELS.hackathons, limit);
+export const sourceFromPatents = (userId: string, limit = 2) => sourceViaWebExtract(userId, WEB_CHANNELS.patents, limit);
+export const sourceFromAccelerators = (userId: string, limit = 3) => sourceViaWebExtract(userId, WEB_CHANNELS.accelerators, limit);
 
 // ------------------------------------------------- Threshold auto-trigger -----
 /**
@@ -446,10 +447,11 @@ export const sourceFromAccelerators = (limit = 3) => sourceViaWebExtract(WEB_CHA
  * crossing a conviction threshold ON THEIR OWN". After a sweep, high-conviction
  * unscreened candidates enter the funnel without a human click.
  */
-export async function autoScreenHighConviction(max = 3): Promise<string[]> {
-  const thesis = await getActiveThesis();
-  const threshold = thesis?.convictionThreshold ?? 68;
-  const all = await listOpportunities();
+export async function autoScreenHighConviction(userId: string, max = 3): Promise<string[]> {
+  const thesis = await getActiveThesis(userId);
+  if (!thesis) return [];
+  const threshold = thesis.convictionThreshold ?? 68;
+  const all = await listOpportunities(userId);
   const hot = all
     .filter(
       (o) =>
@@ -473,21 +475,21 @@ export async function autoScreenHighConviction(max = 3): Promise<string[]> {
 
 // --------------------------------------------------------- Multi-modal sweep --
 /** Full radar sweep across the thesis-enabled channels + threshold auto-screen. */
-export async function sourceAll(): Promise<Record<string, number>> {
-  const profile = await getThesisProfile();
+export async function sourceAll(userId: string): Promise<Record<string, number>> {
+  const profile = await getThesisProfile(userId);
   const enabled = new Set<string>(
     profile?.enabledSources?.length ? profile.enabledSources : [...ALL_CHANNELS]
   );
 
   const runners: [string, () => Promise<string[]>][] = [
-    ["github", () => sourceFromGithub(4)],
-    ["hackernews", () => sourceFromHackerNews(3)],
-    ["arxiv", () => sourceFromArxiv(3)],
-    ["producthunt", () => sourceFromProductHunt(3)],
-    ["hackathons", () => sourceFromHackathons(3)],
-    ["patents", () => sourceFromPatents(2)],
-    ["accelerators", () => sourceFromAccelerators(3)],
-    ["web", () => sourceFromWeb(undefined, 3)],
+    ["github", () => sourceFromGithub(userId, 4)],
+    ["hackernews", () => sourceFromHackerNews(userId, 3)],
+    ["arxiv", () => sourceFromArxiv(userId, 3)],
+    ["producthunt", () => sourceFromProductHunt(userId, 3)],
+    ["hackathons", () => sourceFromHackathons(userId, 3)],
+    ["patents", () => sourceFromPatents(userId, 2)],
+    ["accelerators", () => sourceFromAccelerators(userId, 3)],
+    ["web", () => sourceFromWeb(userId, undefined, 3)],
   ];
 
   const active = runners.filter(([name]) => enabled.has(name));
@@ -500,7 +502,210 @@ export async function sourceAll(): Promise<Record<string, number>> {
   });
 
   // Signals crossing the conviction threshold trigger assessment on their own.
-  const screened = await autoScreenHighConviction(3);
+  const screened = await autoScreenHighConviction(userId, 3);
   counts.autoScreened = screened.length;
   return counts;
+}
+
+// -------------------------------------------------- Deep Background Audit -----
+export async function runDeepFounderBackgroundCheck(opportunityId: string, founderId: string): Promise<void> {
+  const [f] = await db.select().from(founders).where(eq(founders.id, founderId)).limit(1);
+  if (!f) return;
+  const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, opportunityId)).limit(1);
+  if (!opp) return;
+
+  const name = f.fullName;
+  
+  // 1) Search Tavily (web & linkedin)
+  try {
+    const { results } = await tavilySearch(`"${name}" linkedin OR twitter OR resume OR portfolio OR startup`, { maxResults: 5 });
+    if (results.length > 0) {
+      const rawText = results.map(r => `[Web] ${r.title} (${r.url}): ${r.content.slice(0, 300)}`).join("\n\n");
+      await recordSignal({
+        opportunityId,
+        founderId,
+        companyId: opp.companyId,
+        sourceType: "web",
+        title: `Web background — ${name}`,
+        rawText,
+        tags: ["outbound", "deep-check", "social"],
+      });
+      
+      // Extract linkedin profile if found
+      const li = results.find(r => r.url.includes("linkedin.com/in/"));
+      if (li && !f.linkedinUrl) {
+        await db.update(founders).set({ linkedinUrl: li.url }).where(eq(founders.id, founderId));
+      }
+    }
+  } catch (e) {
+    console.error("Tavily search failed in deep background check:", e);
+  }
+
+  // 2) Search GitHub
+  let ghLogin = f.githubLogin || f.canonicalHandle;
+  if (ghLogin) {
+    try {
+      const user = await githubUser(ghLogin);
+      if (user && user.type !== "Organization") {
+        if (!f.githubLogin) {
+          await db.update(founders).set({ githubLogin: user.login }).where(eq(founders.id, founderId));
+        }
+        const repos = await githubSearchRepos(`user:${user.login}`, 5, "stars");
+        const rawText = `GitHub User: ${user.name || user.login} (${user.followers} followers, ${user.public_repos} repos). Bio: ${user.bio ?? ""}\n\n` +
+          repos.map(r => `Repo: ${r.full_name} (${r.stargazers_count}★): ${r.description ?? ""}`).join("\n");
+          
+        await recordSignal({
+          opportunityId,
+          founderId,
+          companyId: opp.companyId,
+          sourceType: "github",
+          title: `GitHub background — ${user.login}`,
+          rawText,
+          tags: ["outbound", "deep-check", "github"],
+          observedAt: new Date(),
+        });
+      }
+    } catch (e) {
+      console.error("GitHub check failed in deep background check:", e);
+    }
+  }
+
+  // 3) Search arXiv
+  try {
+    const arxivUrl = `http://export.arxiv.org/api/query?search_query=au:${encodeURIComponent(name)}&max_results=3`;
+    const xml = await fetch(arxivUrl).then(r => r.text());
+    const entries = xml.split("<entry>").slice(1).map((e) => e.split("</entry>")[0]);
+    let arxivTexts: string[] = [];
+    for (const e of entries) {
+      const title = tag(e, "title");
+      const author = tag(e, "name");
+      const id = tag(e, "id");
+      const summary = tag(e, "summary");
+      const published = tag(e, "published");
+      if (title && author) {
+        arxivTexts.push(`Paper: "${title}" by ${author} published ${published}. Abstract: ${summary}`);
+      }
+    }
+    if (arxivTexts.length > 0) {
+      await recordSignal({
+        opportunityId,
+        founderId,
+        companyId: opp.companyId,
+        sourceType: "arxiv",
+        title: `arXiv publications — ${name}`,
+        rawText: arxivTexts.join("\n\n"),
+        tags: ["outbound", "deep-check", "arxiv"],
+      });
+    }
+  } catch (e) {
+    console.error("arXiv check failed in deep background check:", e);
+  }
+}
+
+// ----------------------------------------------------- Deep Manual Search -----
+export async function deepSearchFounder(userId: string, query: string): Promise<string[]> {
+  const thesis = await getActiveThesis(userId);
+  
+  // 1. Search Tavily for the query (especially looking for founder/linkedin/github info)
+  const webQuery = `"${query}" founder OR github OR linkedin OR arXiv OR papers OR startup OR bio OR resume`;
+  const { results, answer } = await tavilySearch(webQuery, { maxResults: 8, depth: "advanced" });
+  
+  // 2. Search GitHub for the query
+  let ghResults: any[] = [];
+  try {
+    const repos = await githubSearchRepos(query, 5);
+    ghResults = repos;
+  } catch (e) {
+    console.error("GH search failed in manual search:", e);
+  }
+  
+  // 3. Search arXiv for papers matching query
+  let arxivResults: string[] = [];
+  try {
+    const arxivUrl = `http://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&max_results=3`;
+    const xml = await fetch(arxivUrl).then(r => r.text());
+    const entries = xml.split("<entry>").slice(1).map((e) => e.split("</entry>")[0]);
+    for (const e of entries) {
+      const title = tag(e, "title");
+      const author = tag(e, "name");
+      const summary = tag(e, "summary");
+      if (title && author) {
+        arxivResults.push(`Paper title: ${title} by ${author}. Abstract: ${summary}`);
+      }
+    }
+  } catch (e) {
+    console.error("arxiv query failed in manual search:", e);
+  }
+  
+  const evidence = [
+    answer ? `Web Summary: ${answer}` : "",
+    ...results.map((r, i) => `[Web Results ${i+1}] Title: ${r.title} — Url: ${r.url} — Content: ${r.content}`),
+    ...ghResults.map((r, i) => `[GitHub Repo ${i+1}] Name: ${r.full_name} — Url: ${r.html_url} — Stars: ${r.stargazers_count} — Description: ${r.description}`),
+    ...arxivResults.map((p, i) => `[arXiv Paper ${i+1}] ${p}`)
+  ].filter(Boolean).join("\n\n");
+  
+  const systemPrompt = `You are the lead intelligence analyst for an early-stage venture capital fund.
+Your task is to parse unstructured web search, GitHub, and arXiv results to extract the founder profile, company/project, sectors, stage, location, one-liner, and credentials.
+You MUST identify the founder name (usually matching or related to the search query "${query}"), their project or company name, and their key claims.
+Determine if the project matches the VC's investment thesis.`;
+
+  const { candidates } = await structured({
+    schema: z.object({ candidates: z.array(OutboundCandidateSchema).default([]) }),
+    schemaName: "OutboundCandidates",
+    system: systemPrompt,
+    user: `${formatThesis(thesis)}\n\nQuery: ${query}\n\nEvidence gathered:\n${evidence}\n\nExtract the founder(s) and company/project details from the evidence.`,
+  });
+
+  const created: string[] = [];
+  for (const c of candidates) {
+    if (c.isEstablished || isDenylisted(c.companyName)) continue;
+    
+    const match = results.find(
+      (r) => (c.companyName && r.title.toLowerCase().includes(c.companyName.toLowerCase().slice(0, 6))) ||
+             (c.founderName && r.content.toLowerCase().includes(c.founderName.toLowerCase()))
+    );
+    
+    const conviction = computeConviction({
+      llmAssertedFit: true,
+      thesisSectorMatch: matches(`${c.sector} ${c.oneLiner} ${c.whyRelevant}`, thesis?.sectors),
+      thesisGeoMatch: matches(c.geography, thesis?.geographies),
+    });
+    
+    const { opportunityId, deduped } = await createOpportunity({
+      source: "outbound",
+      sourceChannel: "web",
+      thesisId: thesis?.id ?? null,
+      convictionScore: conviction.score,
+      convictionReason: conviction.reason,
+      company: {
+        name: c.companyName || `${c.founderName}'s Project`,
+        sector: c.sector || "Uncategorized",
+        stage: c.stage ?? null,
+        geography: c.geography,
+        oneLiner: c.oneLiner,
+        description: c.whyRelevant,
+      },
+      founders: [
+        {
+          fullName: c.founderName,
+          handleSeed: c.founderHandle || c.founderName.toLowerCase().replace(/\s+/g, ""),
+          role: "founder",
+          isColdStart: true,
+          githubLogin: c.founderHandle?.includes("/") ? undefined : c.founderHandle,
+          linkedinUrl: results.find(r => r.url.includes("linkedin.com/in/"))?.url ?? null,
+        },
+      ],
+      signals: [
+        {
+          sourceType: "web",
+          sourceUrl: match?.url ?? null,
+          title: c.companyName || c.founderName,
+          rawText: `Manual Search for "${query}": ${c.oneLiner}. Why relevant: ${c.whyRelevant}. \n\nEvidence Summary:\n${evidence.slice(0, 1000)}`,
+          tags: ["outbound", "manual-search"],
+        },
+      ],
+    });
+    if (!deduped) created.push(opportunityId);
+  }
+  return created;
 }

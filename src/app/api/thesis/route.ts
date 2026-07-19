@@ -2,14 +2,21 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { theses, opportunities } from "@/db/schema";
 import { getActiveThesis } from "@/lib/services/thesis";
+import { userFromRequest } from "@/lib/auth";
 import { ok, fail, errMessage } from "@/lib/api";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const active = await getActiveThesis();
-    const all = await db.select().from(theses).orderBy(desc(theses.createdAt));
+    const user = await userFromRequest(req);
+    if (!user) return fail("Unauthorized", 401);
+    const active = await getActiveThesis(user.id);
+    const all = await db
+      .select()
+      .from(theses)
+      .where(eq(theses.userId, user.id))
+      .orderBy(desc(theses.createdAt));
     return ok({ active, all });
   } catch (e) {
     return fail(errMessage(e));
@@ -18,13 +25,18 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const user = await userFromRequest(req);
+    if (!user) return fail("Unauthorized", 401);
     const b = await req.json();
     if (!b?.name) return fail("name is required", 400);
-    // one active thesis at a time
-    await db.update(theses).set({ isActive: false }).where(eq(theses.isActive, true));
+
+    // deactivate user's current active thesis
+    await db.update(theses).set({ isActive: false }).where(and(eq(theses.isActive, true), eq(theses.userId, user.id)));
+
     const [row] = await db
       .insert(theses)
       .values({
+        userId: user.id,
         name: b.name,
         sectors: b.sectors ?? [],
         stages: b.stages ?? [],
@@ -50,6 +62,7 @@ export async function POST(req: Request) {
         .set({ status: "archived" })
         .where(
           and(
+            eq(opportunities.thesisId, row.id),
             eq(opportunities.source, "outbound"),
             isNull(opportunities.screenResult),
             isNull(opportunities.decision)

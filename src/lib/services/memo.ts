@@ -7,7 +7,7 @@
  */
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { memos, claims, opportunities, reasoningSteps } from "@/db/schema";
+import { memos, claims, opportunities, reasoningSteps, theses } from "@/db/schema";
 import { structured } from "@/lib/openai";
 import { MemoSchema, VerificationJudgmentSchema } from "@/lib/schemas";
 import { getOpportunityContext, formatContext } from "./context";
@@ -28,7 +28,14 @@ const MEMO_SYSTEM = `You are an investment analyst writing a decision-ready memo
 
 export async function buildMemo(opportunityId: string) {
   const ctx = await getOpportunityContext(opportunityId);
-  const thesis = await getActiveThesis();
+  const thesis = ctx.opportunity.thesisId
+    ? await db
+        .select()
+        .from(theses)
+        .where(eq(theses.id, ctx.opportunity.thesisId))
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+    : null;
 
   const memo = await structured({
     schema: MemoSchema,

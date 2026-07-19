@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users, theses } from "@/db/schema";
 import { verifyPassword } from "@/lib/auth";
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     const activeThesis = await db
       .select({ id: theses.id })
       .from(theses)
-      .where(eq(theses.isActive, true))
+      .where(and(eq(theses.isActive, true), eq(theses.userId, user.id)))
       .limit(1);
 
     const token = await createSessionToken(user.id);

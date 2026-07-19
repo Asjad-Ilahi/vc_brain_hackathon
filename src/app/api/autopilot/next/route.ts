@@ -6,19 +6,28 @@
  * 3-axis scoring → memo → external verification. Everything is real work on
  * real data; a screened-out deal is also a finished result.
  */
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { db } from "@/db/client";
-import { opportunities, opportunityFounders, founders, signals } from "@/db/schema";
+import { opportunities, opportunityFounders, founders, signals, companies } from "@/db/schema";
 import { screenOpportunity } from "@/lib/services/screen";
 import { scoreOpportunity } from "@/lib/services/score";
 import { buildMemo, verifyMemoClaims } from "@/lib/services/memo";
 import { analyzeColdStartFootprint } from "@/lib/services/coldstart";
+import { runDeepFounderBackgroundCheck } from "@/lib/services/sourcing";
+import { getActiveThesis } from "@/lib/services/thesis";
+import { userFromRequest } from "@/lib/auth";
 import { ok, fail, errMessage } from "@/lib/api";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-export async function POST() {
+export async function POST(req: Request) {
+  const user = await userFromRequest(req);
+  if (!user) return fail("Unauthorized", 401);
+
+  const thesis = await getActiveThesis(user.id);
+  if (!thesis) return ok({ processed: null, queueEmpty: true });
+
   // Atomic claim — parallel workers never grab the same deal. The outer
   // status re-check matters: under READ COMMITTED, a second concurrent UPDATE
   // re-evaluates its WHERE against the locked row and matches nothing.
@@ -27,6 +36,7 @@ export async function POST() {
     WHERE id = (
       SELECT id FROM opportunities
       WHERE status IN ('sourced', 'screened')
+        AND thesis_id = ${thesis.id}
         AND decision IS NULL
         AND (screen_result IS NULL OR screen_result = 'pass')
       ORDER BY conviction_score DESC NULLS LAST, created_at DESC
@@ -48,16 +58,40 @@ export async function POST() {
     if (screenResult === "reject") {
       // A rejection IS a finished result — surface it, don't bury it.
       await db.update(opportunities).set({ status: "screened" }).where(eq(opportunities.id, id));
-      return ok({ processed: id, outcome: "screened_out" });
+      
+      const [comp] = await db.select().from(companies).where(eq(companies.id, pre.companyId)).limit(1);
+      const links = await db.select().from(opportunityFounders).where(eq(opportunityFounders.opportunityId, id));
+      const founderNames: string[] = [];
+      for (const l of links) {
+        const [f] = await db.select().from(founders).where(eq(founders.id, l.founderId)).limit(1);
+        if (f) founderNames.push(f.fullName);
+      }
+      return ok({
+        processed: id,
+        company: comp?.name || "Unknown Company",
+        founder: founderNames.join(", ") || "Unknown Founder",
+        outcome: "screened_out",
+      });
     }
 
-    // 2 · Background check for founders with no track record yet
+    // 2 · Background check (deep search for all founders)
     const links = await db.select().from(opportunityFounders).where(eq(opportunityFounders.opportunityId, id));
     let isCold = false;
+    const founderNames: string[] = [];
     for (const l of links) {
       const [f] = await db.select().from(founders).where(eq(founders.id, l.founderId)).limit(1);
-      if (f?.isColdStart) isCold = true;
+      if (f) {
+        founderNames.push(f.fullName);
+        if (f.isColdStart) isCold = true;
+      }
+      try {
+        await runDeepFounderBackgroundCheck(id, l.founderId);
+      } catch (err) {
+        console.error(`Deep background check failed for founder ${l.founderId}:`, err);
+      }
     }
+    
+    // Cold start analysis
     if (isCold) {
       const existing = await db
         .select({ id: signals.id })
@@ -78,7 +112,13 @@ export async function POST() {
     const { memo } = await buildMemo(id);
     await verifyMemoClaims(id, memo.id);
 
-    return ok({ processed: id, outcome: "ready_for_decision" });
+    const [comp] = await db.select().from(companies).where(eq(companies.id, pre.companyId)).limit(1);
+    return ok({
+      processed: id,
+      company: comp?.name || "Unknown Company",
+      founder: founderNames.join(", ") || "Unknown Founder",
+      outcome: "ready_for_decision",
+    });
   } catch (e) {
     // Release the claim so the deal can be retried or handled manually.
     await db.update(opportunities).set({ status: "sourced" }).where(eq(opportunities.id, id));

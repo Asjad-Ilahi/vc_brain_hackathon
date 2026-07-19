@@ -1,17 +1,28 @@
-/** Live autopilot progress for the dashboard banner. */
 import { sql } from "drizzle-orm";
 import { db } from "@/db/client";
+import { userFromRequest } from "@/lib/auth";
+import { getActiveThesis } from "@/lib/services/thesis";
 import { ok, fail, errMessage } from "@/lib/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    // Recover claims from dead workers (function timeout, closed tab, deploy).
+    const user = await userFromRequest(req);
+    if (!user) return fail("Unauthorized", 401);
+
+    const thesis = await getActiveThesis(user.id);
+    if (!thesis) {
+      return ok({ ready: 0, working: 0, queued: 0, decided: 0, screenedOut: 0 });
+    }
+
+    // Recover claims from dead workers (function timeout, closed tab, deploy) for this thesis.
     await db.execute(sql`
       UPDATE opportunities SET status = 'sourced', claimed_at = NULL
-      WHERE status = 'in_diligence' AND claimed_at < now() - interval '6 minutes'`);
+      WHERE status = 'in_diligence' AND claimed_at < now() - interval '6 minutes'
+        AND thesis_id = ${thesis.id}`);
+
     const r = await db.execute(sql`
       SELECT
         count(*) FILTER (WHERE status = 'awaiting_decision' AND decision IS NULL) AS ready,
@@ -23,7 +34,8 @@ export async function GET() {
         count(*) FILTER (WHERE decision IS NOT NULL) AS decided,
         count(*) FILTER (WHERE screen_result = 'reject' AND decision IS NULL AND status != 'archived') AS screened_out
       FROM opportunities
-      WHERE status != 'archived'`);
+      WHERE status != 'archived' AND thesis_id = ${thesis.id}`);
+
     const row = r.rows[0] as Record<string, string>;
     return ok({
       ready: Number(row.ready),

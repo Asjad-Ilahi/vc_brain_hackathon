@@ -1,7 +1,7 @@
 /** Fast first-pass screen — removes clearly non-viable / off-thesis ideas before full analysis. */
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { opportunities, reasoningSteps } from "@/db/schema";
+import { opportunities, reasoningSteps, theses } from "@/db/schema";
 import { structured } from "@/lib/openai";
 import { ScreenSchema, type ScreenResult } from "@/lib/schemas";
 import { getOpportunityContext, formatContext } from "./context";
@@ -14,7 +14,14 @@ decision. Be explicit about thesis fit.`;
 
 export async function screenOpportunity(opportunityId: string): Promise<ScreenResult> {
   const ctx = await getOpportunityContext(opportunityId);
-  const thesis = await getActiveThesis();
+  const thesis = ctx.opportunity.thesisId
+    ? await db
+        .select()
+        .from(theses)
+        .where(eq(theses.id, ctx.opportunity.thesisId))
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+    : null;
 
   const result = await structured({
     schema: ScreenSchema,

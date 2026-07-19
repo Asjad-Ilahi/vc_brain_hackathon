@@ -13,6 +13,8 @@ import {
   signals,
 } from "@/db/schema";
 
+import { getActiveThesis } from "./thesis";
+
 export type AxisData = {
   score: number;
   trend: string;
@@ -82,12 +84,19 @@ function axisTriple(rows: (typeof axisScores.$inferSelect)[]): AxisTriple {
   return out;
 }
 
-export async function listOpportunities(): Promise<OpportunitySummary[]> {
-  // Archived = hypotheses from a previous thesis lens. Kept in Memory (founder
-  // profiles still show them) but out of the working views.
-  const opps = (await db.select().from(opportunities).orderBy(desc(opportunities.createdAt))).filter(
-    (o) => o.status !== "archived"
-  );
+export async function listOpportunities(userId?: string): Promise<OpportunitySummary[]> {
+  let opps = await db.select().from(opportunities).orderBy(desc(opportunities.createdAt));
+  
+  if (userId) {
+    const thesis = await getActiveThesis(userId);
+    if (!thesis) return [];
+    opps = opps.filter((o) => o.thesisId === thesis.id);
+  } else {
+    // Archived = hypotheses from a previous thesis lens. Kept in Memory (founder
+    // profiles still show them) but out of the working views.
+    opps = opps.filter((o) => o.status !== "archived");
+  }
+
   if (opps.length === 0) return [];
   const oppIds = opps.map((o) => o.id);
   const companyIds = [...new Set(opps.map((o) => o.companyId))];
@@ -184,8 +193,8 @@ export async function listOpportunities(): Promise<OpportunitySummary[]> {
   });
 }
 
-export async function getOpportunityDetail(id: string) {
-  const summaries = await listOpportunities();
+export async function getOpportunityDetail(id: string, userId?: string) {
+  const summaries = await listOpportunities(userId);
   const summary = summaries.find((s) => s.id === id);
   if (!summary) throw new Error("not found");
 

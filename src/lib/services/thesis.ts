@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and } from "drizzle-orm";
 import { db } from "@/db/client";
 import { theses } from "@/db/schema";
 
@@ -21,18 +21,21 @@ export type ThesisProfile = {
 };
 
 /** The active fund thesis. Falls back to a default if none configured yet. */
-export async function getActiveThesis(): Promise<Thesis | null> {
-  const rows = await db
-    .select()
-    .from(theses)
-    .where(eq(theses.isActive, true))
+export async function getActiveThesis(userId?: string): Promise<Thesis | null> {
+  let query = db.select().from(theses);
+  if (userId) {
+    query = query.where(and(eq(theses.isActive, true), eq(theses.userId, userId))) as any;
+  } else {
+    query = query.where(eq(theses.isActive, true)) as any;
+  }
+  const rows = await query
     .orderBy(desc(theses.createdAt))
     .limit(1);
   return rows[0] ?? null;
 }
 
-export async function getThesisProfile(): Promise<ThesisProfile | null> {
-  const t = await getActiveThesis();
+export async function getThesisProfile(userId?: string): Promise<ThesisProfile | null> {
+  const t = await getActiveThesis(userId);
   return (t?.profileJson as ThesisProfile | null) ?? null;
 }
 

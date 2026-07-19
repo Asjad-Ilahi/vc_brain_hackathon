@@ -10,6 +10,7 @@ import { parseDeck, pdfToText } from "@/lib/services/deck";
 import { createOpportunity } from "@/lib/services/opportunity";
 import { screenOpportunity } from "@/lib/services/screen";
 import { getActiveThesis } from "@/lib/services/thesis";
+import { userFromRequest } from "@/lib/auth";
 import { ok, fail, errMessage } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -44,12 +45,15 @@ export async function POST(req: Request) {
       deckText = b?.text;
     }
 
+    const user = await userFromRequest(req);
+    if (!user) return fail("Unauthorized", 401);
+
     if (!companyName && !deckText && !imageDataUrl)
       return fail("Provide at least a company name and a deck (file or text).", 400);
 
     // 1) Intake -> structured spec
     const extraction = await parseDeck({ companyName, text: deckText, imageDataUrl });
-    const thesis = await getActiveThesis();
+    const thesis = await getActiveThesis(user.id);
 
     // 2) Create opportunity (Memory ingestion happens inside)
     const { opportunityId, returningFounders } = await createOpportunity({
