@@ -14,6 +14,7 @@ import {
   signals,
 } from "@/db/schema";
 import { ok, fail, errMessage } from "@/lib/api";
+import { founderDisplayName } from "@/lib/utils";
 
 export const runtime = "nodejs";
 
@@ -106,7 +107,9 @@ export async function GET() {
       const sig = lastSignalByFounder.get(f.id);
       return {
         id: f.id,
-        name: f.fullName,
+        // Same identity hygiene as the radar: a real name, an "@handle", or an
+        // honest "Unidentified founder" — never "Unknown"/"Inventor of…".
+        name: founderDisplayName(f.fullName, f.githubLogin) ?? "Unidentified founder",
         handle: f.canonicalHandle,
         location: f.location,
         bio: f.bio,

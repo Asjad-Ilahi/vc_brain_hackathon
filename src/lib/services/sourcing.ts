@@ -11,13 +11,13 @@
 import { sql, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { sourcingChannels, founders, opportunities, opportunityFounders } from "@/db/schema";
-import { githubSearchRepos, githubUser, githubUserEmailFromCommits } from "@/lib/github";
-import { tavilySearch } from "@/lib/tavily";
+import { githubSearchRepos, githubUser, githubUserEmailFromCommits, type GithubRepo } from "@/lib/github";
+import { tavilySearch, type TavilyResult } from "@/lib/tavily";
 import { structured } from "@/lib/openai";
 import { OutboundCandidateSchema } from "@/lib/schemas";
 import { z } from "zod";
-import { withRetry } from "@/lib/utils";
-import { createOpportunity } from "./opportunity";
+import { withRetry, cleanPersonName, looksLikeHandle, cleanPlaceholderField } from "@/lib/utils";
+import { createOpportunity, type NewFounder } from "./opportunity";
 import { getActiveThesis, formatThesis, getThesisProfile, type Thesis } from "./thesis";
 import { computeConviction, matchesThesisTerms } from "./conviction";
 import { screenOpportunity } from "./screen";
@@ -123,7 +123,9 @@ export async function sourceFromGithub(userId: string, limit = 5): Promise<strin
       },
       founders: [
         {
-          fullName: user.name || user.login,
+          // Real name if GitHub has one; else the login, rendered as "@login" by
+          // the display layer (a real, linkable handle — never a fake full name).
+          fullName: cleanPersonName(user.name) ?? user.login,
           handleSeed: user.login,
           githubLogin: user.login,
           location: user.location,
@@ -372,33 +374,64 @@ const WEB_CHANNELS: Record<string, WebChannelSpec> = {
   },
 };
 
-async function resolveFounderName(companyName: string, initialName: string): Promise<string> {
-  const cleanInitial = (initialName || "").trim();
-  if (cleanInitial && cleanInitial.toLowerCase() !== "unknown" && cleanInitial.toLowerCase() !== "unnamed") {
-    return cleanInitial;
-  }
+/**
+ * Resolve a founder's REAL name — the enrichment that saves the investor a
+ * manual lookup. Returns a real human name or null. It NEVER fabricates: if the
+ * evidence only yields a handle or nothing, the caller decides how to present
+ * the person (as "@handle" or by leading with the company). This is the opposite
+ * of the old behaviour, which invented "<Company> Creator" placeholders.
+ */
+async function resolveFounderName(companyName: string, initialName?: string | null): Promise<string | null> {
+  const initial = cleanPersonName(initialName);
+  if (initial && !looksLikeHandle(initial)) return initial; // already a real name
 
   try {
     const query = `"${companyName}" founder OR CEO OR creator OR owner OR author OR build`;
     const { results } = await tavilySearch(query, { maxResults: 3 });
     if (results.length > 0) {
-      const snippets = results.map(r => r.content).join("\n\n");
+      const snippets = results.map((r) => r.content).join("\n\n");
       const answer = await structured({
-        schema: z.object({ fullName: z.string().nullable().describe("The full name of the founder/creator, e.g. 'John Doe'") }),
+        schema: z.object({
+          fullName: z
+            .string()
+            .nullable()
+            .describe("The founder/creator's real full name (e.g. 'John Doe'), or null if not explicitly stated. Never guess."),
+        }),
         schemaName: "FounderNameExtraction",
-        system: `Identify the full name of the main founder or creator of the project/company: ${companyName}. If not explicitly mentioned, return null.`,
+        system: `Identify the REAL full name of the main founder or creator of "${companyName}". Only return a name explicitly present in the search results. If none is stated, return null. Never fabricate.`,
         user: `Search results:\n${snippets}`,
       });
-      if (answer.fullName && answer.fullName.toLowerCase() !== "unknown") {
-        return answer.fullName.trim();
-      }
+      const resolved = cleanPersonName(answer.fullName);
+      if (resolved && !looksLikeHandle(resolved)) return resolved;
     }
   } catch (err) {
     console.error(`Failed to resolve founder name for ${companyName}:`, err);
   }
 
-  // Visual consistency - returns a clean context indicator instead of 'Unknown'
-  return `${companyName} Creator`;
+  return null; // unresolved — honest, not fabricated
+}
+
+/**
+ * Build the founders[] for an outbound candidate. Attaches a founder ONLY when we
+ * have a real identity to show — a real name, or a usable handle. When we have
+ * neither (common for patents/hackathons), we attach nothing and the card leads
+ * with the company/project, which is always a real, useful entity.
+ */
+function buildOutboundFounder(
+  realName: string | null,
+  handle: string | null,
+  extra: { githubLogin?: string | null; linkedinUrl?: string | null; role?: string; bio?: string | null } = {}
+): NewFounder[] {
+  const cleanHandle = (handle || "").trim().replace(/^@/, "") || null;
+  if (realName) {
+    return [{ fullName: realName, handleSeed: cleanHandle ?? realName, isColdStart: true, ...extra }];
+  }
+  if (cleanHandle) {
+    // Handle-only identity — store the handle as the name; the display layer
+    // renders it as "@handle" so it never masquerades as a verified person.
+    return [{ fullName: cleanHandle, handleSeed: cleanHandle, isColdStart: true, ...extra }];
+  }
+  return [];
 }
 
 async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: number, customQuery?: string): Promise<string[]> {
@@ -439,7 +472,8 @@ async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: 
     });
     
     const resolvedName = await resolveFounderName(c.companyName, c.founderName);
-    
+    const foundersArr = buildOutboundFounder(resolvedName, c.founderHandle, { role: "founder" });
+
     const { opportunityId, deduped } = await createOpportunity({
       source: "outbound",
       sourceChannel: spec.channel,
@@ -448,21 +482,14 @@ async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: 
       convictionReason: conviction.reason,
       company: {
         name: c.companyName,
-        sector: c.sector,
+        sector: cleanPlaceholderField(c.sector),
         // Stage only when the source explicitly said it — never simulated.
-        stage: c.stage ?? null,
-        geography: c.geography,
+        stage: cleanPlaceholderField(c.stage),
+        geography: cleanPlaceholderField(c.geography),
         oneLiner: c.oneLiner,
         description: c.whyRelevant,
       },
-      founders: [
-        { 
-          fullName: resolvedName, 
-          handleSeed: c.founderHandle || resolvedName.toLowerCase().replace(/\s+/g, ""), 
-          role: "founder", 
-          isColdStart: true 
-        },
-      ],
+      founders: foundersArr,
       signals: [
         {
           sourceType: spec.sourceType,
@@ -611,7 +638,7 @@ export async function runDeepFounderBackgroundCheck(opportunityId: string, found
   }
 
   // 2) Search GitHub
-  let ghLogin = f.githubLogin || f.canonicalHandle;
+  const ghLogin = f.githubLogin || f.canonicalHandle;
   if (ghLogin) {
     try {
       const user = await githubUser(ghLogin);
@@ -648,11 +675,10 @@ export async function runDeepFounderBackgroundCheck(opportunityId: string, found
     const arxivUrl = `http://export.arxiv.org/api/query?search_query=au:${encodeURIComponent(name)}&max_results=3`;
     const xml = await fetch(arxivUrl).then(r => r.text());
     const entries = xml.split("<entry>").slice(1).map((e) => e.split("</entry>")[0]);
-    let arxivTexts: string[] = [];
+    const arxivTexts: string[] = [];
     for (const e of entries) {
       const title = tag(e, "title");
       const author = tag(e, "name");
-      const id = tag(e, "id");
       const summary = tag(e, "summary");
       const published = tag(e, "published");
       if (title && author) {
@@ -710,7 +736,7 @@ export async function deepSearchFounder(userId: string, query: string): Promise<
     tavilySearch(`"${query}" site:linkedin.com/in/ OR site:github.com/ OR site:twitter.com/`, { maxResults: 8, depth: "advanced" }),
   ]);
 
-  const webResultsMap = new Map<string, any>();
+  const webResultsMap = new Map<string, TavilyResult>();
   let primaryAnswer: string | null = null;
 
   [resFounders, resCompany, resSocial].forEach((res) => {
@@ -727,16 +753,16 @@ export async function deepSearchFounder(userId: string, query: string): Promise<
   const mergedWebResults = Array.from(webResultsMap.values());
   
   // 2. Search GitHub for repositories matching the query
-  let ghResults: any[] = [];
+  let ghResults: GithubRepo[] = [];
   try {
     const repos = await githubSearchRepos(query, 6);
     ghResults = repos;
   } catch (e) {
     console.error("GH search failed in manual search:", e);
   }
-  
+
   // 3. Search arXiv for papers matching query
-  let arxivResults: string[] = [];
+  const arxivResults: string[] = [];
   try {
     const arxivUrl = `http://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&max_results=3`;
     const xml = await fetch(arxivUrl).then(r => r.text());
@@ -772,21 +798,35 @@ Determine if the project matches the VC's investment thesis.`;
     user: `${formatThesis(thesis)}\n\nQuery: ${query}\n\nEvidence gathered:\n${evidence}\n\nExtract the founder(s) and company/project details from the evidence.`,
   });
 
-  const created: string[] = [];
+  const created: { id: string; score: number }[] = [];
   for (const c of candidates) {
-    if (c.isEstablished || isDenylisted(c.companyName)) continue;
-    
+    const companyName = (c.companyName || "").trim();
+    if (companyName && (c.isEstablished || isDenylisted(companyName))) continue;
+
+    const resolvedName = await resolveFounderName(companyName || query, c.founderName);
+    const foundersArr = buildOutboundFounder(resolvedName, c.founderHandle, {
+      role: "founder",
+      linkedinUrl: mergedWebResults.find((r) => r.url.includes("linkedin.com/in/"))?.url ?? null,
+    });
+
+    // A real result needs a real entity: either a company/project name, or an
+    // identified founder. Without either we'd be inventing data — skip it, so a
+    // vague query returns "nothing found" instead of a fabricated card.
+    const displayCompany = companyName || (resolvedName ? `${resolvedName}'s project` : "");
+    if (!displayCompany || (!companyName && foundersArr.length === 0)) continue;
+
     const match = mergedWebResults.find(
-      (r: any) => (c.companyName && r.title.toLowerCase().includes(c.companyName.toLowerCase().slice(0, 6))) ||
-             (c.founderName && r.content.toLowerCase().includes(c.founderName.toLowerCase()))
+      (r) =>
+        (companyName && r.title.toLowerCase().includes(companyName.toLowerCase().slice(0, 6))) ||
+        (resolvedName && r.content.toLowerCase().includes(resolvedName.toLowerCase()))
     );
-    
+
     const conviction = computeConviction({
       llmAssertedFit: true,
       thesisSectorMatch: matches(`${c.sector} ${c.oneLiner} ${c.whyRelevant}`, thesis?.sectors),
       thesisGeoMatch: matches(c.geography, thesis?.geographies),
     });
-    
+
     const { opportunityId, deduped } = await createOpportunity({
       source: "outbound",
       sourceChannel: "web",
@@ -794,34 +834,28 @@ Determine if the project matches the VC's investment thesis.`;
       convictionScore: conviction.score,
       convictionReason: conviction.reason,
       company: {
-        name: c.companyName || `${c.founderName}'s Project`,
-        sector: c.sector || "Uncategorized",
-        stage: c.stage ?? null,
-        geography: c.geography,
+        name: displayCompany,
+        sector: cleanPlaceholderField(c.sector),
+        stage: cleanPlaceholderField(c.stage),
+        geography: cleanPlaceholderField(c.geography),
         oneLiner: c.oneLiner,
         description: c.whyRelevant,
       },
-      founders: [
-        {
-          fullName: await resolveFounderName(c.companyName || `${c.founderName}'s Project`, c.founderName),
-          handleSeed: c.founderHandle || c.founderName.toLowerCase().replace(/\s+/g, ""),
-          role: "founder",
-          isColdStart: true,
-          githubLogin: c.founderHandle?.includes("/") ? undefined : c.founderHandle,
-          linkedinUrl: mergedWebResults.find((r: any) => r.url.includes("linkedin.com/in/"))?.url ?? null,
-        },
-      ],
+      founders: foundersArr,
       signals: [
         {
           sourceType: "web",
           sourceUrl: match?.url ?? null,
-          title: c.companyName || c.founderName,
+          title: displayCompany,
           rawText: `Manual Search for "${query}": ${c.oneLiner}. Why relevant: ${c.whyRelevant}. \n\nEvidence Summary:\n${evidence.slice(0, 1000)}`,
           tags: ["outbound", "manual-search"],
         },
       ],
     });
-    if (!deduped) created.push(opportunityId);
+    if (!deduped) created.push({ id: opportunityId, score: conviction.score });
   }
-  return created;
+  // Best match first — the search page redirects to created[0], so it must be the
+  // strongest candidate, not whatever the LLM happened to list first.
+  created.sort((a, b) => b.score - a.score);
+  return created.map((c) => c.id);
 }

@@ -1,5 +1,6 @@
 /** Read models for the dashboard list, opportunity detail, and NL query ranking. */
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { founderDisplayName, cleanPlaceholderField } from "@/lib/utils";
 import { db } from "@/db/client";
 import {
   opportunities,
@@ -46,7 +47,11 @@ export type OpportunitySummary = {
   decidedBy: string | null;
   convictionScore: number | null;
   convictionReason: string | null;
-  founders: { id: string; name: string; founderScore: number; isColdStart: boolean }[];
+  // `name` is always display-safe (a real name, "@handle", or the company as a
+  // last resort — never "Unknown"/"Inventor of…"). `nameResolved` is false when
+  // we could not identify a person, so the UI can lead with the company instead
+  // of a placeholder. `isHandle` marks a username-only identity.
+  founders: { id: string; name: string; nameResolved: boolean; isHandle: boolean; founderScore: number; isColdStart: boolean }[];
   axes: AxisTriple;
   flags: number; // contradicted claims surfaced by the validator
   recommendation: string | null; // memo's recommendation (decision stays human)
@@ -150,12 +155,19 @@ export async function listOpportunities(_userId?: string): Promise<OpportunitySu
     const fList = (foundersByOpp.get(o.id) ?? [])
       .map((id) => founderById.get(id))
       .filter(Boolean)
-      .map((f) => ({
-        id: f!.id,
-        name: f!.fullName,
-        founderScore: f!.founderScore,
-        isColdStart: f!.isColdStart,
-      }));
+      .map((f) => {
+        const display = founderDisplayName(f!.fullName, f!.githubLogin);
+        return {
+          id: f!.id,
+          // Never surface junk: real name → "@handle" → the company name as a
+          // last resort (so the card still renders something real).
+          name: display ?? (c?.name ?? f!.fullName),
+          nameResolved: display != null,
+          isHandle: display != null && display.startsWith("@"),
+          founderScore: f!.founderScore,
+          isColdStart: f!.isColdStart,
+        };
+      });
     const ttd =
       o.decidedAt && o.firstSignalAt
         ? new Date(o.decidedAt).getTime() - new Date(o.firstSignalAt).getTime()
@@ -164,9 +176,9 @@ export async function listOpportunities(_userId?: string): Promise<OpportunitySu
       id: o.id,
       company: c?.name ?? "Unknown",
       oneLiner: c?.oneLiner ?? null,
-      sector: c?.sector ?? null,
-      stage: c?.stage ?? null,
-      geography: c?.geography ?? null,
+      sector: cleanPlaceholderField(c?.sector),
+      stage: cleanPlaceholderField(c?.stage),
+      geography: cleanPlaceholderField(c?.geography),
       source: o.source,
       sourceChannel: o.sourceChannel,
       status: o.status,

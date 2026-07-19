@@ -356,15 +356,19 @@ function RadarCard({
   const f = o.founders[0];
   const cold = o.founders.some((x) => x.isColdStart);
   const signal = CHANNEL_SIGNAL[o.sourceChannel ?? ""] ?? "Signal";
+  // The company/project is always a real entity — lead with it. The founder is
+  // enrichment: a real name, an @handle, or an honest "unidentified" (never junk).
+  const person = f && f.nameResolved ? f.name : null;
+  const avatarText = person && !f!.isHandle ? initialsOf(person) : initialsOf(o.company);
   return (
     <div className="flex flex-col bg-white rounded-[24px] border border-[#eceef3] shadow-none overflow-hidden hover:border-[#0045FF]/40 transition-colors">
       <div className="flex items-center gap-3 border-b border-[#eceef3] p-4">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#eceef3] bg-[#F8F8F8] text-[#0045FF] text-[12px] font-bold">
-          {f && !cold ? initialsOf(f.name) : cold ? "??" : "—"}
+          {avatarText}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-[13.5px] font-bold text-ink">{f?.name ?? o.company}</span>
+            <span className="truncate text-[13.5px] font-bold text-ink">{o.company}</span>
             {o.sector ? (
               <span className="rounded-full bg-[#EBF0FF] text-[#0045FF] text-[10px] px-2.5 py-0.5 font-bold font-sans">
                 {o.sector}
@@ -372,7 +376,14 @@ function RadarCard({
             ) : null}
           </div>
           <div className="truncate text-[11.5px] text-muted">
-            {o.company}
+            {person ? (
+              <>
+                {f!.isHandle ? "" : "Founder · "}
+                <span className={f!.isHandle ? "font-mono text-[11px]" : ""}>{person}</span>
+              </>
+            ) : (
+              <span className="text-faint">Founder unidentified{cold ? " · cold-start" : ""}</span>
+            )}
             {o.geography ? ` · ${o.geography}` : ""}
           </div>
         </div>
@@ -391,7 +402,7 @@ function RadarCard({
                 {o.convictionScore ?? "—"}
               </div>
             </div>
-            {f ? (
+            {f && f.nameResolved ? (
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Founder</div>
                 <div className="mt-1"><ScorePill n={f.founderScore} /></div>

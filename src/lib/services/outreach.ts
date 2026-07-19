@@ -7,6 +7,7 @@ import { formatThesis } from "./thesis";
 import { env } from "@/lib/env";
 import { eq } from "drizzle-orm";
 import { sendMail } from "@/lib/mail";
+import { founderDisplayName } from "@/lib/utils";
 
 export async function draftOutreach(opportunityId: string) {
   const ctx = await getOpportunityContext(opportunityId);
@@ -18,7 +19,11 @@ export async function draftOutreach(opportunityId: string) {
         .limit(1)
         .then((rows) => rows[0] ?? null)
     : null;
-  const founderName = ctx.founders[0]?.fullName ?? "there";
+  // Only greet by a REAL name — never "Hi Unknown" or "Hi @handle". Falls back
+  // to "there" when we haven't resolved a real person.
+  const f0 = ctx.founders[0];
+  const display = f0 ? founderDisplayName(f0.fullName, f0.githubLogin) : null;
+  const founderName = display && !display.startsWith("@") ? display : "there";
 
   const draft = await llmText({
     system: `You draft short, specific, non-cringe cold outreach from a VC to a founder we sourced

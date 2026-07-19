@@ -172,8 +172,16 @@ export const OutboundCandidateSchema = z.object({
       "Funding stage ONLY if explicitly stated in the results (e.g. 'raising pre-seed'). Never guess — null if unknown."
     ),
   geography: z.string().nullable(),
-  founderName: z.string(),
-  founderHandle: z.string().describe("github login or normalized name"),
+  founderName: z
+    .string()
+    .nullable()
+    .describe(
+      "The founder's/creator's REAL full name — ONLY if it is explicitly present in the evidence. Return null if you only see a username/handle, a patent number, or an org. NEVER fabricate a name and NEVER emit placeholders like 'Unknown', 'Inventor of <id>', or '<Company> Creator'."
+    ),
+  founderHandle: z
+    .string()
+    .nullable()
+    .describe("Their github login / X handle / username if present in the evidence, else null. Never invent one."),
   whyRelevant: z.string().describe("Why this matches the thesis"),
   thesisFit: z
     .boolean()
