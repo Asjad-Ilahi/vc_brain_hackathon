@@ -1,8 +1,6 @@
-/**
- * Sourcing & Network Intelligence — which channels actually produce quality, and
- * which are underexplored. Computed from outcomes so it learns: when a sourced
- * founder scores well, that channel's quality rises automatically.
- */
+import { db } from "@/db/client";
+import { companies, founders, opportunityFounders, opportunities, sourcingNodes } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { listOpportunities } from "./list";
 
 const KNOWN_CHANNELS = [
@@ -26,9 +24,20 @@ export type ChannelStat = {
   quality: number; // 0-100 blended
 };
 
+export type GraphNode = {
+  id: string;
+  institutionName: string;
+  programName: string;
+  qualityRating: number;
+  companyName: string;
+  founderName: string;
+  opportunityId: string;
+};
+
 export async function getChannelIntelligence(): Promise<{
   channels: ChannelStat[];
   suggestions: { channel: string; why: string }[];
+  graphNodes: GraphNode[];
 }> {
   const opps = await listOpportunities();
   const outbound = opps.filter((o) => o.source === "outbound");
@@ -59,11 +68,70 @@ export async function getChannelIntelligence(): Promise<{
     })
     .sort((a, b) => b.quality - a.quality);
 
-  const used = new Set(channels.map((c) => c.name));
-  const suggestions = KNOWN_CHANNELS.filter((k) => !used.has(k)).map((channel) => ({
-    channel,
-    why: "not yet explored — likely untapped supply",
-  }));
+  // Dynamic Sourcing Suggestions based on sourcing nodes quality rating
+  const suggestions: { channel: string; why: string }[] = [];
+  try {
+    const nodes = await db.select().from(sourcingNodes);
+    const instStats = new Map<string, { sum: number; count: number }>();
+    for (const n of nodes) {
+      const key = n.institutionName;
+      const curr = instStats.get(key) ?? { sum: 0, count: 0 };
+      curr.sum += n.qualityRating;
+      curr.count++;
+      instStats.set(key, curr);
+    }
 
-  return { channels, suggestions };
+    for (const [name, stats] of instStats.entries()) {
+      const avgRating = Math.round(stats.sum / stats.count);
+      if (avgRating >= 60 && stats.count < 3) {
+        suggestions.push({
+          channel: name,
+          why: `High-yield source (average quality ${avgRating}%) but underexplored with only ${stats.count} candidate(s).`,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Failed to fetch sourcing node suggestions:", err);
+  }
+
+  // Fallbacks aligning with key channels/brief goals if suggestions are empty
+  if (suggestions.length === 0) {
+    suggestions.push(
+      {
+        channel: "MIT CNC Hackathon",
+        why: "Strong source of developer projects in the North American/European thesis.",
+      },
+      {
+        channel: "GitHub",
+        why: "High-value developer signals representing code shipped before fundraising.",
+      },
+      {
+        channel: "Y Combinator",
+        why: "Cohort directory scrape representing high conversion quality.",
+      }
+    );
+  }
+
+  let graphNodes: GraphNode[] = [];
+  try {
+    graphNodes = await db
+      .select({
+        id: sourcingNodes.id,
+        institutionName: sourcingNodes.institutionName,
+        programName: sourcingNodes.programName,
+        qualityRating: sourcingNodes.qualityRating,
+        companyName: companies.name,
+        founderName: founders.fullName,
+        opportunityId: opportunities.id,
+      })
+      .from(sourcingNodes)
+      .innerJoin(opportunities, eq(sourcingNodes.opportunityId, opportunities.id))
+      .innerJoin(companies, eq(opportunities.companyId, companies.id))
+      .innerJoin(opportunityFounders, eq(opportunities.id, opportunityFounders.opportunityId))
+      .innerJoin(founders, eq(opportunityFounders.founderId, founders.id)) as unknown as GraphNode[];
+  } catch (err) {
+    console.error("Failed to query sourcing graph nodes:", err);
+  }
+
+  return { channels, suggestions, graphNodes };
 }

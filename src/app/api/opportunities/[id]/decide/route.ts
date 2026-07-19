@@ -5,7 +5,7 @@
  */
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { opportunities, opportunityFounders, sourcingChannels, reasoningSteps, memos } from "@/db/schema";
+import { opportunities, opportunityFounders, sourcingChannels, reasoningSteps, memos, sourcingNodes } from "@/db/schema";
 import { bumpFounderScore } from "@/lib/services/ingest";
 import { ok, fail, errMessage } from "@/lib/api";
 
@@ -48,6 +48,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         .update(sourcingChannels)
         .set({ convertedCount: sql`${sourcingChannels.convertedCount} + 1`, updatedAt: new Date() })
         .where(eq(sourcingChannels.name, opp.sourceChannel));
+      
+      // Update quality rating of all sourcing nodes sharing this institution or program
+      try {
+        const [node] = await db.select().from(sourcingNodes).where(eq(sourcingNodes.opportunityId, id)).limit(1);
+        if (node) {
+          await db
+            .update(sourcingNodes)
+            .set({ qualityRating: sql`LEAST(100, ${sourcingNodes.qualityRating} + 15)`, updatedAt: new Date() })
+            .where(eq(sourcingNodes.institutionName, node.institutionName));
+
+          await db
+            .update(sourcingNodes)
+            .set({ qualityRating: sql`LEAST(100, ${sourcingNodes.qualityRating} + 10)`, updatedAt: new Date() })
+            .where(eq(sourcingNodes.programName, node.programName));
+        }
+      } catch (err) {
+        console.error("Failed to update sourcing node quality scores on invest:", err);
+      }
     }
 
     const ttdMs = decidedAt.getTime() - new Date(opp.firstSignalAt).getTime();

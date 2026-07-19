@@ -25,9 +25,12 @@ concrete, real signal from the context (their repo/launch). 90 words max. No fab
     user: `${formatThesis(thesis)}\n\n${formatContext(ctx)}\n\nWrite the outreach to ${founderName}.`,
   });
 
+  const applyLink = `\n\nApply directly here: http://localhost:3000/apply?ref=${opportunityId}`;
+  const finalDraft = draft + applyLink;
+
   const [row] = await db
     .insert(outreach)
-    .values({ opportunityId, channel: "email", draftMessage: draft, status: "drafted" })
+    .values({ opportunityId, channel: "email", draftMessage: finalDraft, status: "drafted" })
     .returning();
   return row;
 }

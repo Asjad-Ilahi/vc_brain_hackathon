@@ -22,16 +22,22 @@ export type ThesisProfile = {
 
 /** The active fund thesis. Falls back to a default if none configured yet. */
 export async function getActiveThesis(userId?: string): Promise<Thesis | null> {
-  let query = db.select().from(theses);
   if (userId) {
-    query = query.where(and(eq(theses.isActive, true), eq(theses.userId, userId))) as any;
-  } else {
-    query = query.where(eq(theses.isActive, true)) as any;
+    const rows = await db
+      .select()
+      .from(theses)
+      .where(and(eq(theses.isActive, true), eq(theses.userId, userId)))
+      .orderBy(desc(theses.createdAt))
+      .limit(1);
+    if (rows.length > 0) return rows[0];
   }
-  const rows = await query
+  const fallback = await db
+    .select()
+    .from(theses)
+    .where(eq(theses.isActive, true))
     .orderBy(desc(theses.createdAt))
     .limit(1);
-  return rows[0] ?? null;
+  return fallback[0] ?? null;
 }
 
 export async function getThesisProfile(userId?: string): Promise<ThesisProfile | null> {

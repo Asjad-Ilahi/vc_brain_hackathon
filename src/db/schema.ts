@@ -237,3 +237,14 @@ export const sourcingChannels = pgTable("sourcing_channels", {
   qualityScore: real("quality_score").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const sourcingNodes = pgTable("sourcing_nodes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  opportunityId: uuid("opportunity_id").references(() => opportunities.id, { onDelete: "cascade" }),
+  institutionName: text("institution_name").notNull(),
+  programName: text("program_name").notNull(),
+  referrerName: text("referrer_name"),
+  qualityRating: integer("quality_rating").notNull().default(50),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});

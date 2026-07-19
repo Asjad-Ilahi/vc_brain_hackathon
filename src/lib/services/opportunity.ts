@@ -1,7 +1,7 @@
 /** Shared creation path for an opportunity — used by BOTH inbound apply and outbound sourcing. */
 import { and, desc, eq, ilike, isNotNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { companies, opportunities, signals } from "@/db/schema";
+import { companies, opportunities, signals, sourcingNodes } from "@/db/schema";
 import { upsertFounder, linkFounderToOpportunity, recordSignal } from "./ingest";
 
 /**
@@ -94,7 +94,84 @@ async function attachFoundersAndSignals(
   return { founderIds, returningFounders };
 }
 
+function extractSourcingNodeDetails(
+  channel: string,
+  signals: NewSignal[]
+): { institution: string; program: string; referrer: string } {
+  let institution = "Open Web";
+  let program = "Web Search";
+  let referrer = "Radar Scan";
+
+  const firstSig = signals[0];
+  const textToScan = `${firstSig?.title ?? ""} ${firstSig?.rawText ?? ""} ${firstSig?.sourceUrl ?? ""}`.toLowerCase();
+
+  switch (channel) {
+    case "github":
+      institution = "GitHub";
+      program = "OSS Repository";
+      referrer = "Developer Scan";
+      break;
+    case "arxiv":
+      institution = "arXiv";
+      program = "Academic Paper";
+      referrer = "Research Sweep";
+      break;
+    case "hackernews":
+      institution = "Hacker News";
+      program = textToScan.includes("show hn") ? "Show HN" : "HN Post";
+      referrer = "Community Feed";
+      break;
+    case "producthunt":
+      institution = "Product Hunt";
+      program = "Product Launch";
+      referrer = "PH Daily";
+      break;
+    case "hackathons":
+      institution = "Devpost";
+      if (textToScan.includes("mit")) {
+        institution = "MIT CNC Hackathon";
+      } else if (textToScan.includes("hack-nation")) {
+        institution = "Hack-Nation";
+      } else if (textToScan.includes("global ai")) {
+        institution = "Global AI Hackathon";
+      }
+      program = "Hackathon Win";
+      referrer = "Hackathon Crawler";
+      break;
+    case "patents":
+      institution = "US Patent Office";
+      program = "Patent Filing";
+      referrer = "IP Registry Scrape";
+      break;
+    case "accelerators":
+      if (textToScan.includes("combinator") || textToScan.includes("yc")) {
+        institution = "Y Combinator";
+      } else if (textToScan.includes("techstars")) {
+        institution = "Techstars";
+      } else {
+        institution = "Accelerator Cohort";
+      }
+      program = "Cohort Batch";
+      referrer = "Accelerator Scrape";
+      break;
+    case "application":
+      institution = "Direct Pitch";
+      program = "Inbound Portal";
+      referrer = "Self-Applied";
+      break;
+    default:
+      if (channel === "web") {
+        institution = "Open Web";
+        program = "General Web Search";
+        referrer = "Web Crawler";
+      }
+  }
+
+  return { institution, program, referrer };
+}
+
 export async function createOpportunity(input: {
+  existingOpportunityId?: string | null;
   source: "inbound" | "outbound";
   sourceChannel: string;
   thesisId?: string | null;
@@ -112,6 +189,44 @@ export async function createOpportunity(input: {
   founders: NewFounder[];
   signals: NewSignal[];
 }): Promise<CreateOpportunityResult> {
+  // If this is a conversion from an existing outbound opportunity
+  if (input.existingOpportunityId) {
+    const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, input.existingOpportunityId)).limit(1);
+    if (opp) {
+      const [company] = await db.select().from(companies).where(eq(companies.id, opp.companyId)).limit(1);
+      if (company) {
+        await db
+          .update(companies)
+          .set({
+            sector: input.company.sector ?? company.sector,
+            stage: input.company.stage ?? company.stage,
+            geography: input.company.geography ?? company.geography,
+            oneLiner: input.company.oneLiner ?? company.oneLiner,
+            description: input.company.description ?? company.description,
+          })
+          .where(eq(companies.id, company.id));
+
+        await db
+          .update(opportunities)
+          .set({
+            status: "applied",
+            source: "inbound",
+            sourceChannel: "application",
+          })
+          .where(eq(opportunities.id, opp.id));
+
+        const { founderIds, returningFounders } = await attachFoundersAndSignals(
+          opp.id,
+          company.id,
+          input.founders,
+          input.signals
+        );
+
+        return { opportunityId: opp.id, companyId: company.id, founderIds, returningFounders, deduped: false };
+      }
+    }
+  }
+
   // OUTBOUND DEDUPE: re-scanning the same founder must ENRICH the existing
   // opportunity (new timestamped signal = the trend over time), not duplicate it.
   // Inbound is exempt on purpose — a re-application is a new evaluation instance
@@ -187,6 +302,20 @@ export async function createOpportunity(input: {
       deadlineAt: new Date(now.getTime() + 24 * 3600_000),
     })
     .returning();
+
+  // Real Entity Extraction for Sourcing Graph
+  try {
+    const details = extractSourcingNodeDetails(input.sourceChannel, input.signals);
+    await db.insert(sourcingNodes).values({
+      opportunityId: opp.id,
+      institutionName: details.institution,
+      programName: details.program,
+      referrerName: details.referrer,
+      qualityRating: 50, // default rating
+    });
+  } catch (err) {
+    console.error("Failed to insert sourcing node:", err);
+  }
 
   const { founderIds, returningFounders } = await attachFoundersAndSignals(
     opp.id,

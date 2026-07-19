@@ -10,7 +10,8 @@ import { CHANNEL_SIGNAL, GhostButton, PageHeader, PrimaryButton, initialsOf } fr
 import { SweepLoader, useSweep } from "../_components/useSweep";
 
 type ChannelStat = { name: string; found: number; scored: number; avgConviction: number; converted: number; quality: number };
-type ChannelIntel = { channels: ChannelStat[]; suggestions: { channel: string; why: string }[] };
+type GraphNode = { id: string; institutionName: string; programName: string; qualityRating: number; companyName: string; founderName: string; opportunityId: string };
+type ChannelIntel = { channels: ChannelStat[]; suggestions: { channel: string; why: string }[]; graphNodes: GraphNode[] };
 
 const SOURCEABLE = ["github", "hackernews", "arxiv", "producthunt", "hackathons", "patents", "accelerators", "web"] as const;
 
@@ -19,7 +20,6 @@ export default function RadarPage() {
   const [opps, setOpps] = useState<OpportunitySummary[]>([]);
   const [thesis, setThesis] = useState<Thesis | null>(null);
   const [channels, setChannels] = useState<ChannelIntel | null>(null);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
@@ -39,13 +39,16 @@ export default function RadarPage() {
       setOpps(o);
       setThesis(t.active);
       setChannels(c);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error(err);
     }
   }, []);
 
   useEffect(() => {
-    load();
+    const executeLoad = async () => {
+      await load();
+    };
+    executeLoad();
   }, [load]);
 
   async function handleManualSearch(e: React.FormEvent) {
@@ -92,6 +95,22 @@ export default function RadarPage() {
     return m;
   }, [radar]);
   const coldStartCount = radar.filter((o) => o.founders.some((f) => f.isColdStart)).length;
+
+  const groupedGraph = useMemo(() => {
+    if (!channels?.graphNodes) return [];
+    const map = new Map<string, Map<string, Array<{ founderName: string; companyName: string; opportunityId: string }>>>();
+    for (const n of channels.graphNodes) {
+      if (!map.has(n.institutionName)) map.set(n.institutionName, new Map());
+      const inst = map.get(n.institutionName)!;
+      if (!inst.has(n.programName)) inst.set(n.programName, []);
+      inst.get(n.programName)!.push({
+        founderName: n.founderName,
+        companyName: n.companyName,
+        opportunityId: n.opportunityId,
+      });
+    }
+    return [...map.entries()];
+  }, [channels]);
 
   const shown = radar.filter((o) => {
     if (filter === "all") return true;
@@ -274,6 +293,34 @@ export default function RadarPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {groupedGraph.length > 0 && (
+              <div className="border border-line bg-card p-4">
+                <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">Sourcing Graph</div>
+                <p className="mt-0.5 text-[11px] text-faint">Network path: Institution → Program → Founder</p>
+                <div className="mt-3 space-y-4 max-h-[350px] overflow-y-auto pr-1">
+                  {groupedGraph.map(([instName, programs]) => (
+                    <div key={instName} className="border-l border-line pl-2.5 space-y-2">
+                      <div className="font-mono text-[11px] font-bold text-accent">{instName}</div>
+                      {[...programs.entries()].map(([progName, items]) => (
+                        <div key={progName} className="border-l border-accent/20 pl-2.5 space-y-1">
+                          <div className="font-mono text-[9.5px] text-muted uppercase tracking-wide">{progName}</div>
+                          {items.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-1.5 text-[11.5px] leading-snug">
+                              <span className="text-faint">↳</span>
+                              <Link href={`/opportunity/${item.opportunityId}`} className="hover:text-accent font-mono truncate text-muted">
+                                <span className="font-semibold text-white hover:text-accent">{item.founderName}</span>
+                                <span className="text-faint"> @{item.companyName}</span>
+                              </Link>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </aside>

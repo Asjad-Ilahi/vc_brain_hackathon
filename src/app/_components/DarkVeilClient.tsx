@@ -21,7 +21,7 @@ type Props = {
 export default function DarkVeilClient(props: Props) {
   const { style, ...rest } = props;
   return (
-    <div style={{ width: "100%", height: "100%", ...style }}>
+    <div style={{ width: "100%", height: "100%", backgroundColor: "#0f3bb3ff", ...style }}>
       <DarkVeil {...rest} />
     </div>
   );

@@ -250,7 +250,8 @@ export default function CalibrationWizard({ mode }: { mode: WizardMode }) {
         });
       }
       try { localStorage.removeItem(KEY); } catch {}
-      router.push("/signup/loading");
+      try { localStorage.setItem("vcb.sweep.request", "1"); } catch {}
+      router.push("/dashboard");
     } catch (e) {
       setErr((e as Error).message);
       setLaunching(false);

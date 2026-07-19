@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     const activeThesis = await db
       .select({ id: theses.id })
       .from(theses)
-      .where(and(eq(theses.isActive, true), eq(theses.userId, user.id)))
+      .where(eq(theses.isActive, true))
       .limit(1);
 
     const token = await createSessionToken(user.id);

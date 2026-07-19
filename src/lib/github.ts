@@ -12,7 +12,7 @@ function headers() {
     "X-GitHub-Api-Version": "2022-11-28",
   };
   const token = env.githubToken;
-  if (token) h.Authorization = `Bearer ${token}`;
+  if (token) h.Authorization = `token ${token}`;
   return h;
 }
 

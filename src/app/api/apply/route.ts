@@ -45,18 +45,21 @@ export async function POST(req: Request) {
       deckText = b?.text;
     }
 
-    const user = await userFromRequest(req);
-    if (!user) return fail("Unauthorized", 401);
+    const url = new URL(req.url);
+    const ref = url.searchParams.get("ref");
+
+    const user = await userFromRequest(req).catch(() => null);
 
     if (!companyName && !deckText && !imageDataUrl)
       return fail("Provide at least a company name and a deck (file or text).", 400);
 
     // 1) Intake -> structured spec
     const extraction = await parseDeck({ companyName, text: deckText, imageDataUrl });
-    const thesis = await getActiveThesis(user.id);
+    const thesis = user ? await getActiveThesis(user.id) : await getActiveThesis();
 
     // 2) Create opportunity (Memory ingestion happens inside)
     const { opportunityId, returningFounders } = await createOpportunity({
+      existingOpportunityId: ref,
       source: "inbound",
       sourceChannel: "application",
       thesisId: thesis?.id ?? null,

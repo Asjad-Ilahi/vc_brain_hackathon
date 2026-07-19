@@ -83,6 +83,14 @@ export function computeConviction(input: ConvictionInput): Conviction {
     if (input.founderScore >= 70) reasons.push({ weight: pts, text: `proven operator (FS ${input.founderScore})` });
   }
 
+  // Cold-start booster: if they have a win/launch/patent but low social traction, boost them
+  const isColdStartEligible = !!(input.hackathonWin || input.hasPatentFiling || input.productHuntLaunch);
+  const hasLowTraction = (input.githubStars ?? 0) < 10 && (input.githubFollowers ?? 0) < 10 && (input.hnPoints ?? 0) < 10;
+  if (isColdStartEligible && hasLowTraction) {
+    score += 20;
+    reasons.push({ weight: 20, text: "promising cold-start signal" });
+  }
+
   const finalScore = clamp(score);
   const top = reasons
     .filter((r) => r.weight > 0)
