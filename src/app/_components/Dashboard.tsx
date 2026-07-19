@@ -104,23 +104,6 @@ export default function Dashboard() {
     });
   };
 
-  const renderAgentLink = (key: string, label: string) => {
-    const activeDeals = getActiveDealsForAgent(key);
-    const isActive = key === "scouter"
-      ? (sweep.running || (auto && auto.ready + auto.decided < target))
-      : activeDeals.length > 0;
-    return (
-      <button
-        onClick={() => setSelectedAgent(key)}
-        className={`hover:underline font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
-          isActive ? "text-[#12A150]" : "text-faint hover:text-[#0045FF]"
-        }`}
-      >
-        {isActive && <span className="w-1.5 h-1.5 rounded-full bg-[#12A150] animate-ping shrink-0" />}
-        {label}
-      </button>
-    );
-  };
 
   const load = useCallback(async () => {
     try {
@@ -335,8 +318,11 @@ export default function Dashboard() {
           </div>
         ) : null}
         {auto && (auto.working > 0 || auto.queued > 0 || auto.ready + auto.decided < target) ? (
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-2 border border-line bg-card px-3.5 py-2.5">
-            <span className="flex items-center gap-2.5 font-mono text-[12px] text-muted">
+          <div
+            onClick={() => setSelectedAgent("scouter")}
+            className="mb-5 flex flex-wrap items-center justify-between gap-2 border border-line bg-card px-3.5 py-2.5 hover:border-[#0045FF] hover:bg-paper cursor-pointer transition-all rounded-lg group select-none"
+          >
+            <span className="flex items-center gap-2.5 font-mono text-[12px] text-muted group-hover:text-ink">
               <Spinner />
               {auto.working > 0 || auto.queued > 0 ? (
                 <span>Agents working in the background — <strong className="text-ink">{auto.ready}</strong> ready for you · {auto.working} being checked · {auto.queued} waiting</span>
@@ -346,17 +332,20 @@ export default function Dashboard() {
             </span>
             <span className="flex items-center gap-1.5 font-mono text-[10.5px] text-faint">
               <span>full check:</span>
-              {renderAgentLink("scouter", "scouter")}
+              <span className="text-[#12A150] font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#12A150] animate-ping shrink-0" />
+                scouter
+              </span>
               <span>→</span>
-              {renderAgentLink("screener", "screen")}
+              <span>screen</span>
               <span>→</span>
-              {renderAgentLink("sourcing", "background")}
+              <span>background</span>
               <span>→</span>
-              {renderAgentLink("scorer", "scores")}
+              <span>scores</span>
               <span>→</span>
-              {renderAgentLink("memo", "memo")}
+              <span>memo</span>
               <span>→</span>
-              {renderAgentLink("validator", "verify")}
+              <span>verify</span>
             </span>
           </div>
         ) : null}
@@ -581,6 +570,33 @@ export default function Dashboard() {
 
             return (
               <div className="space-y-4">
+                {/* Agent Tab Switcher */}
+                <div className="flex flex-wrap border-b border-line pb-2.5 gap-1.5">
+                  {AGENTS.map((a) => {
+                    const active = a.key === selectedAgent;
+                    const aDeals = getActiveDealsForAgent(a.key);
+                    const aActive = a.key === "scouter"
+                      ? (sweep.running || (auto && auto.ready + auto.decided < target))
+                      : aDeals.length > 0;
+                    return (
+                      <button
+                        key={a.key}
+                        onClick={() => setSelectedAgent(a.key)}
+                        className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                          active
+                            ? "bg-[#0045FF] border-[#0045FF] text-white"
+                            : "bg-paper hover:bg-wash hover:border-linestrong text-muted border-line"
+                        }`}
+                      >
+                        {aActive && a.key === "scouter" && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#12A150] animate-ping shrink-0" />
+                        )}
+                        {a.name.split(" ")[0]}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <div>
                   <div className="text-[11px] font-bold uppercase tracking-wider text-accent">{agentDef.role}</div>
                   <p className="mt-1 text-[13px] leading-relaxed text-muted">{agentDef.description}</p>
