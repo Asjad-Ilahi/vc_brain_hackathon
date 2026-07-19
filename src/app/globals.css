@@ -1,32 +1,51 @@
 @import "tailwindcss";
 
 /**
- * VC Brain design system — "terminal editorial".
- * Warm paper, hairline borders, monospace numerals, one burnt-orange accent.
- * Notion-level approachability, Bloomberg-level analytical depth.
- * Deliberately single-theme: the product IS the warm-paper light look.
+ * VC Brain design system — "electric blue intelligence"
+ * Primary: #0045FF / #002999 gradient hero
+ * Neutral canvas: white/light-grey for content sections
+ * Selection colors: 0045FF, FFFFFF, 000000, E0E0E0, EBEBEB, F0F0F0, 6E6E6E, 263238
  */
 @theme {
-  --color-paper: #f7f5f0;
-  --color-card: #fcfbf7;
-  --color-ink: #17140f;
-  --color-muted: #6e6a5f;
-  --color-faint: #7d7768;
-  --color-line: #e4e0d4;
-  --color-linestrong: #cfc9b8;
-  --color-accent: #c44e1c;
+  /* Brand blues */
+  --color-brand: #0045ff;
+  --color-branddeep: #002999;
+  --color-brandlight: #4d7fff;
+  --color-brandfaint: rgba(0, 69, 255, 0.08);
+  --color-brandwash: rgba(0, 69, 255, 0.12);
+
+  /* Canvas / surfaces */
+  --color-paper: #ffffff;
+  --color-card: #f0f0f0;
+  --color-cardalt: #ebebeb;
+
+  /* Ink */
+  --color-ink: #000000;
+  --color-muted: #6e6e6e;
+  --color-faint: #9e9e9e;
+
+  /* Borders */
+  --color-line: #e0e0e0;
+  --color-linestrong: #c4c4c4;
+
+  /* Accent = brand */
+  --color-accent: #0045ff;
   --color-accentink: #ffffff;
-  --color-wash: #f8e9e0;
-  --color-ok: #1e7a3c;
-  --color-okwash: #e7f2e9;
-  --color-warn: #a87614;
-  --color-warnwash: #f7efda;
-  --color-bad: #b3261e;
-  --color-badwash: #f9e7e4;
-  --color-codebg: #f1eee5;
+
+  /* Semantic */
+  --color-ok: #1a9e4a;
+  --color-okwash: #e6f5ec;
+  --color-warn: #b37800;
+  --color-warnwash: #fff3cc;
+  --color-bad: #cc2222;
+  --color-badwash: #fde8e8;
+
+  /* Misc */
+  --color-dark: #263238;
+  --color-codebg: #f0f0f0;
 
   --font-mono: var(--font-jbmono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-urbanist), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 :root {
@@ -35,8 +54,8 @@
 
 html,
 body {
-  background: #f7f5f0;
-  color: #17140f;
+  background: #ffffff;
+  color: #000000;
 }
 
 body {
@@ -46,11 +65,11 @@ body {
 }
 
 * {
-  border-color: #e4e0d4;
+  border-color: #e0e0e0;
 }
 
 ::selection {
-  background: #f3d9cb;
+  background: rgba(0, 69, 255, 0.18);
 }
 
 ::-webkit-scrollbar {
@@ -58,11 +77,10 @@ body {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d8d3c4;
+  background: #c4c4c4;
   border-radius: 6px;
 }
 
-/* Numbers line up in tables and countdowns. */
 .tnum {
   font-variant-numeric: tabular-nums;
 }
@@ -72,7 +90,7 @@ textarea:focus-visible,
 select:focus-visible,
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid #c44e1c;
+  outline: 2px solid #0045ff;
   outline-offset: 1px;
 }
 
@@ -81,4 +99,132 @@ a:focus-visible {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ── Ticker scrolling animation ── */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-ticker {
+  animation: ticker 28s linear infinite;
+}
+
+/* ── Fade-up on scroll (landing sections) ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up {
+  animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Pulse ring for step numbers ── */
+@keyframes pulseRing {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,69,255,0.25); }
+  50%       { box-shadow: 0 0 0 10px rgba(0,69,255,0); }
+}
+.pulse-ring {
+  animation: pulseRing 2.8s ease-in-out infinite;
+}
+
+/* ── Hourglass animation ── */
+@keyframes hourglass-spin {
+  0% { transform: rotate(0deg); }
+  35% { transform: rotate(0deg); }
+  50% { transform: rotate(180deg); }
+  85% { transform: rotate(180deg); }
+  100% { transform: rotate(360deg); }
+}
+.hourglass-spin {
+  animation: hourglass-spin 4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  transform-origin: 26px 26px;
+}
+
+@keyframes sand-top {
+  0% { transform: scaleY(1); }
+  35% { transform: scaleY(0); }
+  100% { transform: scaleY(0); }
+}
+.sand-top {
+  animation: sand-top 4s linear infinite;
+  transform-origin: 26px 19px;
+}
+
+@keyframes sand-bottom {
+  0% { transform: scaleY(0); }
+  35% { transform: scaleY(1); }
+  100% { transform: scaleY(1); }
+}
+.sand-bottom {
+  animation: sand-bottom 4s linear infinite;
+  transform-origin: 26px 39px;
+}
+
+@keyframes sand-stream {
+  0% { stroke-dasharray: 0, 20; stroke-dashoffset: 0; opacity: 0; }
+  5% { stroke-dasharray: 20, 0; opacity: 1; }
+  30% { stroke-dasharray: 20, 0; opacity: 1; }
+  35% { stroke-dasharray: 0, 20; stroke-dashoffset: -20; opacity: 0; }
+  100% { opacity: 0; }
+}
+.sand-stream {
+  animation: sand-stream 4s linear infinite;
+}
+
+/* ── CTA Button Unique Hover Effects ── */
+.cta-btn-main {
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cta-btn-main:hover {
+  background: #000000 !important;
+  color: #ffffff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.cta-btn-arrow {
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cta-btn-arrow:hover {
+  background: #000000 !important;
+  color: #ffffff !important;
+  transform: translateY(-2px) translateX(3px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* ── Custom range slider styling ── */
+.slider-input {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: #F0F0F0;
+  border-radius: 9999px;
+  outline: none;
+}
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0045FF;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.1s ease;
+}
+.slider-input::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+.slider-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0045FF;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.1s ease;
+}
+.slider-input::-moz-range-thumb:hover {
+  transform: scale(1.2);
 }

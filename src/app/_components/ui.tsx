@@ -188,11 +188,10 @@ export function Chip({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`border px-2.5 py-1 font-mono text-[12px] transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        active ? "border-accent bg-wash text-accent" : "border-line bg-card text-muted hover:border-linestrong hover:text-ink"
+      className={`rounded-full px-5 py-2.5 text-[13px] font-sans font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
+        active ? "bg-[#0045FF] text-white" : "bg-[#F8F8F8] text-[#000000] hover:bg-[#eee]"
       }`}
     >
-      {active ? "✓ " : ""}
       {children}
     </button>
   );
@@ -213,8 +212,8 @@ export function Modal({ title, children, onClose }: { title: string; children: R
 }
 
 export const inputCls =
-  "mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-[13px] outline-none focus:border-accent";
-export const labelCls = "block font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted";
+  "mt-1 w-full rounded-full border-0 bg-[#F8F8F8] px-6 py-4.5 text-[14px] text-[#000000] outline-none placeholder-[#a0a0a0] transition-colors focus:bg-[#f0f0f0]";
+export const labelCls = "block font-sans text-[12px] font-bold text-[#000000] mb-1.5";
 
 /* -------------------------------- axis card -------------------------------- */
 const AXIS_LABEL: Record<string, string> = {

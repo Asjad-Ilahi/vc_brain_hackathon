@@ -67,7 +67,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       {/* Top bar */}
-      <header className="flex h-14 items-center gap-3 border-b border-line bg-card px-4 md:gap-4">
+      <header className="flex h-14 items-center gap-3 border-b border-line bg-paper px-4 md:gap-4">
         <button
           onClick={() => setNavOpen(true)}
           aria-label="Open navigation"
@@ -78,7 +78,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </svg>
         </button>
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 place-items-center bg-accent text-accentink">
+          <span className="grid h-8 w-8 place-items-center bg-brand text-white">
             <IconBolt />
           </span>
           <span className="font-mono text-sm font-bold tracking-wide">VC.BRAIN</span>
@@ -137,8 +137,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Mobile nav drawer */}
       {navOpen ? (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-ink/40" onClick={() => setNavOpen(false)} aria-hidden />
-          <nav className="absolute left-0 top-0 flex h-full w-64 flex-col border-r border-linestrong bg-card">
+          <div className="absolute inset-0 bg-dark/40" onClick={() => setNavOpen(false)} aria-hidden />
+          <nav className="absolute left-0 top-0 flex h-full w-64 flex-col border-r border-linestrong bg-paper">
             <div className="flex h-14 items-center justify-between border-b border-line px-4">
               <span className="font-mono text-[13px] font-bold tracking-wide">VC.BRAIN</span>
               <button onClick={() => setNavOpen(false)} aria-label="Close navigation" className="text-muted hover:text-ink">
@@ -154,7 +154,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     key={n.href}
                     href={n.href}
                     className={`flex items-center gap-2.5 px-2.5 py-2.5 font-mono text-[13.5px] ${
-                      active ? "bg-wash text-accent" : "text-muted"
+                      active ? "bg-brandfaint text-brand" : "text-muted"
                     }`}
                   >
                     <n.icon />
@@ -172,7 +172,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex flex-1">
         {/* Sidebar */}
-        <aside className="hidden w-52 shrink-0 flex-col border-r border-line bg-card md:flex">
+        <aside className="hidden w-52 shrink-0 flex-col border-r border-line bg-paper md:flex">
           <div className="px-4 pb-1 pt-5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">
             Workspace
           </div>
@@ -184,7 +184,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   key={n.href}
                   href={n.href}
                   className={`flex items-center gap-2.5 px-2.5 py-2 font-mono text-[13px] transition-colors ${
-                    active ? "bg-wash text-accent" : "text-muted hover:bg-paper hover:text-ink"
+                    active ? "bg-brandfaint text-brand" : "text-muted hover:bg-card hover:text-ink"
                   }`}
                 >
                   <n.icon />
