@@ -35,7 +35,7 @@ export async function uploadToCloudinary(
         folder,
         resource_type: "auto", // handles both PDFs and image assets
       },
-      (error, result) => {
+      (error: any, result: any) => {
         if (error) {
           console.error("Cloudinary upload failed:", error);
           resolve(null); // fail soft to prevent intake pipeline crashes
