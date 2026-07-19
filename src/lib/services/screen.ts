@@ -28,6 +28,7 @@ export async function screenOpportunity(opportunityId: string): Promise<ScreenRe
     schemaName: "ScreenResult",
     system: SYSTEM,
     user: `${formatThesis(thesis)}\n\n${formatContext(ctx)}\n\nScreen this opportunity.`,
+    model: "gpt-4o-mini",
   });
 
   await db

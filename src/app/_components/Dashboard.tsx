@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { OpportunitySummary } from "@/lib/services/list";
 import type { Thesis, ThesisProfile } from "@/lib/services/thesis";
 import { api, postJson, fmtDuration } from "./api";
-import { Badge, Countdown, Eyebrow, ScorePill, Spinner, Stat, TraceLine, TrendArrow, countdownParts, useNow } from "./ui";
+import { Badge, Countdown, Eyebrow, ScorePill, Spinner, Stat, TraceLine, TrendArrow, countdownParts, useNow, Modal } from "./ui";
 import { ApplyModal, GhostButton, PrimaryButton, initialsOf } from "./shared";
 import { SweepLoader, useSweep } from "./useSweep";
 
@@ -45,6 +45,64 @@ export default function Dashboard() {
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [showApply, setShowApply] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+
+  const AGENTS = [
+    {
+      key: "scouter",
+      name: "Scouter Agent",
+      role: "Intake & Discovery",
+      description: "Monitors enabled sourcing channels (GitHub, arXiv, ProductHunt, Web sweeps) to discover early-stage founders and ingest them into the memory database.",
+    },
+    {
+      key: "screener",
+      name: "Screener Agent",
+      role: "Coarse Thesis Filtering",
+      description: "Evaluates inbound applications and newly sourced founders against the active fund thesis using gpt-4o-mini to filter out off-thesis opportunities.",
+    },
+    {
+      key: "sourcing",
+      name: "Sourcing Agent",
+      role: "Deep Background Audit",
+      description: "Performs parallel multi-channel background checks (Tavily search, GitHub profile analysis, arXiv academic lookup, contact email extraction) to build founder track records.",
+    },
+    {
+      key: "scorer",
+      name: "Scorer Agent",
+      role: "3-Axis Conviction Scoring",
+      description: "Scores opportunities independently across three key dimensions — Founder track record, Market size & dynamics, and Idea/Product viability.",
+    },
+    {
+      key: "memo",
+      name: "Memo Agent",
+      role: "Investment Memo Drafting",
+      description: "Synthesizes all gathered evidence and scores into a structured Investment Memo template including SWOT matrix, KPIs, and check size recommendations.",
+    },
+    {
+      key: "validator",
+      name: "Validator Agent",
+      role: "Claim Verification",
+      description: "Cross-checks every claim in the generated investment memo against the memory store, flagging contradictions and evaluating the confidence level of source signals.",
+    },
+  ];
+
+  const getAgentForOpp = (o: OpportunitySummary): string => {
+    if (!o.screenResult) return "screener";
+    if (!o.axes.founder) {
+      const hasCold = o.founders.some((f) => f.isColdStart);
+      return hasCold ? "sourcing" : "scorer";
+    }
+    if (!o.recommendation) return "memo";
+    return "validator";
+  };
+
+  const getActiveDealsForAgent = (agentKey: string): OpportunitySummary[] => {
+    const inDiligence = opps.filter((o) => o.status === "in_diligence" && !o.decision);
+    return inDiligence.filter((o) => {
+      const mapped = getAgentForOpp(o);
+      return mapped === agentKey;
+    });
+  };
 
   const load = useCallback(async () => {
     try {
@@ -279,6 +337,45 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Agent Fleet Control Room */}
+        <div className="mb-6">
+          <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted font-bold mb-3 flex items-center justify-between">
+            <span>Agent Fleet Status Room (Interactive)</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {AGENTS.map((agent) => {
+              const activeDeals = getActiveDealsForAgent(agent.key);
+              const isActive = agent.key === "scouter"
+                ? (sweep.running || (auto && auto.ready + auto.decided < target))
+                : activeDeals.length > 0;
+              return (
+                <button
+                  key={agent.key}
+                  onClick={() => setSelectedAgent(agent.key)}
+                  className="flex flex-col text-left p-4 rounded-xl border border-line bg-card hover:bg-paper hover:border-linestrong transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between gap-2 w-full">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-ink group-hover:text-accent transition-colors">
+                      {agent.name.split(" ")[0]}
+                    </span>
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full ${
+                        isActive ? "bg-ok animate-pulse" : "bg-accent"
+                      }`}
+                    />
+                  </div>
+                  <span className="text-[10px] text-faint font-semibold uppercase mt-1">
+                    {agent.role}
+                  </span>
+                  <span className="text-[11px] text-muted line-clamp-2 mt-2 leading-relaxed">
+                    {isActive ? `Working on ${activeDeals.length} deal(s)` : "Idle / Ready"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
           <Stat
@@ -463,6 +560,101 @@ export default function Dashboard() {
             router.push(`/opportunity/${id}`);
           }}
         />
+      )}
+
+      {selectedAgent && (
+        <Modal
+          title={`${AGENTS.find((a) => a.key === selectedAgent)?.name} Panel`}
+          onClose={() => setSelectedAgent(null)}
+        >
+          {(() => {
+            const agentDef = AGENTS.find((a) => a.key === selectedAgent);
+            if (!agentDef) return null;
+            const activeDeals = getActiveDealsForAgent(selectedAgent);
+            const isActive = selectedAgent === "scouter"
+              ? (sweep.running || (auto && auto.ready + auto.decided < target))
+              : activeDeals.length > 0;
+            
+            // Map agent keys to the activity model values
+            const activityKeys: Record<string, string[]> = {
+              scouter: ["scouter"],
+              screener: ["screener"],
+              sourcing: ["footprint", "sourcing", "web", "github", "arxiv"],
+              scorer: ["scorer"],
+              memo: ["memo"],
+              validator: ["validator"],
+            };
+            const keysToMatch = activityKeys[selectedAgent] || [selectedAgent];
+            const recentLogs = activity.filter((a) => keysToMatch.includes(a.agent.toLowerCase())).slice(0, 4);
+
+            return (
+              <div className="space-y-4">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-accent">{agentDef.role}</div>
+                  <p className="mt-1 text-[13px] leading-relaxed text-muted">{agentDef.description}</p>
+                </div>
+
+                <div className="border-t border-line pt-3">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2">
+                    Current Status: <span className={isActive ? "text-ok" : "text-accent"}>{isActive ? "🟢 Active" : "🔵 Idle / Standby"}</span>
+                  </div>
+                  {selectedAgent === "scouter" && isActive && (
+                    <div className="text-[12.5px] text-muted">
+                      Scanning enabled sourcing channels in the background for new founder candidates.
+                    </div>
+                  )}
+                  {activeDeals.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] font-semibold text-ink">Active Workload ({activeDeals.length}):</div>
+                      {activeDeals.map((o) => (
+                        <Link
+                          key={o.id}
+                          href={`/opportunity/${o.id}`}
+                          onClick={() => setSelectedAgent(null)}
+                          className="flex items-center justify-between p-2 rounded bg-paper border border-line hover:border-linestrong text-[12.5px] text-muted"
+                        >
+                          <span className="font-semibold text-ink">{o.company}</span>
+                          <span>{o.founders[0]?.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : selectedAgent !== "scouter" ? (
+                    <div className="text-[12.5px] text-faint italic">No opportunities currently at this processing stage.</div>
+                  ) : null}
+                </div>
+
+                <div className="border-t border-line pt-3">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-muted mb-2">Recent Logs</div>
+                  {recentLogs.length > 0 ? (
+                    <div className="space-y-2">
+                      {recentLogs.map((log) => (
+                        <div key={log.id} className="p-2.5 rounded bg-cardalt border border-line text-[12px]">
+                          <div className="flex items-center justify-between text-[10px] text-faint mb-1">
+                            <span className="font-bold uppercase">{log.agent}</span>
+                            <span>{new Date(log.createdAt).toLocaleTimeString()}</span>
+                          </div>
+                          <div className="font-semibold text-ink">{log.company}</div>
+                          <div className="text-muted leading-relaxed mt-0.5">{log.outputSummary}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[12.5px] text-faint italic">No recent log entries for this agent.</div>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => setSelectedAgent(null)}
+                    className="px-4 py-2 bg-paper border border-line hover:border-linestrong text-[12.5px] font-bold rounded-lg cursor-pointer"
+                  >
+                    Close Status Panel
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
       )}
     </div>
   );

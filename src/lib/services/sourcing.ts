@@ -611,35 +611,37 @@ export async function runDeepFounderBackgroundCheck(opportunityId: string, found
   if (!opp) return;
 
   const name = f.fullName;
-  
-  // 1) Search Tavily (web & linkedin)
-  try {
-    const { results } = await tavilySearch(`"${name}" linkedin OR twitter OR resume OR portfolio OR startup`, { maxResults: 5 });
-    if (results.length > 0) {
-      const rawText = results.map(r => `[Web] ${r.title} (${r.url}): ${r.content.slice(0, 300)}`).join("\n\n");
-      await recordSignal({
-        opportunityId,
-        founderId,
-        companyId: opp.companyId,
-        sourceType: "web",
-        title: `Web background — ${name}`,
-        rawText,
-        tags: ["outbound", "deep-check", "social"],
-      });
-      
-      // Extract linkedin profile if found
-      const li = results.find(r => r.url.includes("linkedin.com/in/"));
-      if (li && !f.linkedinUrl) {
-        await db.update(founders).set({ linkedinUrl: li.url }).where(eq(founders.id, founderId));
-      }
-    }
-  } catch (e) {
-    console.error("Tavily search failed in deep background check:", e);
-  }
-
-  // 2) Search GitHub
   const ghLogin = f.githubLogin || f.canonicalHandle;
-  if (ghLogin) {
+
+  // Define the 4 concurrent tasks
+  const checkTavily = async () => {
+    try {
+      const { results } = await tavilySearch(`"${name}" linkedin OR twitter OR resume OR portfolio OR startup`, { maxResults: 5 });
+      if (results.length > 0) {
+        const rawText = results.map(r => `[Web] ${r.title} (${r.url}): ${r.content.slice(0, 300)}`).join("\n\n");
+        await recordSignal({
+          opportunityId,
+          founderId,
+          companyId: opp.companyId,
+          sourceType: "web",
+          title: `Web background — ${name}`,
+          rawText,
+          tags: ["outbound", "deep-check", "social"],
+        });
+        
+        // Extract linkedin profile if found
+        const li = results.find(r => r.url.includes("linkedin.com/in/"));
+        if (li && !f.linkedinUrl) {
+          await db.update(founders).set({ linkedinUrl: li.url }).where(eq(founders.id, founderId));
+        }
+      }
+    } catch (e) {
+      console.error("Tavily search failed in deep background check:", e);
+    }
+  };
+
+  const checkGithub = async () => {
+    if (!ghLogin) return;
     try {
       const user = await githubUser(ghLogin);
       if (user && user.type !== "Organization") {
@@ -668,59 +670,69 @@ export async function runDeepFounderBackgroundCheck(opportunityId: string, found
     } catch (e) {
       console.error("GitHub check failed in deep background check:", e);
     }
-  }
+  };
 
-  // 3) Search arXiv
-  try {
-    const arxivUrl = `http://export.arxiv.org/api/query?search_query=au:${encodeURIComponent(name)}&max_results=3`;
-    const xml = await fetch(arxivUrl).then(r => r.text());
-    const entries = xml.split("<entry>").slice(1).map((e) => e.split("</entry>")[0]);
-    const arxivTexts: string[] = [];
-    for (const e of entries) {
-      const title = tag(e, "title");
-      const author = tag(e, "name");
-      const summary = tag(e, "summary");
-      const published = tag(e, "published");
-      if (title && author) {
-        arxivTexts.push(`Paper: "${title}" by ${author} published ${published}. Abstract: ${summary}`);
-      }
-    }
-    if (arxivTexts.length > 0) {
-      await recordSignal({
-        opportunityId,
-        founderId,
-        companyId: opp.companyId,
-        sourceType: "arxiv",
-        title: `arXiv publications — ${name}`,
-        rawText: arxivTexts.join("\n\n"),
-        tags: ["outbound", "deep-check", "arxiv"],
-      });
-    }
-  } catch (e) {
-    console.error("arXiv check failed in deep background check:", e);
-  }
-
-  // 4) Try to find contact email via Tavily Search + LLM extraction if we still don't have one
-  const [currentOpp] = await db.select().from(opportunities).where(eq(opportunities.id, opportunityId)).limit(1);
-  if (currentOpp && !currentOpp.applicantEmail) {
+  const checkArxiv = async () => {
     try {
-      const { results } = await tavilySearch(`"${name}" contact OR email OR "reach me" OR "@"`, { maxResults: 3 });
-      if (results.length > 0) {
-        const textSnippets = results.map(r => `[Page: ${r.title}] Content: ${r.content}`).join("\n\n");
-        const extracted = await structured({
-          schema: z.object({ email: z.string().nullable().describe("A valid email address for this person, or null if none is present") }),
-          schemaName: "EmailExtraction",
-          system: "You extract a single contact email for the specified person from the web search results. If none is found, return null. Avoid generic noreply or info@ domains unless specific to them.",
-          user: `Person name: ${name}\n\nSearch Results:\n${textSnippets}`,
-        });
-        if (extracted.email) {
-          await db.update(opportunities).set({ applicantEmail: extracted.email.trim() }).where(eq(opportunities.id, opportunityId));
+      const arxivUrl = `http://export.arxiv.org/api/query?search_query=au:${encodeURIComponent(name)}&max_results=3`;
+      const xml = await fetch(arxivUrl).then(r => r.text());
+      const entries = xml.split("<entry>").slice(1).map((e) => e.split("</entry>")[0]);
+      const arxivTexts: string[] = [];
+      for (const e of entries) {
+        const title = tag(e, "title");
+        const author = tag(e, "name");
+        const summary = tag(e, "summary");
+        const published = tag(e, "published");
+        if (title && author) {
+          arxivTexts.push(`Paper: "${title}" by ${author} published ${published}. Abstract: ${summary}`);
         }
       }
+      if (arxivTexts.length > 0) {
+        await recordSignal({
+          opportunityId,
+          founderId,
+          companyId: opp.companyId,
+          sourceType: "arxiv",
+          title: `arXiv publications — ${name}`,
+          rawText: arxivTexts.join("\n\n"),
+          tags: ["outbound", "deep-check", "arxiv"],
+        });
+      }
     } catch (e) {
-      console.error("Tavily email extraction failed:", e);
+      console.error("arXiv check failed in deep background check:", e);
     }
-  }
+  };
+
+  const checkContactEmail = async () => {
+    const [currentOpp] = await db.select().from(opportunities).where(eq(opportunities.id, opportunityId)).limit(1);
+    if (currentOpp && !currentOpp.applicantEmail) {
+      try {
+        const { results } = await tavilySearch(`"${name}" contact OR email OR "reach me" OR "@"`, { maxResults: 3 });
+        if (results.length > 0) {
+          const textSnippets = results.map(r => `[Page: ${r.title}] Content: ${r.content}`).join("\n\n");
+          const extracted = await structured({
+            schema: z.object({ email: z.string().nullable().describe("A valid email address for this person, or null if none is present") }),
+            schemaName: "EmailExtraction",
+            system: "You extract a single contact email for the specified person from the web search results. If none is found, return null. Avoid generic noreply or info@ domains unless specific to them.",
+            user: `Person name: ${name}\n\nSearch Results:\n${textSnippets}`,
+          });
+          if (extracted.email) {
+            await db.update(opportunities).set({ applicantEmail: extracted.email.trim() }).where(eq(opportunities.id, opportunityId));
+          }
+        }
+      } catch (e) {
+        console.error("Tavily email extraction failed:", e);
+      }
+    }
+  };
+
+  // Run all check routines concurrently!
+  await Promise.allSettled([
+    checkTavily(),
+    checkGithub(),
+    checkArxiv(),
+    checkContactEmail(),
+  ]);
 }
 
 // ----------------------------------------------------- Deep Manual Search -----
