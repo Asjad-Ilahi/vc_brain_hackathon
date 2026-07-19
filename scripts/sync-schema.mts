@@ -59,6 +59,7 @@ async function main() {
   await run(`ALTER TABLE "opportunities" ADD COLUMN IF NOT EXISTS "applicant_email" text`);
   await run(`ALTER TABLE "opportunities" ADD COLUMN IF NOT EXISTS "deck_url" text`);
   await run(`ALTER TABLE "theses" ADD COLUMN IF NOT EXISTS "user_id" uuid`);
+  await run(`ALTER TABLE "outreach" ADD COLUMN IF NOT EXISTS "sent_at" timestamp with time zone`);
   await run(`DO $$ BEGIN ALTER TABLE "sourcing_nodes" ADD CONSTRAINT "sourcing_nodes_opportunity_id_opportunities_id_fk" FOREIGN KEY ("opportunity_id") REFERENCES "public"."opportunities"("id") ON DELETE cascade; EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$`);
   await run(`DO $$ BEGIN ALTER TABLE "theses" ADD CONSTRAINT "theses_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade; EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$`);
   await run(`DO $$ BEGIN ALTER TABLE "opportunities" ADD CONSTRAINT "opportunities_public_ref_unique" UNIQUE("public_ref"); EXCEPTION WHEN duplicate_object OR duplicate_table THEN null; END $$`);
