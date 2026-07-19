@@ -87,7 +87,7 @@ export async function POST(req: Request) {
 
   for (const o of opps) {
     // Skip if currently claimed by a worker within the last 40 seconds
-    const isClaimed = o.claimedAt && new Date(o.claimedAt).getTime() > Date.now() - 40_000;
+    const isClaimed = o.claimedAt && new Date(o.claimedAt).getTime() > Date.now() - 20_000;
     if (isClaimed) continue;
 
     const step = await getNextDiligenceStep(o.id);
@@ -179,15 +179,7 @@ export async function POST(req: Request) {
       if (memoRow) {
         await verifyMemoClaims(id, memoRow.id);
       }
-      // Record validator reasoning step
-      await db.insert(reasoningSteps).values({
-        opportunityId: id,
-        stepOrder: 5,
-        agent: "validator",
-        inputSummary: "Generated Investment Memo claims",
-        outputSummary: "Verified all claim corroborations, contradictions, and trust levels.",
-        citedSignalIds: [],
-      });
+      // verifyMemoClaims already records its own reasoning step
       // Final pipeline step complete! Move to "Ready For Your Decisions"
       await db.update(opportunities).set({ status: "awaiting_decision" }).where(eq(opportunities.id, id));
     }

@@ -50,8 +50,8 @@ export async function tavilyVerifyClaim(
 ): Promise<{ status: VerificationStatus; evidence: TavilyResult[]; answer: string | null }> {
   const query = `${context} — verify: ${claim}`;
   const { answer, results } = await tavilySearch(query, {
-    maxResults: 4,
-    depth: "advanced",
+    maxResults: 2,
+    depth: "basic",
     includeAnswer: true,
   });
   // The caller (validator agent) interprets corroborate/contradict via the LLM;

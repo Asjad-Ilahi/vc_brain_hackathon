@@ -114,7 +114,7 @@ export async function listOpportunities(_userId?: string): Promise<OpportunitySu
   const oppIds = opps.map((o) => o.id);
   const companyIds = [...new Set(opps.map((o) => o.companyId))];
 
-  const [comps, axes, links, memoRows] = await Promise.all([
+  const [comps, axes, links, memoRows, validatorSteps] = await Promise.all([
     db.select().from(companies).where(inArray(companies.id, companyIds)),
     db.select().from(axisScores).where(inArray(axisScores.opportunityId, oppIds)),
     db.select().from(opportunityFounders).where(inArray(opportunityFounders.opportunityId, oppIds)),
@@ -122,7 +122,12 @@ export async function listOpportunities(_userId?: string): Promise<OpportunitySu
       .select({ id: memos.id, opportunityId: memos.opportunityId, recommendation: memos.recommendation, createdAt: memos.createdAt })
       .from(memos)
       .where(inArray(memos.opportunityId, oppIds)),
+    db
+      .select({ opportunityId: reasoningSteps.opportunityId })
+      .from(reasoningSteps)
+      .where(and(inArray(reasoningSteps.opportunityId, oppIds), eq(reasoningSteps.agent, "validator"))),
   ]);
+  const validatedOppIds = new Set(validatorSteps.map((s) => s.opportunityId));
   const memoIds = memoRows.map((m) => m.id);
   const contradicted = memoIds.length
     ? await db
@@ -196,7 +201,7 @@ export async function listOpportunities(_userId?: string): Promise<OpportunitySu
       geography: cleanPlaceholderField(c?.geography),
       source: o.source,
       sourceChannel: o.sourceChannel,
-      status: o.status,
+      status: validatedOppIds.has(o.id) ? "awaiting_decision" : o.status,
       screenResult: o.screenResult,
       screenReason: o.screenReason,
       decision: o.decision,

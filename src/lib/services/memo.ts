@@ -15,7 +15,7 @@ import { formatThesis } from "./thesis";
 import { tavilyVerifyClaim } from "@/lib/tavily";
 import { z } from "zod";
 
-const MAX_VERIFY = 4; // cap external checks per memo to stay within serverless time
+const MAX_VERIFY = 3; // cap external checks per memo to stay fast
 
 const MEMO_SYSTEM = `You are an investment analyst writing a decision-ready memo. Rules:
 - Cover these required sections: Company snapshot, Investment hypotheses, SWOT, Problem & product,
