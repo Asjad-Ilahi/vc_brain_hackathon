@@ -1,5 +1,5 @@
 /**
- * VC Brain — Memory schema (the data backbone).
+ * ODIN — Memory schema (the data backbone).
  *
  * Design rules enforced here (from the challenge brief):
  *  - Founder Score lives on the founder (person), persists across applications,

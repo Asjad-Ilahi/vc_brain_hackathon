@@ -20,12 +20,8 @@ export default function AuthCard({
       <header className="border-b border-line bg-card">
         <div className="mx-auto flex h-14 max-w-6xl items-center px-5">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="grid h-8 w-8 place-items-center bg-accent text-accentink">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-                <path d="M9 1 3 9h4l-1 6 6-8H8l1-6z" />
-              </svg>
-            </span>
-            <span className="text-[15px] font-extrabold tracking-tight">VC.BRAIN</span>
+            <img src="/logo.png" alt="ODIN Logo" className="w-6 h-6 rounded-full" />
+            <span className="text-[15px] font-extrabold tracking-tight">ODIN</span>
           </Link>
         </div>
       </header>

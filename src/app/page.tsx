@@ -375,20 +375,7 @@ export default function LandingPage() {
         >
           {/* Logo */}
           <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span
-              style={{
-                width: "32px",
-                height: "32px",
-                display: "grid",
-                placeItems: "center",
-                border: "1.5px solid rgba(255,255,255,0.5)",
-                borderRadius: "6px",
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
-                <path d="M9 1 3 9h4l-1 6 6-8H8l1-6z" />
-              </svg>
-            </span>
+              <img src="/logo.png" alt="ODIN Logo" style={{ width: "32px", height: "32px", borderRadius: "50%" }} />
             <span
               style={{
                 fontFamily: "var(--font-mono)",
@@ -398,7 +385,7 @@ export default function LandingPage() {
                 color: "#fff",
               }}
             >
-              VC.BRAIN
+              ODIN
             </span>
           </span>
 
@@ -1074,7 +1061,7 @@ export default function LandingPage() {
             color: "#9E9E9E",
           }}
         >
-          © VC.Brain · v0.9 · <Link href="/admin" style={{ textDecoration: "underline", color: "#666" }}>Investor Command Center</Link> · <Link href="/apply" style={{ textDecoration: "underline", color: "#666" }}>Founders · Apply</Link> · <Link href="/apply/status" style={{ textDecoration: "underline", color: "#666" }}>Check status</Link>
+          © ODIN · v0.9 · <Link href="/admin" style={{ textDecoration: "underline", color: "#666" }}>Investor Command Center</Link> · <Link href="/apply" style={{ textDecoration: "underline", color: "#666" }}>Founders · Apply</Link> · <Link href="/apply/status" style={{ textDecoration: "underline", color: "#666" }}>Check status</Link>
         </span>
         <span
           style={{
@@ -1418,7 +1405,7 @@ export default function LandingPage() {
                 animation: "ping 1s cubic-bezier(0, 0, 0.2, 1) infinite"
               }}></div>
             </div>
-            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#000000", letterSpacing: "0.08em", textTransform: "uppercase" }}>VC Brain Screening</h3>
+            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#000000", letterSpacing: "0.08em", textTransform: "uppercase" }}>ODIN Screening</h3>
             <p style={{ fontSize: "13px", fontFamily: "var(--font-mono)", color: "#6E6E6E", marginTop: "8px", height: "40px" }}>
               {HUD_STEPS[loadingStep]}
             </p>

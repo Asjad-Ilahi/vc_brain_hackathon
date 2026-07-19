@@ -97,10 +97,8 @@ function ApplyPageContent() {
       {/* Header · matches the workspace brand */}
       <header className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-2xl bg-gradient-to-b from-brand to-branddeep text-white">
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M9 1 3 9h4l-1 6 6-8H8l1-6z" /></svg>
-          </span>
-          <span className="text-[17px] font-extrabold tracking-tight">VC.BRAIN</span>
+          <img src="/logo.png" alt="ODIN Logo" className="w-8 h-8 rounded-full" />
+          <span className="text-[17px] font-extrabold tracking-tight">ODIN</span>
         </Link>
         <span className="rounded-full bg-white px-3.5 py-2 text-[11px] font-semibold text-muted u-card">Inbound Portal</span>
       </header>
@@ -211,7 +209,7 @@ function ApplyPageContent() {
             <div className="relative mb-8 h-16 w-16">
               <div className="absolute inset-0 animate-spin rounded-full border-4 border-[#0045FF] border-t-transparent" />
             </div>
-            <h3 className="text-[13px] font-bold uppercase tracking-wider text-ink">VC Brain screening</h3>
+            <h3 className="text-[13px] font-bold uppercase tracking-wider text-ink">ODIN screening</h3>
             <p className="mt-2 h-10 text-[12.5px] text-muted">{HUD_STEPS[loadingStep]}</p>
             <div className="mt-5 h-1.5 w-48 overflow-hidden rounded-full bg-[#eceef3]">
               <div className="h-full rounded-full bg-[#0045FF] transition-all duration-1000" style={{ width: `${((loadingStep + 1) / HUD_STEPS.length) * 100}%` }} />

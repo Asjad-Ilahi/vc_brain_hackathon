@@ -298,7 +298,7 @@ export default function Dashboard() {
           in <span className="text-accent">24 hours.</span>
         </h1>
         <p className="mx-auto mt-4 max-w-md text-[13.5px] text-muted">
-          VC.Brain sources founders, screens them against your thesis, and hands you a memo with
+          ODIN sources founders, screens them against your thesis, and hands you a memo with
           citations. You just say yes or no.
         </p>
         <div className="mt-8 flex justify-center gap-2">

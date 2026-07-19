@@ -84,8 +84,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const Sidebar = (
     <div className="flex h-full flex-col bg-[#0045FF] py-6 text-white">
       <Link href="/dashboard" onClick={() => setNavOpen(false)} className="mb-8 flex items-center gap-2.5 px-6">
-        <IconBrain />
-        <span className="text-[19px] font-extrabold tracking-tight">VC.BRAIN</span>
+        <img src="/logo.png" alt="ODIN Logo" className="w-7 h-7 rounded-full" />
+        <span className="text-[19px] font-extrabold tracking-tight">ODIN</span>
       </Link>
       <SidebarNav pathname={pathname} onNav={() => setNavOpen(false)} />
       {user?.role === "admin" && (
