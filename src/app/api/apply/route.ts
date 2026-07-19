@@ -149,7 +149,7 @@ export async function POST(req: Request) {
     const publicRef = `app_${randomBytes(8).toString("hex")}`;
     await db
       .update(opportunities)
-      .set({ publicRef, applicantEmail, deckUrl })
+      .set({ publicRef, applicantEmail, deckUrl, deadlineAt: new Date(Date.now() + 24 * 3600_000) })
       .where(eq(opportunities.id, opportunityId));
 
     // Receipt email with the status link. sendMail is fail-soft (no-ops without
