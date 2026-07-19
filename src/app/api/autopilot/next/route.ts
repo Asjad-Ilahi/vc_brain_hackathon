@@ -13,10 +13,12 @@ import { screenOpportunity } from "@/lib/services/screen";
 import { scoreOpportunity } from "@/lib/services/score";
 import { buildMemo, verifyMemoClaims } from "@/lib/services/memo";
 import { analyzeColdStartFootprint } from "@/lib/services/coldstart";
-import { runDeepFounderBackgroundCheck } from "@/lib/services/sourcing";
+import { runDeepFounderBackgroundCheck, sourceAll } from "@/lib/services/sourcing";
 import { getActiveThesis } from "@/lib/services/thesis";
 import { userFromRequest } from "@/lib/auth";
 import { ok, fail, errMessage } from "@/lib/api";
+
+let lastSweepAt = 0;
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -44,8 +46,33 @@ export async function POST(req: Request) {
     )
     AND status IN ('sourced', 'screened')
     RETURNING id`);
-  const id = (claimed.rows[0] as { id: string } | undefined)?.id;
-  if (!id) return ok({ processed: null, queueEmpty: true });
+  let id = (claimed.rows[0] as { id: string } | undefined)?.id;
+  if (!id) {
+    const nowTime = Date.now();
+    if (nowTime - lastSweepAt > 60_000) {
+      lastSweepAt = nowTime;
+      try {
+        await sourceAll(user.id);
+        const claimedRetry = await db.execute(sql`
+          UPDATE opportunities SET status = 'in_diligence', claimed_at = now()
+          WHERE id = (
+            SELECT id FROM opportunities
+            WHERE status IN ('sourced', 'screened')
+              AND thesis_id = ${thesis.id}
+              AND decision IS NULL
+              AND (screen_result IS NULL OR screen_result = 'pass')
+            ORDER BY conviction_score DESC NULLS LAST, created_at DESC
+            LIMIT 1
+          )
+          AND status IN ('sourced', 'screened')
+          RETURNING id`);
+        id = (claimedRetry.rows[0] as { id: string } | undefined)?.id;
+      } catch (err) {
+        console.error("Autopilot autonomous sourcing failed:", err);
+      }
+    }
+    if (!id) return ok({ processed: null, queueEmpty: true });
+  }
 
   try {
     // 1 · Screen (skip if already passed at intake)
