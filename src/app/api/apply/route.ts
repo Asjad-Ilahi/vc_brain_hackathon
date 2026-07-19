@@ -14,6 +14,7 @@ import { userFromRequest } from "@/lib/auth";
 import { sendApplicationReceived } from "@/lib/mail";
 import { ok, fail, errMessage } from "@/lib/api";
 import { randomBytes } from "crypto";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
     let companyName = "";
     let deckText: string | undefined;
     let imageDataUrl: string | undefined;
+    let deckUrl: string | null = null;
     // Where the 24h decision goes; the founder returns to /apply/status by publicRef.
     let applicantEmail: string | null = null;
     // Interview/call notes — a distinct ingest source (brief lists interviews);
@@ -41,6 +43,10 @@ export async function POST(req: Request) {
       if (file && typeof file !== "string") {
         const f = file as File;
         const buf = await f.arrayBuffer();
+        
+        // Upload to Cloudinary
+        deckUrl = await uploadToCloudinary(Buffer.from(buf));
+
         if (f.type.includes("pdf")) {
           deckText = `${deckText ?? ""}\n${await pdfToText(buf)}`.trim();
         } else if (f.type.startsWith("image/")) {
@@ -143,7 +149,7 @@ export async function POST(req: Request) {
     const publicRef = `app_${randomBytes(8).toString("hex")}`;
     await db
       .update(opportunities)
-      .set({ publicRef, applicantEmail })
+      .set({ publicRef, applicantEmail, deckUrl })
       .where(eq(opportunities.id, opportunityId));
 
     // Receipt email with the status link. sendMail is fail-soft (no-ops without

@@ -137,6 +137,7 @@ export const opportunities = pgTable("opportunities", {
   publicRef: text("public_ref").unique(),
   // Contact email captured on the public apply form — where the 24h decision goes.
   applicantEmail: text("applicant_email"),
+  deckUrl: text("deck_url"),
   status: text("status").notNull().default("sourced"), // sourced|screening|screened|scored|decided
   // Conviction: auto-computed at ingestion so the system can surface founders
   // crossing a threshold on their own (before any manual assessment).

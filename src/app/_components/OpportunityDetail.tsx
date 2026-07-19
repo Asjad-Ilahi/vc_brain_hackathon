@@ -309,6 +309,16 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 <Badge key={x as string}>{x}</Badge>
               ))}
               {isCold ? <Badge tone="warn">new founder</Badge> : null}
+              {s.deckUrl ? (
+                <a
+                  href={s.deckUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-accent border border-accent/20 bg-accent/5 px-2 py-0.5 rounded hover:bg-accent/10 transition-colors"
+                >
+                  📂 View Pitch Deck
+                </a>
+              ) : null}
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -343,10 +353,18 @@ export default function OpportunityDetail({ id }: { id: string }) {
             )}
           </StripCell>
           <StripCell label="Market">
-            {s.axes.market ? <TrendArrow trend={s.axes.market.trend} /> : <span className="text-[13px] text-faint">—</span>}
+            {s.axes.market ? (
+              <span className={`tnum text-[24px] font-bold ${scoreTone(s.axes.market.score)}`}>{s.axes.market.score}</span>
+            ) : (
+              <span className="text-[13px] text-faint">—</span>
+            )}
           </StripCell>
           <StripCell label="Idea vs market">
-            {s.axes.idea_vs_market ? <TrendArrow trend={s.axes.idea_vs_market.trend} /> : <span className="text-[13px] text-faint">—</span>}
+            {s.axes.idea_vs_market ? (
+              <span className={`tnum text-[24px] font-bold ${scoreTone(s.axes.idea_vs_market.score)}`}>{s.axes.idea_vs_market.score}</span>
+            ) : (
+              <span className="text-[13px] text-faint">—</span>
+            )}
           </StripCell>
           <StripCell label="Contradictions">
             <span className={`tnum text-[24px] font-bold ${contradictions.length > 0 ? "text-bad" : "text-ok"}`}>
@@ -382,7 +400,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 {s.source === "outbound" && !s.decision ? (
                   <GhostButton onClick={draftOutreach} disabled={running}>⚡ Draft outreach</GhostButton>
                 ) : null}
-                {!s.decision ? (
+                {!s.decision && !memo ? (
                   rejected ? (
                     <PrimaryButton tone="ink" onClick={() => runDiligence({ force: true })} disabled={running}>
                       {running ? "Running…" : "Override gate → full diligence"}

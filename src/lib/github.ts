@@ -26,6 +26,7 @@ export type GithubUser = {
   public_repos: number;
   company: string | null;
   blog: string | null;
+  email: string | null;
   type: "User" | "Organization";
 };
 
@@ -70,4 +71,37 @@ export async function githubSearchRepos(
 
 export async function githubUser(login: string): Promise<GithubUser> {
   return ghGet<GithubUser>(`https://api.github.com/users/${encodeURIComponent(login)}`);
+}
+
+export async function githubUserEmailFromCommits(login: string): Promise<string | null> {
+  try {
+    const url = `https://api.github.com/users/${encodeURIComponent(login)}/events/public?per_page=10`;
+    interface GithubEvent {
+      type: string;
+      payload?: {
+        commits?: {
+          author?: {
+            email?: string;
+            name?: string;
+          };
+        }[];
+      };
+    }
+    const events = await ghGet<GithubEvent[]>(url);
+    if (!Array.isArray(events)) return null;
+
+    for (const event of events) {
+      if (event.type === "PushEvent" && event.payload?.commits) {
+        for (const commit of event.payload.commits) {
+          const email = commit.author?.email;
+          if (email && email.includes("@") && !email.includes("noreply.github.com")) {
+            return email.trim();
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`Failed to scan commit emails for ${login}:`, err);
+  }
+  return null;
 }

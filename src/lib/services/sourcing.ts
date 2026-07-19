@@ -11,7 +11,7 @@
 import { sql, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { sourcingChannels, founders, opportunities, opportunityFounders } from "@/db/schema";
-import { githubSearchRepos, githubUser } from "@/lib/github";
+import { githubSearchRepos, githubUser, githubUserEmailFromCommits } from "@/lib/github";
 import { tavilySearch } from "@/lib/tavily";
 import { structured } from "@/lib/openai";
 import { OutboundCandidateSchema } from "@/lib/schemas";
@@ -143,6 +143,13 @@ export async function sourceFromGithub(userId: string, limit = 5): Promise<strin
         },
       ],
     });
+    const email = user.email || (await githubUserEmailFromCommits(user.login));
+    if (email) {
+      await db
+        .update(opportunities)
+        .set({ applicantEmail: email })
+        .where(eq(opportunities.id, opportunityId));
+    }
     if (!deduped) created.push(opportunityId);
   }
   await bumpChannel("github", created.length);
@@ -575,6 +582,10 @@ export async function runDeepFounderBackgroundCheck(opportunityId: string, found
         if (!f.githubLogin) {
           await db.update(founders).set({ githubLogin: user.login }).where(eq(founders.id, founderId));
         }
+        const email = user.email || (await githubUserEmailFromCommits(user.login));
+        if (email && !opp.applicantEmail) {
+          await db.update(opportunities).set({ applicantEmail: email }).where(eq(opportunities.id, opportunityId));
+        }
         const repos = await githubSearchRepos(`user:${user.login}`, 5, "stars");
         const rawText = `GitHub User: ${user.name || user.login} (${user.followers} followers, ${user.public_repos} repos). Bio: ${user.bio ?? ""}\n\n` +
           repos.map(r => `Repo: ${r.full_name} (${r.stargazers_count}★): ${r.description ?? ""}`).join("\n");
@@ -624,6 +635,28 @@ export async function runDeepFounderBackgroundCheck(opportunityId: string, found
     }
   } catch (e) {
     console.error("arXiv check failed in deep background check:", e);
+  }
+
+  // 4) Try to find contact email via Tavily Search + LLM extraction if we still don't have one
+  const [currentOpp] = await db.select().from(opportunities).where(eq(opportunities.id, opportunityId)).limit(1);
+  if (currentOpp && !currentOpp.applicantEmail) {
+    try {
+      const { results } = await tavilySearch(`"${name}" contact OR email OR "reach me" OR "@"`, { maxResults: 3 });
+      if (results.length > 0) {
+        const textSnippets = results.map(r => `[Page: ${r.title}] Content: ${r.content}`).join("\n\n");
+        const extracted = await structured({
+          schema: z.object({ email: z.string().nullable().describe("A valid email address for this person, or null if none is present") }),
+          schemaName: "EmailExtraction",
+          system: "You extract a single contact email for the specified person from the web search results. If none is found, return null. Avoid generic noreply or info@ domains unless specific to them.",
+          user: `Person name: ${name}\n\nSearch Results:\n${textSnippets}`,
+        });
+        if (extracted.email) {
+          await db.update(opportunities).set({ applicantEmail: extracted.email.trim() }).where(eq(opportunities.id, opportunityId));
+        }
+      }
+    } catch (e) {
+      console.error("Tavily email extraction failed:", e);
+    }
   }
 }
 

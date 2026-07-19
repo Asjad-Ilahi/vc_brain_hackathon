@@ -55,6 +55,7 @@ export type OpportunitySummary = {
   deadlineAt: string | null; // the 24h clock
   decidedAt: string | null;
   applicantEmail?: string | null;
+  deckUrl?: string | null;
 };
 
 /** Latest row per axis wins; the previous one becomes prevScore (history kept, never discarded). */
@@ -185,6 +186,7 @@ export async function listOpportunities(_userId?: string): Promise<OpportunitySu
       deadlineAt: o.deadlineAt ? new Date(o.deadlineAt).toISOString() : null,
       decidedAt: o.decidedAt ? new Date(o.decidedAt).toISOString() : null,
       applicantEmail: o.applicantEmail,
+      deckUrl: o.deckUrl,
     };
   });
 }

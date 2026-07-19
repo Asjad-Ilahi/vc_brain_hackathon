@@ -555,9 +555,9 @@ function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
           ))}
 
           {/* Edges from Institutions to Companies */}
-          {nodeCoords.map((n) => (
+          {nodeCoords.map((n, i) => (
             <path
-              key={`edge-${n.id}`}
+              key={`edge-${n.id}-${i}`}
               d={`M ${n.ix} ${n.iy} Q ${(n.ix + n.x)/2} ${(n.iy + n.y)/2 - 15} ${n.x} ${n.y}`}
               fill="none"
               stroke="rgba(0, 69, 255, 0.15)"
@@ -582,8 +582,8 @@ function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
           ))}
 
           {/* Company Nodes */}
-          {nodeCoords.map((n) => (
-            <g key={`comp-${n.id}`} className="group cursor-pointer">
+          {nodeCoords.map((n, i) => (
+            <g key={`comp-${n.id}-${i}`} className="group cursor-pointer">
               <circle cx={n.x} cy={n.y} r="6" fill="#12a150" className="group-hover:scale-125 transition-transform" />
               <text
                 x={n.x}
