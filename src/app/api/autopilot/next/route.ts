@@ -112,10 +112,16 @@ export async function POST(req: Request) {
     return ok({ processed: null, queueEmpty: true });
   }
 
-  // 3. Atomically lock candidate
+  // 3. Atomically lock candidate. Do NOT downgrade a deal that already finished
+  //    the memo (awaiting_decision) back to in_diligence just to run the final
+  //    validation step — that made it vanish from "Ready for decision" and never
+  //    return. Keep its status; only take the lock.
   await db
     .update(opportunities)
-    .set({ status: "in_diligence", claimedAt: new Date() })
+    .set({
+      status: candidate.status === "awaiting_decision" ? "awaiting_decision" : "in_diligence",
+      claimedAt: new Date(),
+    })
     .where(eq(opportunities.id, candidate.id));
 
   const id = candidate.id;
@@ -182,6 +188,9 @@ export async function POST(req: Request) {
         outputSummary: "Verified all claim corroborations, contradictions, and trust levels.",
         citedSignalIds: [],
       });
+      // Validation is the FINAL step — the deal is now ready for the human
+      // decision and must land on "awaiting_decision" so it stays on the board.
+      await db.update(opportunities).set({ status: "awaiting_decision" }).where(eq(opportunities.id, id));
     }
 
     // 5. Release claim lock
