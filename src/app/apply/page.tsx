@@ -96,9 +96,8 @@ function ApplyPageContent() {
     <div className="flex min-h-screen flex-col bg-[#f7f8fb] text-ink">
       {/* Header · matches the workspace brand */}
       <header className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-2.5">
-          <img src="/logo.png" alt="ODIN Logo" className="w-8 h-8 rounded-full" />
-          <span className="text-[17px] font-extrabold tracking-tight">ODIN</span>
+        <Link href="/" className="flex items-center">
+          <img src="/logo.png" alt="ODIN Logo" className="w-12 h-12 rounded-xl" />
         </Link>
         <span className="rounded-full bg-white px-3.5 py-2 text-[11px] font-semibold text-muted u-card">Inbound Portal</span>
       </header>

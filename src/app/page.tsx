@@ -374,19 +374,8 @@ export default function LandingPage() {
           }}
         >
           {/* Logo */}
-          <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <img src="/logo.png" alt="ODIN Logo" style={{ width: "32px", height: "32px", borderRadius: "50%" }} />
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "14px",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                color: "#fff",
-              }}
-            >
-              ODIN
-            </span>
+          <span style={{ display: "flex", alignItems: "center" }}>
+              <img src="/logo.png" alt="ODIN Logo" style={{ width: "48px", height: "48px", borderRadius: "12px" }} />
           </span>
 
           {/* CTA */}

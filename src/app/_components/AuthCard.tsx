@@ -19,9 +19,8 @@ export default function AuthCard({
     <div className="flex min-h-screen flex-col bg-paper">
       <header className="border-b border-line bg-card">
         <div className="mx-auto flex h-14 max-w-6xl items-center px-5">
-          <Link href="/" className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="ODIN Logo" className="w-6 h-6 rounded-full" />
-            <span className="text-[15px] font-extrabold tracking-tight">ODIN</span>
+          <Link href="/" className="flex items-center">
+            <img src="/logo.png" alt="ODIN Logo" className="w-12 h-12 rounded-xl" />
           </Link>
         </div>
       </header>
