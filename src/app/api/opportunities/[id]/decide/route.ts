@@ -5,8 +5,10 @@
  */
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { opportunities, opportunityFounders, sourcingChannels, reasoningSteps, memos, sourcingNodes } from "@/db/schema";
+import { opportunities, opportunityFounders, sourcingChannels, reasoningSteps, memos, sourcingNodes, companies } from "@/db/schema";
 import { bumpFounderScore } from "@/lib/services/ingest";
+import { requireRole } from "@/lib/auth";
+import { sendDecisionEmail } from "@/lib/mail";
 import { ok, fail, errMessage } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -15,6 +17,14 @@ const VALID = new Set(["invest", "watch", "pass"]);
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // Deploying/deciding is the one human, capital-moving action → investor/admin
+    // only. Analysts can run diligence and draft, but never deploy (viewer = demo).
+    const auth = await requireRole(req, ["investor", "admin"]);
+    if (!auth.ok)
+      return fail(
+        auth.status === 401 ? "Not signed in." : "Only an investor or admin can record a decision.",
+        auth.status
+      );
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
     const decision = String(body?.decision ?? "");
@@ -66,6 +76,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       } catch (err) {
         console.error("Failed to update sourcing node quality scores on invest:", err);
       }
+    }
+
+    // The 24h promise: an inbound applicant left an email → tell them the human
+    // decision. Fail-soft (skips without SMTP env; a mail failure never blocks).
+    if (opp.applicantEmail && opp.publicRef) {
+      const [co] = await db.select({ name: companies.name }).from(companies).where(eq(companies.id, opp.companyId)).limit(1);
+      await sendDecisionEmail(opp.applicantEmail, co?.name ?? "your company", opp.publicRef, decision, note);
     }
 
     const ttdMs = decidedAt.getTime() - new Date(opp.firstSignalAt).getTime();

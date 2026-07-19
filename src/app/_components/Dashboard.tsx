@@ -12,6 +12,20 @@ import { SweepLoader, useSweep } from "./useSweep";
 type Activity = { id: string; agent: string; outputSummary: string | null; createdAt: string; opportunityId: string; company: string };
 type ChannelStat = { name: string; found: number; quality: number };
 type AutoStatus = { ready: number; working: number; queued: number; decided: number; screenedOut: number };
+type GraphNode = {
+  id: string;
+  institutionName: string;
+  programName: string;
+  qualityRating: number;
+  companyName: string;
+  founderName: string;
+  opportunityId: string;
+};
+type ChannelIntel = {
+  channels: ChannelStat[];
+  suggestions: { channel: string; why: string }[];
+  graphNodes: GraphNode[];
+};
 
 const AUTOPILOT_CONCURRENCY = 2; // parallel background workers
 const AUTOPILOT_DEFAULT_TARGET = 10; // fully-checked deals before pausing
@@ -23,6 +37,8 @@ export default function Dashboard() {
   const [thesis, setThesis] = useState<Thesis | null>(null);
   const [activity, setActivity] = useState<Activity[]>([]);
   const [channels, setChannels] = useState<ChannelStat[]>([]);
+  const [suggestions, setSuggestions] = useState<{ channel: string; why: string }[]>([]);
+  const [graphNodes, setGraphNodes] = useState<GraphNode[]>([]);
   const [founderCount, setFounderCount] = useState<{ total: number; week: number } | null>(null);
   const [account, setAccount] = useState<{ name: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,13 +52,15 @@ export default function Dashboard() {
         api<OpportunitySummary[]>("/api/opportunities"),
         api<{ active: Thesis | null }>("/api/thesis"),
         api<Activity[]>("/api/activity").catch(() => []),
-        api<{ channels: ChannelStat[] }>("/api/channels").catch(() => ({ channels: [] })),
+        api<ChannelIntel>("/api/channels").catch(() => ({ channels: [], suggestions: [], graphNodes: [] })),
         api<{ firstSeenAt: string }[]>("/api/founders").catch(() => []),
       ]);
       setOpps(o);
       setThesis(t.active);
       setActivity(a);
       setChannels(c.channels);
+      setSuggestions(c.suggestions || []);
+      setGraphNodes(c.graphNodes || []);
       api<{ user: { name: string } | null }>("/api/auth/me")
         .then((r) => setAccount(r.user))
         .catch(() => { });
@@ -415,6 +433,7 @@ export default function Dashboard() {
                 )}
               </div>
             </section>
+            <SourcingGraph nodes={graphNodes} />
           </div>
 
           {/* Quick actions */}
@@ -461,6 +480,23 @@ export default function Dashboard() {
                   </Link>
                 ))}
             </div>
+
+            {/* Sourcing Suggestions */}
+            {suggestions.length > 0 && (
+              <div className="mt-2 border border-line bg-card p-3.5 rounded-xl">
+                <div className="border-b border-line pb-2 mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.15em] text-muted font-bold">
+                  Sourcing suggestions
+                </div>
+                <div className="space-y-3">
+                  {suggestions.map((s, i) => (
+                    <div key={i} className="text-[12px] leading-relaxed border-b border-line last:border-0 last:pb-0 pb-2.5">
+                      <div className="font-mono font-bold text-accent">{s.channel}</div>
+                      <div className="text-muted mt-0.5">{s.why}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </aside>
         </div>
       </div>
@@ -487,5 +523,123 @@ function QuickAction({ href, title, sub }: { href: string; title: string; sub: s
       </div>
       <p className="mt-1 text-[11.5px] text-muted">{sub}</p>
     </Link>
+  );
+}
+
+function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
+  if (nodes.length === 0) {
+    return (
+      <div className="flex h-56 items-center justify-center text-[12px] text-faint border border-line bg-cardalt rounded-2xl">
+        No relationships in sourcing graph yet — scan for candidates.
+      </div>
+    );
+  }
+
+  const width = 450;
+  const height = 280;
+  const cx = width / 2;
+  const cy = height / 2;
+
+  // Distinct institutions
+  const institutions = Array.from(new Set(nodes.map((n) => n.institutionName)));
+  const instCoords = new Map<string, { x: number; y: number }>();
+  
+  institutions.forEach((inst, index) => {
+    const angle = (index * 2 * Math.PI) / institutions.length;
+    const r = 55;
+    instCoords.set(inst, {
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle),
+    });
+  });
+
+  // Position nodes
+  const nodeCoords = nodes.map((n, index) => {
+    const instCoord = instCoords.get(n.institutionName) || { x: cx, y: cy };
+    const angle = (index * 2 * Math.PI) / nodes.length;
+    const r = 110;
+    return {
+      ...n,
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle),
+      ix: instCoord.x,
+      iy: instCoord.y,
+    };
+  });
+
+  return (
+    <div className="border border-line bg-card rounded-2xl p-4 u-card mt-5">
+      <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted font-bold mb-3 flex items-center justify-between">
+        <span>Sourcing Graph Network (Stretch 3)</span>
+        <span className="text-accent flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
+          Live Moat
+        </span>
+      </div>
+      <div className="relative flex justify-center overflow-hidden">
+        <svg width={width} height={height} className="overflow-visible">
+          {/* Central Hub */}
+          <circle cx={cx} cy={cy} r="14" fill="#0045ff" className="animate-pulse opacity-15" />
+          <circle cx={cx} cy={cy} r="8" fill="#0045ff" />
+          
+          {/* Edges from Center to Institutions */}
+          {Array.from(instCoords.entries()).map(([name, coords]) => (
+            <line
+              key={`c-${name}`}
+              x1={cx}
+              y1={cy}
+              x2={coords.x}
+              y2={coords.y}
+              stroke="rgba(0, 69, 255, 0.12)"
+              strokeWidth="1.5"
+              strokeDasharray="4 4"
+            />
+          ))}
+
+          {/* Edges from Institutions to Companies */}
+          {nodeCoords.map((n) => (
+            <path
+              key={`edge-${n.id}`}
+              d={`M ${n.ix} ${n.iy} Q ${(n.ix + n.x)/2} ${(n.iy + n.y)/2 - 15} ${n.x} ${n.y}`}
+              fill="none"
+              stroke="rgba(0, 69, 255, 0.15)"
+              strokeWidth="1.5"
+            />
+          ))}
+
+          {/* Institution Nodes */}
+          {Array.from(instCoords.entries()).map(([name, coords]) => (
+            <g key={`inst-${name}`}>
+              <circle cx={coords.x} cy={coords.y} r="10" fill="#f1f3f7" stroke="#dcdfe8" strokeWidth="1" />
+              <circle cx={coords.x} cy={coords.y} r="5" fill="#0045ff" />
+              <text
+                x={coords.x}
+                y={coords.y - 12}
+                textAnchor="middle"
+                className="font-mono text-[9px] font-bold fill-muted"
+              >
+                {name}
+              </text>
+            </g>
+          ))}
+
+          {/* Company Nodes */}
+          {nodeCoords.map((n) => (
+            <g key={`comp-${n.id}`} className="group cursor-pointer">
+              <circle cx={n.x} cy={n.y} r="6" fill="#12a150" className="group-hover:scale-125 transition-transform" />
+              <text
+                x={n.x}
+                y={n.y + 14}
+                textAnchor="middle"
+                className="font-mono text-[8px] fill-ink font-bold opacity-80 group-hover:opacity-100"
+              >
+                {n.companyName}
+              </text>
+              <title>{`${n.founderName} @ ${n.companyName} (${n.programName})`}</title>
+            </g>
+          ))}
+        </svg>
+      </div>
+    </div>
   );
 }

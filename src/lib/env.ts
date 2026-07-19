@@ -29,6 +29,40 @@ export const env = {
   get elevenLabsApiKey() {
     return optional("ELEVENLABS_API_KEY"); // optional: audio memo only
   },
+  /**
+   * Absolute base URL of this deployment — used to build shareable links that
+   * live OUTSIDE the app (e.g. the /apply?ref= link inside a cold-outreach
+   * draft). Prefers an explicit canonical domain, then Vercel's per-deploy URL,
+   * then localhost for dev. Never hardcode localhost in shipped links.
+   */
+  get appUrl() {
+    const explicit = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+    if (explicit) return explicit.replace(/\/+$/, "");
+    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+    return "http://localhost:3000";
+  },
+  /**
+   * SMTP mail (all optional — the mailer silently no-ops when unset, and the
+   * founder loop still works via the /apply/status link). For Hostinger:
+   * SMTP_HOST=smtp.hostinger.com, SMTP_PORT=465, SMTP_USER=the mailbox address,
+   * SMTP_PASS=its password, MAIL_FROM='VC.Brain <mailbox@domain>'.
+   */
+  get smtpHost() {
+    return optional("SMTP_HOST");
+  },
+  get smtpPort() {
+    const raw = optional("SMTP_PORT");
+    return raw ? Number(raw) : 465;
+  },
+  get smtpUser() {
+    return optional("SMTP_USER");
+  },
+  get smtpPass() {
+    return optional("SMTP_PASS");
+  },
+  get mailFrom() {
+    return optional("MAIL_FROM") || optional("SMTP_USER");
+  },
   /** Model used for extraction, scoring, memo, query parsing. */
   openaiModel: process.env.OPENAI_MODEL || "gpt-4o",
 };

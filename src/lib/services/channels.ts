@@ -1,5 +1,5 @@
 import { db } from "@/db/client";
-import { companies, founders, opportunityFounders, opportunities, sourcingNodes } from "@/db/schema";
+import { companies, founders, opportunityFounders, opportunities, sourcingNodes, theses } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { listOpportunities } from "./list";
 
@@ -96,18 +96,24 @@ export async function getChannelIntelligence(): Promise<{
 
   // Fallbacks aligning with key channels/brief goals if suggestions are empty
   if (suggestions.length === 0) {
+    const thesisRows = await db.select().from(theses).where(eq(theses.isActive, true)).limit(1);
+    const activeThesis = thesisRows[0] ?? null;
+    const sector = activeThesis?.sectors?.[0] || "AI infrastructure";
+    const geo = activeThesis?.geographies?.[0] || "global";
+    const stage = activeThesis?.stages?.[0] || "seed";
+    
     suggestions.push(
       {
-        channel: "MIT CNC Hackathon",
-        why: "Strong source of developer projects in the North American/European thesis.",
+        channel: `GitHub (${sector} focus)`,
+        why: `High-value developer signals representing code pushed to young repos in the ${sector} sector.`,
       },
       {
-        channel: "GitHub",
-        why: "High-value developer signals representing code shipped before fundraising.",
+        channel: `${geo.toUpperCase()} Sourcing Sweeps`,
+        why: `Targeting early-stage developers building solutions in ${geo} aligned with your geography lens.`,
       },
       {
-        channel: "Y Combinator",
-        why: "Cohort directory scrape representing high conversion quality.",
+        channel: `${stage.toUpperCase()} Accelerator Batches`,
+        why: `Scouting pre-demo-day cohorts matching your check size and ${stage} stage targets.`,
       }
     );
   }

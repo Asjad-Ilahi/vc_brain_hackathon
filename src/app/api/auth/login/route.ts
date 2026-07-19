@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users, theses } from "@/db/schema";
 import { verifyPassword, hashPassword } from "@/lib/auth";
@@ -39,6 +39,7 @@ export async function POST(req: Request) {
           email,
           name: "Maschmeyer Partner",
           passwordHash: hashPassword(password),
+          role: "admin", // the demo/preset bootstrap operator is the admin
         })
         .returning();
       user = inserted;

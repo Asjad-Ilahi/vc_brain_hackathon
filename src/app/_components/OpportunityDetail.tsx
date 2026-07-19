@@ -47,8 +47,9 @@ type Step = {
   citedSignalIds: string[];
   createdAt?: string;
 };
+type OutreachRow = { id: string; draftMessage: string; status: string; sentAt: string | null };
 type Memo = { id: string; summary: string; recommendation: string | null; sectionsJson: Record<string, unknown> };
-type Detail = { summary: OpportunitySummary; signals: Signal[]; memo: Memo | null; claims: Claim[]; reasoningSteps: Step[] };
+type Detail = { summary: OpportunitySummary; signals: Signal[]; memo: Memo | null; claims: Claim[]; reasoningSteps: Step[]; outreach: OutreachRow | null };
 type ScoreHistory = { id: string; score: number; delta: number; reason: string; milestone: string | null; createdAt: string };
 
 type StageState = "idle" | "running" | "done" | "error";
@@ -61,17 +62,23 @@ export default function OpportunityDetail({ id }: { id: string }) {
   const [stages, setStages] = useState<Record<string, StageState>>({});
   const [running, setRunning] = useState(false);
   const [deciding, setDeciding] = useState(false);
+  const [me, setMe] = useState<{ role?: string } | null>(null);
   const [outreach, setOutreach] = useState<string | null>(null);
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [sendingOutreach, setSendingOutreach] = useState(false);
+  const [outreachSent, setOutreachSent] = useState(false);
   const [histories, setHistories] = useState<Record<string, { score: number; isColdStart: boolean; history: ScoreHistory[] }>>({});
 
   const load = useCallback(async () => {
     try {
-      const [detail, t] = await Promise.all([
+      const [detail, t, meRes] = await Promise.all([
         api<Detail>(`/api/opportunities/${id}`),
         api<{ active: Thesis | null }>("/api/thesis").catch(() => ({ active: null })),
+        api<{ user: { role?: string } | null }>("/api/auth/me").catch(() => ({ user: null })),
       ]);
       setD(detail);
       setThesis(t.active);
+      setMe(meRes.user);
       const entries = await Promise.all(
         detail.summary.founders.map(async (f) => {
           try {
@@ -89,6 +96,18 @@ export default function OpportunityDetail({ id }: { id: string }) {
       setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (d?.outreach) {
+      setOutreach(d.outreach.draftMessage);
+      if (d.outreach.status === "sent") {
+        setOutreachSent(true);
+      }
+    }
+    if (d?.summary?.applicantEmail) {
+      setRecipientEmail(d.summary.applicantEmail);
+    }
+  }, [d]);
 
   useEffect(() => {
     load();
@@ -172,6 +191,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
   async function draftOutreach() {
     setRunning(true);
+    setErr(null);
     try {
       const r = await postJson<{ draftMessage: string }>(`/api/opportunities/${id}/outreach`);
       setOutreach(r.draftMessage);
@@ -179,6 +199,27 @@ export default function OpportunityDetail({ id }: { id: string }) {
       setErr((e as Error).message);
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function handleSendOutreach() {
+    if (!recipientEmail) {
+      alert("Please enter a recipient email address.");
+      return;
+    }
+    setSendingOutreach(true);
+    setErr(null);
+    try {
+      await postJson(`/api/opportunities/${id}/outreach/send`, {
+        email: recipientEmail,
+        message: outreach,
+      });
+      setOutreachSent(true);
+      await load();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSendingOutreach(false);
     }
   }
 
@@ -233,6 +274,9 @@ export default function OpportunityDetail({ id }: { id: string }) {
   };
   const checkK = Math.round((thesis?.checkSizeMinUsd ?? 100_000) / 1000);
   const ownPct = thesis?.ownershipTargetPct ?? 7;
+  // Only an investor/admin records the human decision (RBAC). Analyst/viewer see
+  // the panel read-only — the API enforces this too; this just hides dead buttons.
+  const canDeploy = me?.role === "investor" || me?.role === "admin";
   const founderName = s.founders[0]?.name;
   const rejected = s.screenResult === "reject";
   const screened = stages.screen ?? (s.screenResult ? "done" : "idle");
@@ -358,11 +402,51 @@ export default function OpportunityDetail({ id }: { id: string }) {
             ) : null}
             {err ? <p className="mt-2.5 text-[12px] text-bad">{err}</p> : null}
             {outreach ? (
-              <div className="mt-3 border border-ok/40 bg-okwash p-3">
-                <div className="mb-1 text-[10.5px] uppercase tracking-wide text-ok">
-                  Draft outreach — not sent · activation triggers an application, not an investment
+              <div className="mt-4 border border-line bg-cardalt p-4 rounded-xl">
+                <div className="flex items-center justify-between border-b border-line pb-2 mb-3">
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-accent">
+                    ⚡ Outreach Command Center
+                  </span>
+                  <Badge tone={outreachSent ? "ok" : "warn"}>
+                    {outreachSent ? "✓ Email Sent" : "● Draft Ready"}
+                  </Badge>
                 </div>
-                <p className="whitespace-pre-wrap text-[12.5px] leading-relaxed">{outreach}</p>
+                
+                <div className="grid gap-3">
+                  <div>
+                    <label className="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1 font-semibold">Recipient Email</label>
+                    <input
+                      type="email"
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
+                      disabled={outreachSent || sendingOutreach}
+                      placeholder="Enter founder email address..."
+                      className="w-full border border-line bg-paper px-3 py-2 text-[12.5px] rounded-lg focus:outline-none focus:ring-1 focus:ring-accent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1 font-semibold">Message Body</label>
+                    <textarea
+                      value={outreach ?? ""}
+                      onChange={(e) => setOutreach(e.target.value)}
+                      disabled={outreachSent || sendingOutreach}
+                      rows={5}
+                      className="w-full border border-line bg-paper px-3 py-2 text-[12.5px] rounded-lg focus:outline-none focus:ring-1 focus:ring-accent leading-relaxed"
+                    />
+                  </div>
+                  
+                  {!outreachSent && (
+                    <div className="flex justify-end mt-2">
+                      <PrimaryButton
+                        onClick={handleSendOutreach}
+                        disabled={sendingOutreach || !recipientEmail}
+                      >
+                        {sendingOutreach ? "Sending Outreach..." : "🚀 Send Outreach Email"}
+                      </PrimaryButton>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : null}
           </section>
@@ -639,7 +723,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                   </p>
                 ) : null}
               </div>
-            ) : (
+            ) : canDeploy ? (
               <div className="mt-3 flex flex-col gap-2">
                 <button
                   onClick={() => decide("invest")}
@@ -672,6 +756,11 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 {!memo ? (
                   <p className="text-[10.5px] text-faint">Deploy unlocks once the memo is drafted — the system never decides for you.</p>
                 ) : null}
+              </div>
+            ) : (
+              <div className="mt-3 text-[12px] leading-relaxed text-muted">
+                Read-only — recording the decision is an investor action. Your role can review the
+                diligence and memo, but not deploy capital.
               </div>
             )}
           </div>

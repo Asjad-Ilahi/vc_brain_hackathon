@@ -29,6 +29,27 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
+  // Access role. The brief is single-investor (no RBAC language), so this is a
+  // deliberate operator-facing enhancement: 'admin' provisions users + does
+  // everything; 'investor' configures thesis + deploys capital; 'analyst' runs
+  // diligence/drafts but cannot deploy; 'viewer' is read-only (the public demo).
+  role: text("role").notNull().default("investor"), // 'admin'|'investor'|'analyst'|'viewer'
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Invites — how a new operator gets an account (there is NO public signup).
+// The admin creates a single-use invite for an email+role; accepting it at
+// /invite/[token] sets the password and provisions the user with that role.
+// ---------------------------------------------------------------------------
+export const invites = pgTable("invites", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: text("email").notNull(),
+  role: text("role").notNull().default("investor"),
+  token: text("token").notNull().unique(),
+  invitedByUserId: uuid("invited_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -110,6 +131,12 @@ export const opportunities = pgTable("opportunities", {
   thesisId: uuid("thesis_id").references(() => theses.id),
   source: text("source").notNull(), // 'inbound' | 'outbound'
   sourceChannel: text("source_channel"), // 'application' | 'github' | 'hackernews' | 'arxiv' | 'web'
+  // Public tracking ref for inbound applicants — the handle a founder returns to
+  // (see /apply/status). Opaque + unguessable; the ONLY thing a logged-out
+  // founder needs to check their 24h outcome.
+  publicRef: text("public_ref").unique(),
+  // Contact email captured on the public apply form — where the 24h decision goes.
+  applicantEmail: text("applicant_email"),
   status: text("status").notNull().default("sourced"), // sourced|screening|screened|scored|decided
   // Conviction: auto-computed at ingestion so the system can surface founders
   // crossing a threshold on their own (before any manual assessment).
@@ -223,6 +250,7 @@ export const outreach = pgTable("outreach", {
   channel: text("channel").notNull().default("email"),
   draftMessage: text("draft_message").notNull(),
   status: text("status").notNull().default("drafted"), // 'drafted' — sending is out of scope
+  sentAt: timestamp("sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

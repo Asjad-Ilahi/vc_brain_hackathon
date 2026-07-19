@@ -155,8 +155,23 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [publicRef, setPublicRef] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  // One-click read-only demo: mint a viewer session, then open the workspace.
+  async function startDemo() {
+    setDemoLoading(true);
+    try {
+      const res = await fetch("/api/auth/demo", { method: "POST" });
+      if (!res.ok) throw new Error();
+      window.location.href = "/dashboard";
+    } catch {
+      setDemoLoading(false);
+      window.location.href = "/admin"; // fall back to the sign-in gateway
+    }
+  }
 
   const HUD_STEPS = [
     "Uploading and reading pitch deck contents...",
@@ -307,6 +322,8 @@ export default function LandingPage() {
     try {
       const formData = new FormData();
       formData.append("companyName", companyName);
+      formData.append("email", email);
+      if (fullName) formData.append("founderName", fullName);
       formData.append("text", pitchText);
       if (file) {
         formData.append("deck", file);
@@ -317,12 +334,13 @@ export default function LandingPage() {
         body: formData,
       });
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to submit application.");
       }
 
       clearInterval(interval);
+      setPublicRef(data?.data?.publicRef ?? "");
       setSubmitted(true);
     } catch (err) {
       clearInterval(interval);
@@ -554,22 +572,25 @@ export default function LandingPage() {
 
           {/* CTAs */}
           <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
-            <Link
-              href="/admin"
+            <button
+              onClick={startDemo}
+              disabled={demoLoading}
               style={{
                 padding: "14px 28px",
                 border: "1.5px solid rgba(255,255,255,0.85)",
+                background: "transparent",
                 color: "#fff",
                 fontFamily: "var(--font-sans)",
                 fontSize: "15px",
                 fontWeight: 500,
-                textDecoration: "none",
+                cursor: "pointer",
                 transition: "background 0.2s",
                 borderRadius: "6px",
+                opacity: demoLoading ? 0.6 : 1,
               }}
             >
-              See Demo
-            </Link>
+              {demoLoading ? "Opening demo…" : "See Demo"}
+            </button>
 
             <div style={{ display: "flex", gap: "6px" }}>
               <button
@@ -1053,7 +1074,7 @@ export default function LandingPage() {
             color: "#9E9E9E",
           }}
         >
-          © VC.Brain · v0.9 · <Link href="/admin" style={{ textDecoration: "underline", color: "#666" }}>Investor Command Center</Link>
+          © VC.Brain · v0.9 · <Link href="/admin" style={{ textDecoration: "underline", color: "#666" }}>Investor Command Center</Link> · <Link href="/apply" style={{ textDecoration: "underline", color: "#666" }}>Founders — Apply</Link> · <Link href="/apply/status" style={{ textDecoration: "underline", color: "#666" }}>Check status</Link>
         </span>
         <span
           style={{
@@ -1320,6 +1341,28 @@ export default function LandingPage() {
                 <p style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.5)", marginTop: "10px", lineHeight: 1.6 }}>
                   Your details have been successfully queued for screening. Our automated systems will review your alignment and deliver our decision to <strong style={{ color: "#fff" }}>{email}</strong> within 24 hours.
                 </p>
+                {publicRef && (
+                  <div style={{ marginTop: "18px" }}>
+                    <p style={{ fontSize: "11.5px", color: "rgba(255,255,255,0.4)" }}>
+                      No account needed — this private link is how you check your outcome:
+                    </p>
+                    <Link
+                      href={`/apply/status?ref=${publicRef}`}
+                      style={{
+                        display: "inline-block",
+                        marginTop: "6px",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: "#3B71FE",
+                        textDecoration: "none",
+                        wordBreak: "break-all",
+                      }}
+                    >
+                      Track application status →
+                    </Link>
+                  </div>
+                )}
                 <button
                   onClick={() => setShowModal(false)}
                   style={{

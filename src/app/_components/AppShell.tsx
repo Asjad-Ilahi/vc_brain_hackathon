@@ -15,42 +15,17 @@ const NAV = [
   { href: "/activity", label: "Agent Activity Log", icon: IconTerminal },
 ];
 
-// Pages that render without the workspace chrome.
-const PUBLIC_PATHS = ["/signin", "/signup", "/onboarding", "/admin"];
+// Pages that render WITHOUT the workspace chrome (sidebar/topbar). Note this is
+// a different axis from proxy.ts's auth allow-list: "/onboarding" needs a
+// session (auth-gated in proxy) but is chrome-less here (full-screen wizard),
+// while "/" is public in proxy but chrome-less via the special-case below. Both
+// lists are intentionally not identical.
+const PUBLIC_PATHS = ["/signin", "/signup", "/setup", "/onboarding", "/admin", "/apply", "/invite"];
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [q, setQ] = useState("");
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-  const [navOpen, setNavOpen] = useState(false);
-  const isPublic = pathname === "/" || PUBLIC_PATHS.some((p) => pathname.startsWith(p));
-
-  useEffect(() => setNavOpen(false), [pathname]);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setNavOpen(false);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  useEffect(() => {
-    if (isPublic) return;
-    api<{ user: { name: string; email: string } | null }>("/api/auth/me")
-      .then((r) => setUser(r.user))
-      .catch(() => {});
-  }, [pathname, isPublic]);
-
-  if (isPublic) return <>{children}</>;
-
-  async function logout() {
-    try {
-      await postJson("/api/auth/logout");
-    } catch {}
-    router.push("/signin");
-    router.refresh();
-  }
-
-  const SidebarNav = ({ onNav }: { onNav?: () => void }) => (
+// Declared at module scope (not inside AppShell) so it isn't recreated on every
+// render — a component created during render resets its subtree state each time.
+function SidebarNav({ pathname, onNav }: { pathname: string; onNav?: () => void }) {
+  return (
     <nav className="flex flex-1 flex-col gap-1.5 px-3">
       {NAV.map((n) => {
         const active = pathname.startsWith(n.href);
@@ -70,6 +45,41 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       })}
     </nav>
   );
+}
+
+export default function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [q, setQ] = useState("");
+  const [user, setUser] = useState<{ name: string; email: string; role?: string } | null>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const isPublic = pathname === "/" || PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+
+  // The mobile drawer closes via each nav Link's onClick, the logo, and Escape
+  // (below) — no route-change effect needed, which also avoids a setState-in-
+  // effect cascade. Keep the Escape-to-close subscription.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setNavOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (isPublic) return;
+    api<{ user: { name: string; email: string; role?: string } | null }>("/api/auth/me")
+      .then((r) => setUser(r.user))
+      .catch(() => {});
+  }, [pathname, isPublic]);
+
+  if (isPublic) return <>{children}</>;
+
+  async function logout() {
+    try {
+      await postJson("/api/auth/logout");
+    } catch {}
+    router.push("/signin");
+    router.refresh();
+  }
 
   const Sidebar = (
     <div className="flex h-full flex-col bg-gradient-to-b from-brand to-branddeep py-6 text-white">
@@ -77,7 +87,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <IconBrain />
         <span className="text-[19px] font-extrabold tracking-tight">VC.BRAIN</span>
       </Link>
-      <SidebarNav onNav={() => setNavOpen(false)} />
+      <SidebarNav pathname={pathname} onNav={() => setNavOpen(false)} />
+      {user?.role === "admin" && (
+        <div className="mt-1 px-3">
+          <Link
+            href="/admin/users"
+            onClick={() => setNavOpen(false)}
+            className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-[14px] font-semibold transition-colors ${
+              pathname.startsWith("/admin/users")
+                ? "bg-white text-brand shadow-sm"
+                : "text-white/80 hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <IconUsers />
+            Team &amp; access
+          </Link>
+        </div>
+      )}
       <div className="mt-4 px-6 text-[11px] font-medium text-white/50">v0.9 · thesis synced</div>
     </div>
   );
@@ -213,4 +239,7 @@ function IconDb() {
 }
 function IconTerminal() {
   return <S><rect x="3" y="4" width="14" height="12" rx="2" /><path d="M6 8l2.5 2L6 12M11 12h3" /></S>;
+}
+function IconUsers() {
+  return <S><circle cx="7" cy="7" r="2.6" /><path d="M2.5 16c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" /><path d="M13 5.2a2.6 2.6 0 0 1 0 4.6M14 12.3c1.8.4 3 1.7 3 3.7" /></S>;
 }

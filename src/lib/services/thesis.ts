@@ -1,4 +1,4 @@
-import { desc, eq, and } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { theses } from "@/db/schema";
 
@@ -20,24 +20,21 @@ export type ThesisProfile = {
   onboardedAt?: string;
 };
 
-/** The active fund thesis. Falls back to a default if none configured yet. */
-export async function getActiveThesis(userId?: string): Promise<Thesis | null> {
-  if (userId) {
-    const rows = await db
-      .select()
-      .from(theses)
-      .where(and(eq(theses.isActive, true), eq(theses.userId, userId)))
-      .orderBy(desc(theses.createdAt))
-      .limit(1);
-    if (rows.length > 0) return rows[0];
-  }
-  const fallback = await db
+/**
+ * The active fund thesis. Single-fund by design (the brief describes "a single
+ * investor" running one workspace) — there is exactly ONE active thesis for the
+ * whole system. The `userId` parameter is retained for call-site compatibility
+ * but intentionally ignored; every caller sees the same global thesis. This is
+ * what kills the "second account → empty pipeline" bug (RF-5 / G5).
+ */
+export async function getActiveThesis(_userId?: string): Promise<Thesis | null> {
+  const rows = await db
     .select()
     .from(theses)
     .where(eq(theses.isActive, true))
     .orderBy(desc(theses.createdAt))
     .limit(1);
-  return fallback[0] ?? null;
+  return rows[0] ?? null;
 }
 
 export async function getThesisProfile(userId?: string): Promise<ThesisProfile | null> {

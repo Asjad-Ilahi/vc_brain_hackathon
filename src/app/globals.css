@@ -95,8 +95,15 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
-input, textarea {
-  border: none !important;
+/* Workspace inputs are borderless by default. Scoped to @layer base (NOT
+   unlayered — an unlayered rule beats every layered Tailwind utility regardless
+   of specificity, which is what hid the borders). In the base layer, an input
+   that opts into a `border` utility — the public /apply portal, the radar
+   search — wins because utilities layer > base layer. */
+@layer base {
+  input, textarea {
+    border-width: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

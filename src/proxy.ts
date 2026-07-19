@@ -1,18 +1,29 @@
 /**
  * Auth gate. Workspace pages redirect to /signin; API routes return 401 JSON.
- * Public: the landing page, sign-in/up, auth APIs, static assets, and the
- * Vercel cron's scheduled sweep.
+ * Public: the landing page, sign-in/up, the founder apply portal + its 24h
+ * outcome page, auth APIs, static assets, and the Vercel cron's scheduled sweep.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
-const PUBLIC_PAGES = new Set(["/", "/admin", "/signin", "/signup"]);
+// Pages reachable with NO session. Founders have no account (the apply portal +
+// its status page + the outreach "?ref=" converge link). "/setup" is the
+// first-run admin bootstrap; "/invite/*" (below) is how an invited operator sets
+// their password before an account exists.
+const PUBLIC_PAGES = new Set(["/", "/admin", "/signin", "/signup", "/setup", "/apply", "/apply/status"]);
 
 function isPublic(req: NextRequest): boolean {
   const { pathname } = req.nextUrl;
   if (PUBLIC_PAGES.has(pathname)) return true;
   if (pathname.startsWith("/api/auth/")) return true;
   if (pathname === "/api/apply" && req.method === "POST") return true;
+  // Founder checks their own 24h outcome by opaque publicRef — no session.
+  if (pathname === "/api/apply/status" && req.method === "GET") return true;
+  // First-run bootstrap: no user exists yet, so /api/setup has no session.
+  if (pathname === "/api/setup") return true;
+  // Invited operator accepts + sets a password before their account exists.
+  if (pathname.startsWith("/invite/")) return true;
+  if (pathname === "/api/invites/accept") return true; // GET (lookup) + POST (accept), pre-account
   // Vercel cron fires GET /api/source/all on a schedule (no session). With
   // CRON_SECRET set, Vercel sends it as a Bearer token — require it, since a
   // user-agent alone is spoofable (and this endpoint spends API credits).

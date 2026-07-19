@@ -94,9 +94,10 @@ export async function buildMemo(opportunityId: string) {
   return { memo: memoRow, claims: claimRows };
 }
 
-const JUDGE_SYSTEM = `You are a validator. Given a claim, web search evidence, and general market benchmarks for the company's sector and stage, judge whether the evidence corroborates or contradicts the claim.
+const JUDGE_SYSTEM = `You are a validator. Given a claim, web search evidence, the company's own internal evidence, and general market benchmarks for the company's sector and stage, judge whether the evidence corroborates or contradicts the claim.
 - Benchmark checks: cross-reference metrics (revenue, ARR, valuation, funding size) against comparable ranges in the benchmarks. If the claim is highly anomalous, unrealistic, or an outlier (e.g. claiming $5M ARR at pre-seed or a $100M valuation for a seed round without exceptional traction), flag it as contradicted with a clear explanation.
-- If evidence is absent or irrelevant, return not_found.
+- INTERNAL consistency (self-correction): also check the claim against the company's OWN internal evidence — its deck, code activity, interview notes, and other collected signals. If internal sources conflict with the claim or with each other (e.g. the deck says "10k users" but the repo/interview indicates a private beta), that IS a contradiction even when the web is silent — name the conflicting internal source in the note.
+- If all evidence (web + internal) is absent or irrelevant, return not_found.
 - Assign trustLevel honestly: high only with clear corroboration, contradicted claims are low. Do not assume the claim is true.`;
 
 const AUDIT_SYSTEM = `You are a strict validator auditing scoring rationales against raw evidence signals.
@@ -133,6 +134,14 @@ export async function verifyMemoClaims(opportunityId: string, memoId: string) {
     console.error("Benchmark check failed:", err);
   }
 
+  // Internal evidence (the company's own signals) — the self-correction half of
+  // the Trust Score: a deck claim can be contradicted by the company's own
+  // repo/interview/launch data even when the web has nothing on it.
+  const internalEvidence = ctx.signals
+    .slice(0, 12)
+    .map((s) => `[${s.sourceType}] ${s.title ?? ""}: ${(s.rawText ?? "").slice(0, 300)}`)
+    .join("\n");
+
   let contradictions = 0;
   for (const c of toCheck) {
     const { evidence, answer } = await tavilyVerifyClaim(c.claimText, companyContext);
@@ -149,6 +158,9 @@ Claim: "${c.claimText}"
 
 Web evidence for this specific claim:
 ${evidenceText || "(no results)"}
+
+Internal evidence (the company's own collected signals — check the claim against these too):
+${internalEvidence || "(none)"}
 
 General Market Benchmarks for ${ctx.company.stage ?? "seed"} ${ctx.company.sector ?? "AI infrastructure"}:
 ${benchmarkInfo || "(no results)"}`,
@@ -170,7 +182,7 @@ ${benchmarkInfo || "(no results)"}`,
   try {
     const scores = await db.select().from(axisScores).where(eq(axisScores.opportunityId, opportunityId));
     if (scores.length > 0) {
-      const signalsText = ctx.signals.map((s) => `[signal:${s.id}] Title: ${s.title}\nText: ${s.rawText}`).join("\n\n");
+      const signalsText = ctx.signals.map((s) => `[signal:${s.id}] Source: ${s.sourceType} - Title: ${s.title}\nText: ${s.rawText}`).join("\n\n");
       const rationalesText = scores.map((s) => `Axis: ${s.axis}\nScore: ${s.score}\nRationale: ${s.rationale}`).join("\n\n");
 
       const audit = await structured({
@@ -195,9 +207,53 @@ ${benchmarkInfo || "(no results)"}`,
           contradictions++;
         }
       }
+
+      // Internal timeline/metric contradiction engine
+      const InternalContradictionSchema = z.object({
+        contradictions: z.array(
+          z.object({
+            section: z.enum(['company_snapshot', 'investment_hypotheses', 'problem_product', 'traction_kpis']),
+            claimText: z.string().describe("The claim text containing a contradiction"),
+            explanation: z.string().describe("Explain what the contradiction is between the memory signals"),
+            evidenceSignalIds: z.array(z.string()).describe("The signal IDs that contradict each other"),
+          })
+        ).default([]),
+      });
+
+      const INTERNAL_CONTRADICTION_SYSTEM = `You are a strict validator auditing a startup's memory signals (pitch deck, GitHub commits, LinkedIn profiles, academic publications, open web).
+Your goal is to detect factual contradictions and timeline inconsistencies BETWEEN the signals.
+Examples:
+- Timeline discrepancy: Pitch deck claims founder worked at Snowflake for 5 years, but LinkedIn signal says 2 years, or states they were in school during those years.
+- Metric discrepancy: Pitch deck claims "$2M ARR", but the Product Hunt or GitHub signal shows the product launched 1 month ago and is in closed beta.
+- Moat/Tech discrepancy: Pitch deck claims a proprietary Rust database codebase, but the GitHub repository is a standard fork of another project with no new code.
+Provide a clear, brief explanation for each contradiction and reference the conflicting [signal:id] values in the evidence list. Map each to one of the memo sections: 'company_snapshot', 'investment_hypotheses', 'problem_product', 'traction_kpis'.`;
+
+      const internalAudit = await structured({
+        schema: InternalContradictionSchema,
+        schemaName: "InternalContradictionAudit",
+        system: INTERNAL_CONTRADICTION_SYSTEM,
+        user: `RAW MEMORY SIGNALS:\n${signalsText}`,
+      });
+
+      if (internalAudit.contradictions && internalAudit.contradictions.length > 0) {
+        const validSignalIds = new Set(ctx.signals.map((s) => s.id));
+        for (const ic of internalAudit.contradictions) {
+          await db.insert(claims).values({
+            memoId,
+            section: ic.section,
+            claimText: ic.claimText,
+            evidenceSignalIds: ic.evidenceSignalIds.filter(id => validSignalIds.has(id)),
+            confidence: 0.2,
+            trustLevel: "low",
+            externalVerification: "contradicted",
+            contradictionNote: `Memory conflict: ${ic.explanation}`,
+          });
+          contradictions++;
+        }
+      }
     }
   } catch (err) {
-    console.error("Scoring rationale audit failed:", err);
+    console.error("Audit / internal contradiction checks failed:", err);
   }
 
   await db.insert(reasoningSteps).values({
@@ -205,7 +261,7 @@ ${benchmarkInfo || "(no results)"}`,
     stepOrder: 4,
     agent: "validator",
     inputSummary: `${toCheck.length} claims checked against web${skipped > 0 ? ` (${skipped} skipped: over per-memo cap of ${MAX_VERIFY})` : ""}`,
-    outputSummary: `${contradictions} contradiction(s) flagged`,
+    outputSummary: `${contradictions} contradiction(s) flagged (including internal and scoring hallucination checks)`,
     citedSignalIds: [],
   });
 

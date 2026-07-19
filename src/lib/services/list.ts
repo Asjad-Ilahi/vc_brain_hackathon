@@ -11,9 +11,8 @@ import {
   claims,
   reasoningSteps,
   signals,
+  outreach,
 } from "@/db/schema";
-
-import { getActiveThesis } from "./thesis";
 
 export type AxisData = {
   score: number;
@@ -55,6 +54,7 @@ export type OpportunitySummary = {
   firstSignalAt: string;
   deadlineAt: string | null; // the 24h clock
   decidedAt: string | null;
+  applicantEmail?: string | null;
 };
 
 /** Latest row per axis wins; the previous one becomes prevScore (history kept, never discarded). */
@@ -84,18 +84,13 @@ function axisTriple(rows: (typeof axisScores.$inferSelect)[]): AxisTriple {
   return out;
 }
 
-export async function listOpportunities(userId?: string): Promise<OpportunitySummary[]> {
+export async function listOpportunities(_userId?: string): Promise<OpportunitySummary[]> {
+  // Single-fund: every opportunity belongs to the one workspace, so there is no
+  // per-user scoping (the `userId` param is retained for call-site compatibility
+  // but ignored). Archived = hypotheses from a previous thesis lens; kept in
+  // Memory (founder profiles still show them) but out of the working views.
   let opps = await db.select().from(opportunities).orderBy(desc(opportunities.createdAt));
-  
-  if (userId) {
-    const thesis = await getActiveThesis(userId);
-    if (!thesis) return [];
-    opps = opps.filter((o) => o.thesisId === thesis.id);
-  } else {
-    // Archived = hypotheses from a previous thesis lens. Kept in Memory (founder
-    // profiles still show them) but out of the working views.
-    opps = opps.filter((o) => o.status !== "archived");
-  }
+  opps = opps.filter((o) => o.status !== "archived");
 
   if (opps.length === 0) return [];
   const oppIds = opps.map((o) => o.id);
@@ -189,6 +184,7 @@ export async function listOpportunities(userId?: string): Promise<OpportunitySum
       firstSignalAt: new Date(o.firstSignalAt).toISOString(),
       deadlineAt: o.deadlineAt ? new Date(o.deadlineAt).toISOString() : null,
       decidedAt: o.decidedAt ? new Date(o.decidedAt).toISOString() : null,
+      applicantEmail: o.applicantEmail,
     };
   });
 }
@@ -198,13 +194,21 @@ export async function getOpportunityDetail(id: string, userId?: string) {
   const summary = summaries.find((s) => s.id === id);
   if (!summary) throw new Error("not found");
 
-  const [sigs, memoRows, steps] = await Promise.all([
+  const [sigs, memoRows, steps, outreachRows] = await Promise.all([
     db.select().from(signals).where(eq(signals.opportunityId, id)),
     db.select().from(memos).where(eq(memos.opportunityId, id)).orderBy(desc(memos.createdAt)).limit(1),
     db.select().from(reasoningSteps).where(eq(reasoningSteps.opportunityId, id)).orderBy(reasoningSteps.stepOrder),
+    db.select().from(outreach).where(eq(outreach.opportunityId, id)).orderBy(desc(outreach.createdAt)).limit(1),
   ]);
   const memo = memoRows[0] ?? null;
   const claimRows = memo ? await db.select().from(claims).where(eq(claims.memoId, memo.id)) : [];
 
-  return { summary, signals: sigs, memo, claims: claimRows, reasoningSteps: steps };
+  return {
+    summary,
+    signals: sigs,
+    memo,
+    claims: claimRows,
+    reasoningSteps: steps,
+    outreach: outreachRows[0] ?? null,
+  };
 }

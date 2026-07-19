@@ -10,7 +10,7 @@
  */
 import { sql, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { sourcingChannels, founders, opportunities } from "@/db/schema";
+import { sourcingChannels, founders, opportunities, opportunityFounders } from "@/db/schema";
 import { githubSearchRepos, githubUser } from "@/lib/github";
 import { tavilySearch } from "@/lib/tavily";
 import { structured } from "@/lib/openai";
@@ -23,6 +23,7 @@ import { computeConviction, matchesThesisTerms } from "./conviction";
 import { screenOpportunity } from "./screen";
 import { listOpportunities } from "./list";
 import { recordSignal } from "./ingest";
+import { analyzeColdStartFootprint } from "./coldstart";
 
 export const ALL_CHANNELS = [
   "github",
@@ -464,12 +465,36 @@ export async function autoScreenHighConviction(userId: string, max = 3): Promise
     .slice(0, max);
 
   const screened: string[] = [];
-  await Promise.allSettled(
-    hot.map(async (o) => {
+  for (const o of hot) {
+    try {
       await screenOpportunity(o.id);
+      
+      // Auto-trigger background check and cold-start footprint prediction immediately
+      const links = await db.select().from(opportunityFounders).where(eq(opportunityFounders.opportunityId, o.id));
+      let isCold = false;
+      for (const l of links) {
+        const [f] = await db.select().from(founders).where(eq(founders.id, l.founderId)).limit(1);
+        if (f) {
+          if (f.isColdStart) isCold = true;
+          try {
+            await runDeepFounderBackgroundCheck(o.id, f.id);
+          } catch (e) {
+            console.error("Background check failed in autoScreen:", e);
+          }
+        }
+      }
+      if (isCold) {
+        try {
+          await analyzeColdStartFootprint(o.id);
+        } catch (e) {
+          console.error("Coldstart footprint check failed in autoScreen:", e);
+        }
+      }
       screened.push(o.id);
-    })
-  );
+    } catch (err) {
+      console.error(`Auto-screen failed for opportunity ${o.id}:`, err);
+    }
+  }
   return screened;
 }
 

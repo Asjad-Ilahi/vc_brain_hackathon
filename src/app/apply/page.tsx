@@ -1,11 +1,10 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import DarkVeilClient from "../_components/DarkVeilClient";
 
 function ApplyPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const ref = searchParams.get("ref") || "";
 
@@ -13,6 +12,7 @@ function ApplyPageContent() {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [pitchText, setPitchText] = useState("");
+  const [interviewText, setInterviewText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   
   // Handles
@@ -23,6 +23,8 @@ function ApplyPageContent() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [publicRef, setPublicRef] = useState("");
+  const [deadlineLabel, setDeadlineLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
@@ -94,6 +96,7 @@ function ApplyPageContent() {
     try {
       const formData = new FormData();
       formData.append("companyName", companyName);
+      formData.append("email", email);
       formData.append("text", pitchText);
       if (file) {
         formData.append("deck", file);
@@ -105,6 +108,7 @@ function ApplyPageContent() {
       if (github) formData.append("github", github);
       if (twitter) formData.append("twitter", twitter);
       if (linkedin) formData.append("linkedin", linkedin);
+      if (interviewText.trim()) formData.append("interview", interviewText.trim());
 
       const targetUrl = ref ? `/api/apply?ref=${encodeURIComponent(ref)}` : "/api/apply";
       const res = await fetch(targetUrl, {
@@ -112,12 +116,15 @@ function ApplyPageContent() {
         body: formData,
       });
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to submit application.");
       }
 
       clearInterval(interval);
+      setPublicRef(data?.data?.publicRef ?? "");
+      // Computed in this event handler (not in render) so it stays pure.
+      setDeadlineLabel(new Date(Date.now() + 24 * 3600 * 1000).toLocaleDateString());
       setSubmitted(true);
     } catch (err) {
       clearInterval(interval);
@@ -306,6 +313,20 @@ function ApplyPageContent() {
                   />
                 </div>
 
+                <div className="flex flex-col gap-1.5">
+                  <label className="font-mono text-[10.5px] text-muted uppercase tracking-wider">
+                    Interview / call notes <span className="normal-case text-faint">(optional)</span>
+                  </label>
+                  <textarea
+                    value={interviewText}
+                    onChange={(e) => setInterviewText(e.target.value)}
+                    placeholder="Paste notes from a call or interview — they become a separate evidence source the validator cross-checks against your deck."
+                    rows={3}
+                    className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-[13.5px] focus:border-accent focus:outline-none resize-none transition-colors"
+                    style={{ color: "#fff" }}
+                  />
+                </div>
+
                 <button
                   type="submit"
                   className="w-full bg-accent hover:opacity-95 text-white font-semibold py-3 rounded-lg text-[14px] mt-2 shadow-lg transition-all focus:outline-none"
@@ -328,10 +349,33 @@ function ApplyPageContent() {
               </p>
               <div className="mt-5 p-3.5 border border-white/5 rounded-lg bg-white/[0.01] inline-block">
                 <span className="font-mono text-[11px] text-accent">
-                  Expected Decision By: {new Date(Date.now() + 24 * 3600 * 1000).toLocaleDateString()} local
+                  Expected Decision By: {deadlineLabel} local
                 </span>
               </div>
-              <div className="mt-8 flex justify-center">
+              {publicRef && (
+                <div className="mt-6 rounded-lg border border-accent/20 bg-accent/5 p-4 text-left">
+                  <p className="text-[11.5px] text-muted leading-relaxed">
+                    You have no account — this private link is the only way to check your
+                    outcome. Save it:
+                  </p>
+                  <Link
+                    href={`/apply/status?ref=${publicRef}`}
+                    className="mt-2 inline-block font-mono text-[12px] font-semibold text-accent hover:underline break-all"
+                  >
+                    /apply/status?ref={publicRef}
+                  </Link>
+                </div>
+              )}
+              <div className="mt-8 flex justify-center gap-3">
+                {publicRef && (
+                  <Link
+                    href={`/apply/status?ref=${publicRef}`}
+                    className="rounded-lg px-5 py-2.5 text-[13px] font-semibold text-white transition-all"
+                    style={{ background: "linear-gradient(90deg, #0045FF 0%, #002999 100%)", boxShadow: "0 4px 15px rgba(0,69,255,0.3)" }}
+                  >
+                    Check status
+                  </Link>
+                )}
                 <Link
                   href="/"
                   className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg px-5 py-2.5 text-[13px] font-semibold text-white transition-colors"

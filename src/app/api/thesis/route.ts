@@ -2,7 +2,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { theses, opportunities } from "@/db/schema";
 import { getActiveThesis } from "@/lib/services/thesis";
-import { userFromRequest } from "@/lib/auth";
+import { userFromRequest, requireRole } from "@/lib/auth";
 import { ok, fail, errMessage } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -11,12 +11,9 @@ export async function GET(req: Request) {
   try {
     const user = await userFromRequest(req);
     if (!user) return fail("Unauthorized", 401);
-    const active = await getActiveThesis(user.id);
-    const all = await db
-      .select()
-      .from(theses)
-      .where(eq(theses.userId, user.id))
-      .orderBy(desc(theses.createdAt));
+    // Single-fund: the whole workspace shares one active thesis + one history.
+    const active = await getActiveThesis();
+    const all = await db.select().from(theses).orderBy(desc(theses.createdAt));
     return ok({ active, all });
   } catch (e) {
     return fail(errMessage(e));
@@ -25,13 +22,16 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const user = await userFromRequest(req);
-    if (!user) return fail("Unauthorized", 401);
+    // Configuring the thesis is an investor/admin action (analyst/viewer read-only).
+    const auth = await requireRole(req, ["investor", "admin"]);
+    if (!auth.ok)
+      return fail(auth.status === 401 ? "Unauthorized" : "Only an investor or admin can change the thesis.", auth.status);
+    const user = auth.user;
     const b = await req.json();
     if (!b?.name) return fail("name is required", 400);
 
-    // deactivate user's current active thesis
-    await db.update(theses).set({ isActive: false }).where(and(eq(theses.isActive, true), eq(theses.userId, user.id)));
+    // Single-fund: deactivate the workspace's current active thesis (only one).
+    await db.update(theses).set({ isActive: false }).where(eq(theses.isActive, true));
 
     const [row] = await db
       .insert(theses)
