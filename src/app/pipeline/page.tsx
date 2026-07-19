@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { OpportunitySummary } from "@/lib/services/list";
 import { api, postJson } from "../_components/api";
-import { Badge, Chip, Countdown, ScorePill, Spinner, TrendArrow, countdownParts, useNow } from "../_components/ui";
+import { Badge, Chip, Countdown, ScorePill, Spinner, TrendArrow, countdownParts, useNow, scoreTone } from "../_components/ui";
 import { ApplyModal, GhostButton, PageHeader, initialsOf } from "../_components/shared";
 
 type QueryResult = OpportunitySummary & { matchScore: number; matchReasons: string[] };
@@ -28,8 +28,8 @@ function Pipeline() {
   const [queryResults, setQueryResults] = useState<QueryResult[] | null>(null);
   const [parsed, setParsed] = useState<unknown>(null);
   const [querying, setQuerying] = useState(false);
-  const [filter, setFilter] = useState<"all" | "under8" | "flagged" | "inbound" | "outbound">("all");
-  const [sort, setSort] = useState<"countdown" | "score" | "sector">("countdown");
+  const [filter, setFilter] = useState<"all" | "under8" | "flagged" | "inbound" | "outbound" | "screened" | "pending" | "screened_out">("all");
+  const [sort, setSort] = useState<"arrangement" | "countdown" | "score" | "sector">("arrangement");
   const [showApply, setShowApply] = useState(false);
 
   const load = useCallback(async () => {
@@ -60,6 +60,13 @@ function Pipeline() {
       .finally(() => setQuerying(false));
   }, [q]);
 
+  const getStageOrder = (o: OpportunitySummary) => {
+    if (o.screenResult === "pass") return 0;
+    if (!o.screenResult) return 1;
+    if (o.screenResult === "reject") return 2;
+    return 1;
+  };
+
   const active = useMemo(() => {
     const base = (queryResults ?? opps).filter((o) => !o.decision);
     const filtered = base.filter((o) => {
@@ -70,10 +77,21 @@ function Pipeline() {
       if (filter === "flagged") return o.flags > 0;
       if (filter === "inbound") return o.source === "inbound";
       if (filter === "outbound") return o.source === "outbound";
+      if (filter === "screened") return o.screenResult === "pass";
+      if (filter === "pending") return !o.screenResult;
+      if (filter === "screened_out") return o.screenResult === "reject";
       return true;
     });
     if (queryResults) return filtered; // keep relevance order for query results
     return [...filtered].sort((a, b) => {
+      if (sort === "arrangement") {
+        const orderA = getStageOrder(a);
+        const orderB = getStageOrder(b);
+        if (orderA !== orderB) return orderA - orderB;
+        const da = a.deadlineAt ? new Date(a.deadlineAt).getTime() : Infinity;
+        const db = b.deadlineAt ? new Date(b.deadlineAt).getTime() : Infinity;
+        return da - db;
+      }
       if (sort === "countdown") {
         const da = a.deadlineAt ? new Date(a.deadlineAt).getTime() : Infinity;
         const db = b.deadlineAt ? new Date(b.deadlineAt).getTime() : Infinity;
@@ -105,6 +123,9 @@ function Pipeline() {
   const flagged = opps.filter((o) => !o.decision && o.flags > 0).length;
   const inboundN = opps.filter((o) => !o.decision && o.source === "inbound").length;
   const outboundN = opps.filter((o) => !o.decision && o.source === "outbound").length;
+  const screenedN = opps.filter((o) => !o.decision && o.screenResult === "pass").length;
+  const pendingN = opps.filter((o) => !o.decision && !o.screenResult).length;
+  const screenedOutN = opps.filter((o) => !o.decision && o.screenResult === "reject").length;
 
   return (
     <div>
@@ -151,15 +172,19 @@ function Pipeline() {
           <Chip active={filter === "flagged"} onClick={() => setFilter("flagged")}>Flagged · {flagged}</Chip>
           <Chip active={filter === "inbound"} onClick={() => setFilter("inbound")}>Applied · {inboundN}</Chip>
           <Chip active={filter === "outbound"} onClick={() => setFilter("outbound")}>Found by us · {outboundN}</Chip>
+          <div className="h-4 w-px bg-line mx-1" />
+          <Chip active={filter === "screened"} onClick={() => setFilter("screened")}>Screened · {screenedN}</Chip>
+          <Chip active={filter === "pending"} onClick={() => setFilter("pending")}>Pending · {pendingN}</Chip>
+          <Chip active={filter === "screened_out"} onClick={() => setFilter("screened_out")}>Screened Out · {screenedOutN}</Chip>
           <div className="ml-auto flex items-center gap-1 text-[11px] text-faint">
             Sort:
-            {(["countdown", "score", "sector"] as const).map((s) => (
+            {(["arrangement", "countdown", "score", "sector"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setSort(s)}
                 className={`px-1.5 py-0.5 font-sans font-semibold ${sort === s ? "text-[#0045FF]" : "hover:text-ink"}`}
               >
-                {s === "countdown" ? "Countdown ↑" : s === "score" ? "Score ↓" : "Sector"}
+                {s === "arrangement" ? "Arrangement" : s === "countdown" ? "Countdown ↑" : s === "score" ? "Score ↓" : "Sector"}
               </button>
             ))}
           </div>
@@ -257,7 +282,10 @@ function AxisCell({ data }: { data?: { score: number; trend: string; rationale: 
   return (
     <td className="px-3.5 py-3">
       <div className="flex items-center gap-2">
-        <TrendArrow trend={data.trend} />
+        <div className="flex shrink-0 items-center gap-1">
+          <span className={`font-bold text-[13px] ${scoreTone(data.score)}`}>{data.score}</span>
+          <TrendArrow trend={data.trend} />
+        </div>
         <span className="line-clamp-2 max-w-[190px] text-[11.5px] leading-snug text-muted">{data.rationale}</span>
       </div>
     </td>
