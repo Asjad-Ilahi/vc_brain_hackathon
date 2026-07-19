@@ -59,7 +59,7 @@ function SignIn() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-5 w-full bg-accent px-4 py-2.5 font-mono text-[12.5px] font-semibold uppercase tracking-wide text-accentink hover:opacity-90 disabled:opacity-50"
+          className="u-btn u-btn-primary mt-5 w-full py-3 text-[13.5px]"
         >
           {loading ? "Signing in…" : "Sign in →"}
         </button>

@@ -25,21 +25,21 @@ export default function AuthCard({
                 <path d="M9 1 3 9h4l-1 6 6-8H8l1-6z" />
               </svg>
             </span>
-            <span className="font-mono text-sm font-bold tracking-wide">VC.BRAIN</span>
+            <span className="text-[15px] font-extrabold tracking-tight">VC.BRAIN</span>
           </Link>
         </div>
       </header>
       <main className="flex flex-1 items-start justify-center px-4 py-16 md:py-24">
         <div className="w-full max-w-md">
-          <div className="border border-line bg-card">
-            <div className="border-b border-line bg-paper px-6 py-5">
+          <div className="u-card overflow-hidden">
+            <div className="border-b border-line bg-cardalt px-6 py-5">
               <Eyebrow>{eyebrow}</Eyebrow>
-              <h1 className="mt-1.5 font-mono text-[22px] font-bold tracking-tight">{title}</h1>
+              <h1 className="mt-1.5 text-[24px] font-extrabold tracking-tight">{title}</h1>
               <p className="mt-1 text-[12.5px] text-muted">{sub}</p>
             </div>
             <div className="px-6 py-6">{children}</div>
           </div>
-          <p className="mt-4 text-center font-mono text-[12px] text-muted">{footer}</p>
+          <p className="mt-4 text-center text-[12.5px] text-muted">{footer}</p>
         </div>
       </main>
     </div>
