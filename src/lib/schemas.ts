@@ -182,6 +182,22 @@ export const OutboundCandidateSchema = z.object({
     .string()
     .nullable()
     .describe("Their github login / X handle / username if present in the evidence, else null. Never invent one."),
+  founderEmail: z
+    .string()
+    .nullable()
+    .describe("The founder's contact email if it literally appears in the evidence, else null. Never guess or construct one."),
+  linkedinUrl: z
+    .string()
+    .nullable()
+    .describe("Full https://linkedin.com/in/... profile URL if present in the evidence, else null."),
+  twitterHandle: z
+    .string()
+    .nullable()
+    .describe("Their X/Twitter handle (without @) if present in the evidence, else null."),
+  website: z
+    .string()
+    .nullable()
+    .describe("Personal or company website URL if present in the evidence, else null."),
   whyRelevant: z.string().describe("Why this matches the thesis"),
   thesisFit: z
     .boolean()

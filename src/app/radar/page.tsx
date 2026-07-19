@@ -342,6 +342,49 @@ export default function RadarPage() {
   );
 }
 
+/** Resolved email + public profiles — so the investor doesn't have to go look. */
+function ContactRail({
+  email,
+  f,
+}: {
+  email: string | null;
+  f?: { githubLogin: string | null; linkedinUrl: string | null; twitterHandle: string | null };
+}) {
+  const links = [
+    f?.githubLogin ? { label: "GitHub", href: `https://github.com/${f.githubLogin}` } : null,
+    f?.linkedinUrl ? { label: "LinkedIn", href: f.linkedinUrl } : null,
+    f?.twitterHandle ? { label: "X", href: `https://x.com/${f.twitterHandle.replace(/^@/, "")}` } : null,
+  ].filter(Boolean) as { label: string; href: string }[];
+  if (!email && links.length === 0) return null;
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+  return (
+    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+      {email ? (
+        <a
+          href={`mailto:${email}`}
+          onClick={stop}
+          title={email}
+          className="inline-flex max-w-[190px] items-center gap-1 truncate rounded-full bg-[#EBF0FF] px-2 py-0.5 text-[10px] font-semibold text-[#0045FF] hover:underline"
+        >
+          ✉ <span className="truncate">{email}</span>
+        </a>
+      ) : null}
+      {links.map((l) => (
+        <a
+          key={l.label}
+          href={l.href}
+          target="_blank"
+          rel="noreferrer"
+          onClick={stop}
+          className="rounded-full border border-[#eceef3] px-2 py-0.5 text-[10px] font-semibold text-muted transition-colors hover:border-[#0045FF] hover:text-[#0045FF]"
+        >
+          {l.label} ↗
+        </a>
+      ))}
+    </div>
+  );
+}
+
 function RadarCard({
   o,
   threshold,
@@ -394,6 +437,7 @@ function RadarCard({
         </div>
         <p className="mt-1.5 line-clamp-2 text-[12.5px] text-muted leading-relaxed font-sans">{o.oneLiner ?? o.convictionReason}</p>
         <p className="mt-1 line-clamp-1 text-[11px] text-faint font-sans">why now: {o.convictionReason ?? "—"}</p>
+        <ContactRail email={o.applicantEmail ?? null} f={f} />
         <div className="mt-4 flex items-end justify-between">
           <div className="flex items-center gap-4">
             <div>

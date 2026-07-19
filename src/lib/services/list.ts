@@ -51,7 +51,19 @@ export type OpportunitySummary = {
   // last resort — never "Unknown"/"Inventor of…"). `nameResolved` is false when
   // we could not identify a person, so the UI can lead with the company instead
   // of a placeholder. `isHandle` marks a username-only identity.
-  founders: { id: string; name: string; nameResolved: boolean; isHandle: boolean; founderScore: number; isColdStart: boolean }[];
+  founders: {
+    id: string;
+    name: string;
+    nameResolved: boolean;
+    isHandle: boolean;
+    founderScore: number;
+    isColdStart: boolean;
+    // Public profile links resolved during sourcing — so the investor doesn't
+    // have to go find them. Any may be null.
+    githubLogin: string | null;
+    linkedinUrl: string | null;
+    twitterHandle: string | null;
+  }[];
   axes: AxisTriple;
   flags: number; // contradicted claims surfaced by the validator
   recommendation: string | null; // memo's recommendation (decision stays human)
@@ -166,6 +178,9 @@ export async function listOpportunities(_userId?: string): Promise<OpportunitySu
           isHandle: display != null && display.startsWith("@"),
           founderScore: f!.founderScore,
           isColdStart: f!.isColdStart,
+          githubLogin: f!.githubLogin ?? null,
+          linkedinUrl: f!.linkedinUrl ?? null,
+          twitterHandle: f!.twitterHandle ?? null,
         };
       });
     const ttd =

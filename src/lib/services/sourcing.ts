@@ -191,6 +191,7 @@ export async function sourceFromHackerNews(userId: string, limit = 4): Promise<s
   );
 
   const created: string[] = [];
+  const enrichTargets: { opportunityId: string; founderId: string | undefined; company: string; author: string }[] = [];
   for (const hit of (data.hits ?? []).filter((h) => h.title && h.author)) {
     if (created.length >= limit) break;
     if (!matches(hit.title, thesis?.sectors)) continue; // off-thesis: never shown
@@ -200,7 +201,7 @@ export async function sourceFromHackerNews(userId: string, limit = 4): Promise<s
       thesisSectorMatch: matches(hit.title, thesis?.sectors),
     });
     const company = companyFromHNTitle(hit.title);
-    const { opportunityId, deduped } = await createOpportunity({
+    const { opportunityId, deduped, founderIds } = await createOpportunity({
       source: "outbound",
       sourceChannel: "hackernews",
       thesisId: thesis?.id ?? null,
@@ -224,8 +225,18 @@ export async function sourceFromHackerNews(userId: string, limit = 4): Promise<s
         },
       ],
     });
-    if (!deduped) created.push(opportunityId);
+    if (!deduped) {
+      created.push(opportunityId);
+      enrichTargets.push({ opportunityId, founderId: founderIds[0], company, author: hit.author });
+    }
   }
+  // Broaden beyond HN: look each new founder up on the open web for real
+  // contact + profile links (parallel, fail-soft — doesn't block the sweep).
+  await Promise.allSettled(
+    enrichTargets.map((t) =>
+      t.founderId ? enrichFounderContactsFromWeb(t.founderId, t.opportunityId, t.author, t.company) : Promise.resolve()
+    )
+  );
   await bumpChannel("hackernews", created.length);
   return created;
 }
@@ -417,10 +428,83 @@ async function resolveFounderName(companyName: string, initialName?: string | nu
  * neither (common for patents/hackathons), we attach nothing and the card leads
  * with the company/project, which is always a real, useful entity.
  */
+/* ------- contact / public-profile resolution (broad, evidence-based) -------
+ * The point of the product is to save the investor a lookup — so we pull the
+ * founder's real email + public profiles from the SAME web evidence the pipeline
+ * already fetched (no extra API calls, no single-platform bias). Everything is
+ * normalized; junk/role/no-reply addresses are dropped, never invented. */
+const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
+function normEmail(raw?: string | null): string | null {
+  const m = (raw ?? "").match(EMAIL_RE);
+  if (!m) return null;
+  const e = m[0].toLowerCase();
+  if (/(noreply|no-reply|^(info|hello|support|contact|admin|team|sales|press)@)/.test(e)) return null;
+  if (/\.(png|jpg|jpeg|svg|gif|webp)$/.test(e)) return null;
+  return e;
+}
+function normTwitter(raw?: string | null): string | null {
+  const s = (raw ?? "").trim().replace(/^@/, "").replace(/https?:\/\/(www\.)?(twitter|x)\.com\//i, "").replace(/[/?].*$/, "");
+  if (/^(home|share|intent|i|search|hashtag)$/i.test(s)) return null;
+  return /^[a-z0-9_]{1,15}$/i.test(s) ? s : null;
+}
+function normLinkedin(raw?: string | null): string | null {
+  const m = (raw ?? "").match(/https?:\/\/(www\.)?linkedin\.com\/in\/[a-z0-9\-_%]+/i);
+  return m ? m[0].replace(/[).,]+$/, "") : null;
+}
+function githubFromUrl(url: string): string | null {
+  const m = url.match(/https?:\/\/(www\.)?github\.com\/([a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){0,38})(\/|$)/i);
+  const login = m?.[2];
+  if (!login || ["orgs", "topics", "about", "features", "sponsors", "marketplace"].includes(login.toLowerCase())) return null;
+  return login;
+}
+/** Mine contacts from a specific piece of evidence (the result matched to THIS candidate). */
+function mineContacts(hay: string): { linkedinUrl: string | null; twitterHandle: string | null; email: string | null; githubLogin: string | null } {
+  const twMatch = hay.match(/https?:\/\/(www\.)?(twitter|x)\.com\/([a-z0-9_]{1,15})/i);
+  return {
+    linkedinUrl: normLinkedin(hay),
+    twitterHandle: twMatch ? normTwitter(twMatch[3]) : null,
+    email: normEmail(hay),
+    githubLogin: githubFromUrl(hay),
+  };
+}
+
+/**
+ * Broad, cross-platform contact lookup for a founder we only have a weak handle
+ * for (e.g. a Hacker News / arXiv username). ONE web search, deterministic mining
+ * of the results — NOT tied to a single platform — filling only the fields we
+ * don't already have. Fail-soft: enrichment never breaks a sweep.
+ */
+async function enrichFounderContactsFromWeb(
+  founderId: string,
+  opportunityId: string,
+  person: string,
+  company?: string | null
+): Promise<void> {
+  try {
+    const subject = person && !looksLikeHandle(person) ? `"${person}"` : company ? `"${company}"` : `"${person}"`;
+    const { results } = await tavilySearch(`${subject} founder OR maker OR creator linkedin OR github OR twitter OR email`, { maxResults: 5 });
+    if (results.length === 0) return;
+    const c = mineContacts(results.map((r) => `${r.url}\n${r.content}`).join("\n"));
+    const [f] = await db.select().from(founders).where(eq(founders.id, founderId)).limit(1);
+    if (!f) return;
+    const set: Record<string, string> = {};
+    if (!f.linkedinUrl && c.linkedinUrl) set.linkedinUrl = c.linkedinUrl;
+    if (!f.twitterHandle && c.twitterHandle) set.twitterHandle = c.twitterHandle;
+    if (!f.githubLogin && c.githubLogin) set.githubLogin = c.githubLogin;
+    if (Object.keys(set).length) await db.update(founders).set(set).where(eq(founders.id, founderId));
+    if (c.email) {
+      const [opp] = await db.select().from(opportunities).where(eq(opportunities.id, opportunityId)).limit(1);
+      if (opp && !opp.applicantEmail) await db.update(opportunities).set({ applicantEmail: c.email }).where(eq(opportunities.id, opportunityId));
+    }
+  } catch (e) {
+    console.error("contact enrichment failed:", e);
+  }
+}
+
 function buildOutboundFounder(
   realName: string | null,
   handle: string | null,
-  extra: { githubLogin?: string | null; linkedinUrl?: string | null; role?: string; bio?: string | null } = {}
+  extra: { githubLogin?: string | null; linkedinUrl?: string | null; twitterHandle?: string | null; location?: string | null; role?: string; bio?: string | null } = {}
 ): NewFounder[] {
   const cleanHandle = (handle || "").trim().replace(/^@/, "") || null;
   if (realName) {
@@ -472,7 +556,23 @@ async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: 
     });
     
     const resolvedName = await resolveFounderName(c.companyName, c.founderName);
-    const foundersArr = buildOutboundFounder(resolvedName, c.founderHandle, { role: "founder" });
+    // Broad, evidence-based contact resolution — prefer the LLM's candidate-
+    // specific extraction, fall back to mining the result matched to this founder.
+    const mined = mineContacts(match ? `${match.url}\n${match.content}` : "");
+    const email = normEmail(c.founderEmail) ?? mined.email;
+    const linkedinUrl = normLinkedin(c.linkedinUrl) ?? mined.linkedinUrl;
+    const twitterHandle = normTwitter(c.twitterHandle) ?? mined.twitterHandle;
+    const ghLogin =
+      (c.founderHandle && !c.founderHandle.includes("/") && !c.founderHandle.includes("@")
+        ? c.founderHandle.replace(/^@/, "")
+        : null) ?? mined.githubLogin;
+    const foundersArr = buildOutboundFounder(resolvedName, c.founderHandle, {
+      role: "founder",
+      linkedinUrl,
+      twitterHandle,
+      githubLogin: ghLogin,
+      location: cleanPlaceholderField(c.geography),
+    });
 
     const { opportunityId, deduped } = await createOpportunity({
       source: "outbound",
@@ -500,6 +600,9 @@ async function sourceViaWebExtract(userId: string, spec: WebChannelSpec, limit: 
         },
       ],
     });
+    if (email && !deduped) {
+      await db.update(opportunities).set({ applicantEmail: email }).where(eq(opportunities.id, opportunityId));
+    }
     if (!deduped) created.push(opportunityId);
   }
   await bumpChannel(spec.channel, created.length);
@@ -816,9 +919,29 @@ Determine if the project matches the VC's investment thesis.`;
     if (companyName && (c.isEstablished || isDenylisted(companyName))) continue;
 
     const resolvedName = await resolveFounderName(companyName || query, c.founderName);
+
+    const match = mergedWebResults.find(
+      (r) =>
+        (companyName && r.title.toLowerCase().includes(companyName.toLowerCase().slice(0, 6))) ||
+        (resolvedName && r.content.toLowerCase().includes(resolvedName.toLowerCase()))
+    );
+    // Broad contact resolution: candidate fields → matched result → any profile
+    // link across the merged web/github evidence (not one platform).
+    const anyLinkedin = mergedWebResults.map((r) => r.url).find((u) => /linkedin\.com\/in\//i.test(u)) ?? null;
+    const mined = mineContacts(match ? `${match.url}\n${match.content}` : "");
+    const email = normEmail(c.founderEmail) ?? mined.email;
+    const linkedinUrl = normLinkedin(c.linkedinUrl) ?? mined.linkedinUrl ?? normLinkedin(anyLinkedin);
+    const twitterHandle = normTwitter(c.twitterHandle) ?? mined.twitterHandle;
+    const ghLogin =
+      (c.founderHandle && !c.founderHandle.includes("/") && !c.founderHandle.includes("@")
+        ? c.founderHandle.replace(/^@/, "")
+        : null) ?? mined.githubLogin ?? ghResults[0]?.owner?.login ?? null;
     const foundersArr = buildOutboundFounder(resolvedName, c.founderHandle, {
       role: "founder",
-      linkedinUrl: mergedWebResults.find((r) => r.url.includes("linkedin.com/in/"))?.url ?? null,
+      linkedinUrl,
+      twitterHandle,
+      githubLogin: ghLogin,
+      location: cleanPlaceholderField(c.geography),
     });
 
     // A real result needs a real entity: either a company/project name, or an
@@ -826,12 +949,6 @@ Determine if the project matches the VC's investment thesis.`;
     // vague query returns "nothing found" instead of a fabricated card.
     const displayCompany = companyName || (resolvedName ? `${resolvedName}'s project` : "");
     if (!displayCompany || (!companyName && foundersArr.length === 0)) continue;
-
-    const match = mergedWebResults.find(
-      (r) =>
-        (companyName && r.title.toLowerCase().includes(companyName.toLowerCase().slice(0, 6))) ||
-        (resolvedName && r.content.toLowerCase().includes(resolvedName.toLowerCase()))
-    );
 
     const conviction = computeConviction({
       llmAssertedFit: true,
@@ -864,6 +981,9 @@ Determine if the project matches the VC's investment thesis.`;
         },
       ],
     });
+    if (email && !deduped) {
+      await db.update(opportunities).set({ applicantEmail: email }).where(eq(opportunities.id, opportunityId));
+    }
     if (!deduped) created.push({ id: opportunityId, score: conviction.score });
   }
   // Best match first — the search page redirects to created[0], so it must be the
