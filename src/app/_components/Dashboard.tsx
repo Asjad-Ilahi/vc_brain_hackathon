@@ -247,8 +247,10 @@ export default function Dashboard() {
       (o) =>
         o.source === "outbound" &&
         !o.decision &&
-        o.status === "awaiting_decision" &&
-        (o.recommendation === "invest" || o.recommendation === "watch")
+        (o.convictionScore ?? 0) >= threshold &&
+        o.axes.founder?.score != null &&
+        o.axes.market?.score != null &&
+        o.axes.idea_vs_market?.score != null
     )
     .sort((a, b) => (b.convictionScore ?? 0) - (a.convictionScore ?? 0));
   const crossed24h = crossed.filter((o) => now - new Date(o.firstSignalAt).getTime() < 24 * 3600_000);
@@ -433,7 +435,6 @@ export default function Dashboard() {
               ) : (
                 awaiting
                   .sort((a, b) => (b.axes.founder?.score ?? 0) - (a.axes.founder?.score ?? 0))
-                  .slice(0, 10)
                   .map((o) => {
                     const isDeploy = o.recommendation === "invest";
                     const isPass = o.recommendation === "pass";

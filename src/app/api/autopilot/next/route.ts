@@ -188,8 +188,7 @@ export async function POST(req: Request) {
         outputSummary: "Verified all claim corroborations, contradictions, and trust levels.",
         citedSignalIds: [],
       });
-      // Validation is the FINAL step — the deal is now ready for the human
-      // decision and must land on "awaiting_decision" so it stays on the board.
+      // Final pipeline step complete! Move to "Ready For Your Decisions"
       await db.update(opportunities).set({ status: "awaiting_decision" }).where(eq(opportunities.id, id));
     }
 

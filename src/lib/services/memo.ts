@@ -80,10 +80,7 @@ export async function buildMemo(opportunityId: string) {
 
   // The memo only RECOMMENDS. The decision (and decidedAt) belongs to the human —
   // "one human in the loop for oversight". See /api/opportunities/[id]/decide.
-  await db
-    .update(opportunities)
-    .set({ status: "awaiting_decision" })
-    .where(eq(opportunities.id, opportunityId));
+  // Status update to "awaiting_decision" moved to the end of the validator step.
 
   await db.insert(reasoningSteps).values({
     opportunityId,
@@ -125,93 +122,30 @@ export async function verifyMemoClaims(opportunityId: string, memoId: string) {
   const toCheck = rows.filter((c) => c.trustLevel === "unverified").slice(0, MAX_VERIFY);
   const skipped = rows.filter((c) => c.trustLevel === "unverified").length - toCheck.length;
 
-  // Anomalous Metric Validator: fetch general market benchmarks
-  let benchmarkInfo = "";
-  try {
-    const sector = ctx.company.sector ?? "AI infrastructure";
-    const stage = ctx.company.stage ?? "seed";
-    const query = `average valuation funding size ARR benchmarks for ${stage} stage ${sector} startups`;
-    const { evidence } = await tavilyVerifyClaim(query, `${stage} ${sector} benchmarks`);
-    benchmarkInfo = evidence.map((e) => `${e.title}: ${e.content.slice(0, 350)}`).join("\n");
-  } catch (err) {
-    console.error("Benchmark check failed:", err);
-  }
+  // 1. Kick off Benchmark Search immediately
+  const benchmarkPromise = (async () => {
+    try {
+      const sector = ctx.company.sector ?? "AI infrastructure";
+      const stage = ctx.company.stage ?? "seed";
+      const query = `average valuation funding size ARR benchmarks for ${stage} stage ${sector} startups`;
+      const { evidence } = await tavilyVerifyClaim(query, `${stage} ${sector} benchmarks`);
+      return evidence.map((e) => `${e.title}: ${e.content.slice(0, 350)}`).join("\n");
+    } catch (err) {
+      console.error("Benchmark check failed:", err);
+      return "";
+    }
+  })();
 
-  // Internal evidence (the company's own signals) — the self-correction half of
-  // the Trust Score: a deck claim can be contradicted by the company's own
-  // repo/interview/launch data even when the web has nothing on it.
-  const internalEvidence = ctx.signals
-    .slice(0, 12)
-    .map((s) => `[${s.sourceType}] ${s.title ?? ""}: ${(s.rawText ?? "").slice(0, 300)}`)
-    .join("\n");
+  // 2. Kick off Hallucination & Contradiction Audits immediately
+  const scoresPromise = db.select().from(axisScores).where(eq(axisScores.opportunityId, opportunityId));
+  const auditsPromise = (async () => {
+    try {
+      const scores = await scoresPromise;
+      if (scores.length === 0) return null;
 
-  let contradictions = 0;
-  for (const c of toCheck) {
-    const { evidence, answer } = await tavilyVerifyClaim(c.claimText, companyContext);
-    const evidenceText =
-      (answer ? `Answer: ${answer}\n` : "") +
-      evidence.map((e, i) => `[${i + 1}] ${e.title}: ${e.content.slice(0, 300)} (${e.url})`).join("\n");
-
-    const judgment = await structured({
-      schema: VerificationJudgmentSchema,
-      schemaName: "VerificationJudgment",
-      system: JUDGE_SYSTEM,
-      user: `Company: ${companyContext}
-Claim: "${c.claimText}"
-
-Web evidence for this specific claim:
-${evidenceText || "(no results)"}
-
-Internal evidence (the company's own collected signals — check the claim against these too):
-${internalEvidence || "(none)"}
-
-General Market Benchmarks for ${ctx.company.stage ?? "seed"} ${ctx.company.sector ?? "AI infrastructure"}:
-${benchmarkInfo || "(no results)"}`,
-    });
-
-    if (judgment.verdict === "contradicted") contradictions++;
-
-    await db
-      .update(claims)
-      .set({
-        trustLevel: judgment.trustLevel,
-        externalVerification: judgment.verdict,
-        contradictionNote: judgment.verdict === "contradicted" ? judgment.note : null,
-      })
-      .where(eq(claims.id, c.id));
-  }
-
-  // Scoring Hallucination Audit: compare axis scores against raw signals
-  try {
-    const scores = await db.select().from(axisScores).where(eq(axisScores.opportunityId, opportunityId));
-    if (scores.length > 0) {
       const signalsText = ctx.signals.map((s) => `[signal:${s.id}] Source: ${s.sourceType} - Title: ${s.title}\nText: ${s.rawText}`).join("\n\n");
       const rationalesText = scores.map((s) => `Axis: ${s.axis}\nScore: ${s.score}\nRationale: ${s.rationale}`).join("\n\n");
 
-      const audit = await structured({
-        schema: AuditResultSchema,
-        schemaName: "AuditResult",
-        system: AUDIT_SYSTEM,
-        user: `RAW SIGNALS EVIDENCE:\n${signalsText}\n\nSCORING RATIONALES TO AUDIT:\n${rationalesText}`,
-      });
-
-      if (audit.hallucinations && audit.hallucinations.length > 0) {
-        for (const h of audit.hallucinations) {
-          await db.insert(claims).values({
-            memoId,
-            section: "validation_audit",
-            claimText: `Hallucination in ${h.axis} rationale: ${h.hallucinatedClaim}`,
-            evidenceSignalIds: [],
-            confidence: 0.1,
-            trustLevel: "low",
-            externalVerification: "contradicted",
-            contradictionNote: `Auditor flag: ${h.explanation}`,
-          });
-          contradictions++;
-        }
-      }
-
-      // Internal timeline/metric contradiction engine
       const InternalContradictionSchema = z.object({
         contradictions: z.array(
           z.object({
@@ -231,32 +165,118 @@ Examples:
 - Moat/Tech discrepancy: Pitch deck claims a proprietary Rust database codebase, but the GitHub repository is a standard fork of another project with no new code.
 Provide a clear, brief explanation for each contradiction and reference the conflicting [signal:id] values in the evidence list. Map each to one of the memo sections: 'company_snapshot', 'investment_hypotheses', 'problem_product', 'traction_kpis'.`;
 
-      const internalAudit = await structured({
-        schema: InternalContradictionSchema,
-        schemaName: "InternalContradictionAudit",
-        system: INTERNAL_CONTRADICTION_SYSTEM,
-        user: `RAW MEMORY SIGNALS:\n${signalsText}`,
-      });
+      return await Promise.all([
+        structured({
+          schema: AuditResultSchema,
+          schemaName: "AuditResult",
+          system: AUDIT_SYSTEM,
+          user: `RAW SIGNALS EVIDENCE:\n${signalsText}\n\nSCORING RATIONALES TO AUDIT:\n${rationalesText}`,
+          model: "gpt-4o-mini",
+        }),
+        structured({
+          schema: InternalContradictionSchema,
+          schemaName: "InternalContradictionAudit",
+          system: INTERNAL_CONTRADICTION_SYSTEM,
+          user: `RAW MEMORY SIGNALS:\n${signalsText}`,
+          model: "gpt-4o-mini",
+        }),
+      ]);
+    } catch (err) {
+      console.error("Audit / internal contradiction checks failed:", err);
+      return null;
+    }
+  })();
 
-      if (internalAudit.contradictions && internalAudit.contradictions.length > 0) {
-        const validSignalIds = new Set(ctx.signals.map((s) => s.id));
-        for (const ic of internalAudit.contradictions) {
-          await db.insert(claims).values({
-            memoId,
-            section: ic.section,
-            claimText: ic.claimText,
-            evidenceSignalIds: ic.evidenceSignalIds.filter(id => validSignalIds.has(id)),
-            confidence: 0.2,
-            trustLevel: "low",
-            externalVerification: "contradicted",
-            contradictionNote: `Memory conflict: ${ic.explanation}`,
-          });
-          contradictions++;
-        }
+  // 3. Kick off individual claim web searches immediately
+  const claimSearches = toCheck.map(c => ({
+    claim: c,
+    searchPromise: tavilyVerifyClaim(c.claimText, companyContext).catch(err => {
+      console.error("Tavily failed for claim:", err);
+      return { evidence: [], answer: null };
+    })
+  }));
+
+  const internalEvidence = ctx.signals
+    .slice(0, 12)
+    .map((s) => `[${s.sourceType}] ${s.title ?? ""}: ${(s.rawText ?? "").slice(0, 300)}`)
+    .join("\n");
+
+  let contradictions = 0;
+
+  // 4. Process each claim judgment as soon as its search AND the benchmark search are both ready
+  await Promise.all(claimSearches.map(async ({ claim, searchPromise }) => {
+    const [{ evidence, answer }, benchmarkInfo] = await Promise.all([searchPromise, benchmarkPromise]);
+    
+    const evidenceText =
+      (answer ? `Answer: ${answer}\n` : "") +
+      (evidence || []).map((e: any, i: number) => `[${i + 1}] ${e.title}: ${e.content.slice(0, 300)} (${e.url})`).join("\n");
+
+    const judgment = await structured({
+      schema: VerificationJudgmentSchema,
+      schemaName: "VerificationJudgment",
+      system: JUDGE_SYSTEM,
+      user: `Company: ${companyContext}
+Claim: "${claim.claimText}"
+
+Web evidence for this specific claim:
+${evidenceText || "(no results)"}
+
+Internal evidence (the company's own collected signals — check the claim against these too):
+${internalEvidence || "(none)"}
+
+General Market Benchmarks for ${ctx.company.stage ?? "seed"} ${ctx.company.sector ?? "AI infrastructure"}:
+${benchmarkInfo || "(no results)"}`,
+      model: "gpt-4o-mini",
+    });
+
+    if (judgment.verdict === "contradicted") contradictions++;
+
+    await db
+      .update(claims)
+      .set({
+        trustLevel: judgment.trustLevel,
+        externalVerification: judgment.verdict,
+        contradictionNote: judgment.verdict === "contradicted" ? judgment.note : null,
+      })
+      .where(eq(claims.id, claim.id));
+  }));
+
+  // 5. Wait for the audit results and process them
+  const auditResults = await auditsPromise;
+  if (auditResults) {
+    const [audit, internalAudit] = auditResults;
+    if (audit.hallucinations && audit.hallucinations.length > 0) {
+      for (const h of audit.hallucinations) {
+        await db.insert(claims).values({
+          memoId,
+          section: "validation_audit",
+          claimText: `Hallucination in ${h.axis} rationale: ${h.hallucinatedClaim}`,
+          evidenceSignalIds: [],
+          confidence: 0.1,
+          trustLevel: "low",
+          externalVerification: "contradicted",
+          contradictionNote: `Auditor flag: ${h.explanation}`,
+        });
+        contradictions++;
       }
     }
-  } catch (err) {
-    console.error("Audit / internal contradiction checks failed:", err);
+
+    if (internalAudit.contradictions && internalAudit.contradictions.length > 0) {
+      const validSignalIds = new Set(ctx.signals.map((s) => s.id));
+      for (const ic of internalAudit.contradictions) {
+        await db.insert(claims).values({
+          memoId,
+          section: ic.section,
+          claimText: ic.claimText,
+          evidenceSignalIds: ic.evidenceSignalIds.filter((id: string) => validSignalIds.has(id)),
+          confidence: 0.2,
+          trustLevel: "low",
+          externalVerification: "contradicted",
+          contradictionNote: `Memory conflict: ${ic.explanation}`,
+        });
+        contradictions++;
+      }
+    }
   }
 
   await db.insert(reasoningSteps).values({
