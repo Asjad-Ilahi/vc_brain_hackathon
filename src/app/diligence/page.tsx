@@ -4,11 +4,12 @@ import Link from "next/link";
 import type { OpportunitySummary } from "@/lib/services/list";
 import { api } from "../_components/api";
 import { Badge, Countdown, ScorePill, Spinner, TrendArrow } from "../_components/ui";
-import { PageHeader } from "../_components/shared";
+import { PageHeader, ListSearch } from "../_components/shared";
 
 export default function DiligencePage() {
   const [opps, setOpps] = useState<OpportunitySummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [term, setTerm] = useState("");
 
   useEffect(() => {
     api<OpportunitySummary[]>("/api/opportunities")
@@ -28,6 +29,11 @@ export default function DiligencePage() {
     [opps]
   );
 
+  const t = term.trim().toLowerCase();
+  const shown = t
+    ? queue.filter((o) => [o.company, o.founders[0]?.name, o.sector, o.oneLiner].filter(Boolean).join(" ").toLowerCase().includes(t))
+    : queue;
+
   return (
     <div>
       <PageHeader
@@ -36,15 +42,22 @@ export default function DiligencePage() {
         sub="Every claim is checked against public evidence. Anything that doesn't add up gets flagged before it reaches you."
       />
       <div className="space-y-4">
+        {!loading && queue.length > 0 ? (
+          <ListSearch value={term} onChange={setTerm} placeholder="Search the queue by company, founder, or sector…" />
+        ) : null}
         {loading ? (
           <div className="py-20 text-center"><Spinner label="Loading queue…" /></div>
         ) : queue.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
             Queue is clear — source founders on the Radar or take an application.
           </div>
+        ) : shown.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
+            No deals in the queue match “{term}”.
+          </div>
         ) : (
           <div className="bg-[#F8F8F8] rounded-[28px] p-6 border-0 shadow-none space-y-3">
-            {queue.map((o) => {
+            {shown.map((o) => {
               const stage = o.status === "awaiting_decision" ? 4 : o.axes.founder ? 3 : o.screenResult ? 2 : 1;
               return (
                 <Link

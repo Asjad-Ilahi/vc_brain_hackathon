@@ -6,7 +6,7 @@ import type { OpportunitySummary } from "@/lib/services/list";
 import type { Thesis } from "@/lib/services/thesis";
 import { api, postJson } from "../_components/api";
 import { Badge, Chip, Modal, ScorePill, Spinner, TrendArrow } from "../_components/ui";
-import { CHANNEL_SIGNAL, GhostButton, PageHeader, PrimaryButton, initialsOf } from "../_components/shared";
+import { CHANNEL_SIGNAL, GhostButton, ListSearch, PageHeader, PrimaryButton, initialsOf } from "../_components/shared";
 import { SweepLoader, useSweep } from "../_components/useSweep";
 
 type ChannelStat = { name: string; found: number; scored: number; avgConviction: number; converted: number; quality: number };
@@ -26,6 +26,7 @@ export default function RadarPage() {
   const [outreach, setOutreach] = useState<{ company: string; draft: string } | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState(""); // client-side filter over loaded cards
   const [searching, setSearching] = useState(false);
   const [searchStatus, setSearchStatus] = useState<string | null>(null);
 
@@ -125,11 +126,14 @@ export default function RadarPage() {
     return [...map.entries()];
   }, [channels]);
 
-  const shown = radar.filter((o) => {
-    if (filter === "all") return true;
-    if (filter === "coldstart") return o.founders.some((f) => f.isColdStart);
-    return o.sourceChannel === filter;
-  });
+  const term = searchTerm.trim().toLowerCase();
+  const shown = radar
+    .filter((o) => {
+      if (filter === "all") return true;
+      if (filter === "coldstart") return o.founders.some((f) => f.isColdStart);
+      return o.sourceChannel === filter;
+    })
+    .filter((o) => !term || [o.company, o.founders[0]?.name, o.sector, o.geography, o.oneLiner, o.convictionReason].filter(Boolean).join(" ").toLowerCase().includes(term));
 
   const sweep = useSweep(load);
 
@@ -199,6 +203,11 @@ export default function RadarPage() {
             </div>
           )}
         </div>
+
+        {/* Filter the founders already on the radar */}
+        {radar.length > 0 ? (
+          <ListSearch value={searchTerm} onChange={setSearchTerm} placeholder="Filter these founders by name, company, sector…" />
+        ) : null}
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-1.5">

@@ -21,6 +21,40 @@ export function initialsOf(name: string): string {
   return ((parts[0]?.[0] ?? "?") + (parts[1]?.[0] ?? "")).toUpperCase();
 }
 
+/** Inline client-side filter over an already-loaded list. Matches the topbar search look. */
+export function ListSearch({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <div className={`flex items-center gap-2.5 rounded-full bg-white px-4 py-2.5 u-card ${className ?? "max-w-sm"}`}>
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" className="shrink-0 text-faint" aria-hidden>
+        <circle cx="9" cy="9" r="6" />
+        <path d="m17 17-3.2-3.2" />
+      </svg>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder ?? "Search this list…"}
+        className="w-full bg-transparent text-[13px] text-ink outline-none placeholder:text-faint"
+        aria-label={placeholder ?? "Search this list"}
+      />
+      {value ? (
+        <button type="button" onClick={() => onChange("")} className="shrink-0 text-[13px] text-faint hover:text-ink" aria-label="Clear search">
+          ✕
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function PageHeader({
   eyebrow,
   title,

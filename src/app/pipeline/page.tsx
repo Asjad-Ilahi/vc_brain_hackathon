@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { OpportunitySummary } from "@/lib/services/list";
 import { api, postJson } from "../_components/api";
 import { Badge, Chip, Countdown, ScorePill, Spinner, TrendArrow, countdownParts, useNow, scoreTone } from "../_components/ui";
-import { ApplyModal, GhostButton, PageHeader, initialsOf } from "../_components/shared";
+import { ApplyModal, GhostButton, ListSearch, PageHeader, initialsOf } from "../_components/shared";
 
 type QueryResult = OpportunitySummary & { matchScore: number; matchReasons: string[] };
 
@@ -30,6 +30,7 @@ function Pipeline() {
   const [querying, setQuerying] = useState(false);
   const [filter, setFilter] = useState<"all" | "under8" | "flagged" | "inbound" | "outbound" | "screened" | "pending" | "screened_out">("all");
   const [sort, setSort] = useState<"arrangement" | "countdown" | "score" | "sector">("arrangement");
+  const [term, setTerm] = useState(""); // client-side filter over the loaded deals
   const [showApply, setShowApply] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
@@ -89,19 +90,22 @@ function Pipeline() {
 
   const active = useMemo(() => {
     const base = (queryResults ?? opps).filter((o) => !o.decision);
-    const filtered = base.filter((o) => {
-      if (filter === "under8") {
-        const p = countdownParts(o.deadlineAt, now);
-        return p && !p.expired && p.ms < 8 * 3600_000;
-      }
-      if (filter === "flagged") return o.flags > 0;
-      if (filter === "inbound") return o.source === "inbound";
-      if (filter === "outbound") return o.source === "outbound";
-      if (filter === "screened") return o.screenResult === "pass";
-      if (filter === "pending") return !o.screenResult;
-      if (filter === "screened_out") return o.screenResult === "reject";
-      return true;
-    });
+    const t = term.trim().toLowerCase();
+    const filtered = base
+      .filter((o) => {
+        if (filter === "under8") {
+          const p = countdownParts(o.deadlineAt, now);
+          return p && !p.expired && p.ms < 8 * 3600_000;
+        }
+        if (filter === "flagged") return o.flags > 0;
+        if (filter === "inbound") return o.source === "inbound";
+        if (filter === "outbound") return o.source === "outbound";
+        if (filter === "screened") return o.screenResult === "pass";
+        if (filter === "pending") return !o.screenResult;
+        if (filter === "screened_out") return o.screenResult === "reject";
+        return true;
+      })
+      .filter((o) => !t || [o.company, o.founders[0]?.name, o.sector, o.oneLiner].filter(Boolean).join(" ").toLowerCase().includes(t));
     if (queryResults) return filtered; // keep relevance order for query results
     return [...filtered].sort((a, b) => {
       if (sort === "arrangement") {
@@ -127,7 +131,7 @@ function Pipeline() {
       }
       return (a.sector ?? "").localeCompare(b.sector ?? "");
     });
-  }, [opps, queryResults, filter, sort, now]);
+  }, [opps, queryResults, filter, sort, now, term]);
 
   const decidedRows = useMemo(() => opps.filter((o) => o.decision), [opps]);
   const under8 = opps.filter((o) => {
@@ -183,6 +187,11 @@ function Pipeline() {
               </div>
             )}
           </div>
+        ) : null}
+
+        {/* Filter the deals already loaded */}
+        {opps.length > 0 ? (
+          <ListSearch value={term} onChange={setTerm} placeholder="Search these deals by company, founder, or sector…" />
         ) : null}
 
         {/* Filters + sort drop-downs */}

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, fmtAgo } from "../_components/api";
 import { Badge, Countdown, Spinner } from "../_components/ui";
-import { PageHeader } from "../_components/shared";
+import { PageHeader, ListSearch } from "../_components/shared";
 
 type MemoRow = {
   id: string;
@@ -21,12 +21,18 @@ type MemoRow = {
 export default function MemosPage() {
   const [rows, setRows] = useState<MemoRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [term, setTerm] = useState("");
 
   useEffect(() => {
     api<MemoRow[]>("/api/memos")
       .then(setRows)
       .finally(() => setLoading(false));
   }, []);
+
+  const t = term.trim().toLowerCase();
+  const shown = t
+    ? rows.filter((m) => [m.company, m.oneLiner, m.summary, m.recommendation].filter(Boolean).join(" ").toLowerCase().includes(t))
+    : rows;
 
   return (
     <div>
@@ -36,15 +42,22 @@ export default function MemosPage() {
         sub="Auto-drafted from diligence. Every claim linked to evidence. The recommendation is the system's — the decision is yours."
       />
       <div className="space-y-4">
+        {!loading && rows.length > 0 ? (
+          <ListSearch value={term} onChange={setTerm} placeholder="Search memos by company, one-liner, or text…" />
+        ) : null}
         {loading ? (
           <div className="py-20 text-center"><Spinner label="Loading memos…" /></div>
         ) : rows.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
             No memos yet — run diligence on a pipeline deal.
           </div>
+        ) : shown.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-linestrong py-16 text-center text-[13px] text-faint">
+            No memos match “{term}”.
+          </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
-            {rows.map((m) => (
+            {shown.map((m) => (
               <Link key={m.id} href={`/opportunity/${m.opportunityId}`} className="group bg-white border border-[#eceef3] rounded-[24px] p-6 shadow-none transition-colors hover:border-[#0045FF]/40">
                 <div className="flex items-baseline justify-between gap-2 border-b border-[#eceef3] pb-3 mb-3">
                   <span className="truncate text-[15px] font-bold text-ink group-hover:text-[#0045FF]">{m.company}</span>
