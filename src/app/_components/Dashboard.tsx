@@ -220,46 +220,34 @@ export default function Dashboard() {
   return (
     <div>
       {/* Command header */}
-      <div className="border-b border-line px-6 py-6 md:px-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-6 px-6 md:px-8 pt-6">
+        <div className="bg-[#F8F8F8] rounded-[28px] p-8 flex flex-wrap items-center justify-between gap-6 border-0 shadow-none">
           <div>
-            <Eyebrow>
-              Command center ·{" "}
-              {new Date(now).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} local
-            </Eyebrow>
-            <h1 className="mt-2 font-mono text-[26px] font-bold tracking-tight">
-              Good {daypart}
-              {firstName ? `, ${firstName}` : ""}.
+            <h1 className="font-sans text-[32px] tracking-tight text-ink font-light">
+              Good {daypart === "morning" ? "Morning" : daypart === "afternoon" ? "Afternoon" : daypart === "night" ? "Night" : "Evening"}{" "}
+              <span className="text-[#0045FF] font-bold">{firstName || "Lena"}</span>
             </h1>
-            <p className="mt-1.5 max-w-2xl text-[13px] text-muted">
-              {undecided.length} opportunit{undecided.length === 1 ? "y" : "ies"} on the clock
-              {awaiting.length > 0 ? ` — ${awaiting.length} memo${awaiting.length === 1 ? "" : "s"} awaiting your decision` : ""}.{" "}
-              {crossed24h.length > 0 ? `${crossed24h.length} strong matches found in the last 24h. ` : ""}
-              {calibratedDays != null
-                ? `Thesis last calibrated ${calibratedDays === 0 ? "today" : `${calibratedDays}d ago`}.`
-                : ""}
+            <p className="mt-2.5 font-sans text-[13.5px] text-muted flex flex-wrap items-center gap-1.5 font-medium">
+              <span>Opportunities awaiting decision.</span>
+              <span className="text-[#0045FF] font-bold text-[15px] mx-1">+</span>
+              <span>Thesis to be calibrated</span>
+              <span className="text-[#0045FF] font-bold text-[15px] mx-1">+</span>
+              <span>Cross conviction thresholds</span>
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex gap-2">
-              <GhostButton onClick={() => setShowApply(true)}>+ New application</GhostButton>
-            </div>
-            {urgent.length > 0 ? (
-              <Link
-                href="/pipeline"
-                className="flex items-center gap-1.5 border border-warn/40 bg-warnwash px-2.5 py-1 font-mono text-[11px] text-warn"
-              >
-                ⏱ {urgent.length} under 4h · action required
-              </Link>
-            ) : null}
-            {overdue.length > 0 ? (
-              <Link
-                href="/diligence"
-                className="flex items-center gap-1.5 border border-bad/40 bg-badwash px-2.5 py-1 font-mono text-[11px] text-bad"
-              >
-                ⚑ {overdue.length} past the 24h window — decide or extend
-              </Link>
-            ) : null}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowApply(true)}
+              className="rounded-full border border-[#dcdfe8] bg-transparent px-6 py-3.5 text-center text-[13.5px] font-semibold text-ink transition-all hover:bg-[#F8F8F8] cursor-pointer"
+            >
+              New Application
+            </button>
+            <Link
+              href="/radar"
+              className="rounded-full bg-[#0045FF] px-6 py-3.5 text-center text-[13.5px] font-bold text-white transition-all hover:bg-[#0033cc] cursor-pointer"
+            >
+              Find Founders
+            </Link>
           </div>
         </div>
       </div>
@@ -292,37 +280,47 @@ export default function Dashboard() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
           <Stat
-            label="In pipeline"
+            label="All Pipeline Opportunities"
             value={undecided.length}
-            sub={`${awaiting.length} awaiting your decision · 24h clock running`}
+            sub={`+${crossed24h.length} new from 24 hr run`}
+            icon={<IconNetwork />}
           />
-          <Stat label="New finds · 24h" value={signals24h} sub={channelBits || "run a search"} />
           <Stat
-            label="Founders in memory"
+            label="New Finds , 24h"
+            value={signals24h}
+            sub={channelBits || "run a search"}
+            icon={<IconRadar />}
+          />
+          <Stat
+            label="Founders In Memory"
             value={founderCount?.total ?? "—"}
             sub={founderCount ? `+${founderCount.week} this week` : undefined}
+            icon={<IconDatabase />}
           />
-          <Stat label="Avg time to decision" value={fmtDuration(avgTtd)} sub="first signal → human decision" />
+          <Stat
+            label="Avg Time To Decision"
+            value={avgTtd ? fmtDuration(avgTtd) : "-"}
+            sub="first signal"
+            icon={<IconClock />}
+          />
         </div>
 
-        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_300px]">
-          <div className="min-w-0">
-            {/* Fully checked — the finished results */}
-            <section className="border border-accent/50 bg-card">
-              <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-                <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-accent">
-                  Ready for your decision · fully checked by the agents
-                </span>
-                {auto && auto.queued > 0 && auto.ready + auto.decided >= target ? (
-                  <button onClick={processMore} className="font-mono text-[11px] text-accent hover:underline">
-                    Check {AUTOPILOT_DEFAULT_TARGET} more →
-                  </button>
-                ) : null}
-              </div>
+        {/* Main Dashboard Layout */}
+        <div className="mt-6 flex flex-col gap-6">
+
+          {/* Section 1: Ready For Your Decisions (Solid blue container - moved above) */}
+          <section className="bg-[#5F83FF] text-white rounded-[28px] p-6 pb-8 shadow-none border-0">
+            <div className="flex items-center gap-2 px-2 pb-4 font-sans text-[15px] font-bold text-white">
+              <span>Ready For Your Decisions</span>
+              <span className="text-white font-bold text-[16px] mx-1">+</span>
+              <span className="text-white/80 font-medium">Fully Checked By The Agents</span>
+            </div>
+
+            <div className="border-t border-white/5 pt-4 space-y-4">
               {awaiting.length === 0 ? (
-                <p className="px-4 py-6 text-center text-[12.5px] text-faint">
+                <p className="py-8 text-center text-[13px] text-white/80 font-sans">
                   {auto && (auto.working > 0 || auto.queued > 0)
                     ? "Agents are running the first full checks — results appear here."
                     : "Nothing waiting on you. The autonomous agent is continuously checking for deals, or you can add an application."}
@@ -331,173 +329,129 @@ export default function Dashboard() {
                 awaiting
                   .sort((a, b) => (b.axes.founder?.score ?? 0) - (a.axes.founder?.score ?? 0))
                   .slice(0, 10)
-                  .map((o) => (
-                    <Link
-                      key={o.id}
-                      href={`/opportunity/${o.id}`}
-                      className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 hover:bg-paper"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-baseline gap-x-2">
-                          <span className="font-mono text-[13px] font-semibold">{o.company}</span>
-                          <span className="text-[12px] text-muted">{o.founders[0]?.name ?? ""}</span>
-                          {o.recommendation ? (
-                            <Badge tone={o.recommendation === "invest" ? "ok" : o.recommendation === "watch" ? "warn" : "bad"}>
-                              memo says {o.recommendation === "invest" ? "deploy" : o.recommendation}
-                            </Badge>
-                          ) : null}
-                          {o.flags > 0 ? <Badge tone="warn">⚠ {o.flags} flagged</Badge> : null}
-                        </div>
-                        <div className="truncate text-[11.5px] text-faint">{o.oneLiner ?? o.convictionReason}</div>
-                      </div>
-                      <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                        {o.axes.founder ? <ScorePill n={o.axes.founder.score} label="F" /> : null}
-                        {o.axes.market ? <ScorePill n={o.axes.market.score} label="M" /> : null}
-                        {o.axes.idea_vs_market ? <ScorePill n={o.axes.idea_vs_market.score} label="I" /> : null}
-                      </div>
-                      <Countdown deadline={o.deadlineAt} decided={!!o.decision} />
-                      <span className="text-faint">→</span>
-                    </Link>
-                  ))
-              )}
-            </section>
+                  .map((o) => {
+                    const isDeploy = o.recommendation === "invest";
+                    const isPass = o.recommendation === "pass";
 
-            {/* Strong matches still queued */}
-            <section className="mt-5 border border-line bg-card">
-              <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-                <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
-                  Strong matches from your search (score {threshold}+)
-                </span>
-                <Link href="/radar" className="font-mono text-[11px] text-accent hover:underline">
-                  See all finds →
-                </Link>
-              </div>
+                    const badgeBg = isDeploy ? "bg-[#E7F6EE]" : isPass ? "bg-[#FDEAEE]" : "bg-[#FDF2D8]";
+                    const badgeText = isDeploy ? "text-[#12A150]" : isPass ? "text-[#E0355A]" : "text-[#B7791F]";
+
+                    return (
+                      <Link
+                        key={o.id}
+                        href={`/opportunity/${o.id}`}
+                        className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white rounded-[28px] md:rounded-full px-8 py-4.5 border-0 shadow-none hover:bg-slate-50 transition-all"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-sans text-[15px] font-bold text-ink">{o.company}</span>
+                            <span className="rounded-full bg-[#EBF0FF] text-[#0045FF] px-3.5 py-1 text-[11px] font-bold font-sans">
+                              Inventor Of {o.company}
+                            </span>
+                            {o.recommendation && (
+                              <span className={`rounded-full ${badgeBg} ${badgeText} px-3.5 py-1 text-[11px] font-bold font-sans`}>
+                                Memo Says {o.recommendation === "invest" ? "Deploy" : o.recommendation.charAt(0).toUpperCase() + o.recommendation.slice(1)}
+                              </span>
+                            )}
+                            {o.deadlineAt && (
+                              <span className="text-[12px] text-muted font-medium font-sans ml-1 flex items-center gap-1">
+                                <Countdown deadline={o.deadlineAt} decided={!!o.decision} />
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[13px] text-muted font-sans mt-1 truncate">{o.oneLiner ?? o.convictionReason}</div>
+                        </div>
+
+                        <div className="bg-[#F8F8F8] border border-[#eceef3] rounded-[20px] md:rounded-full px-6 py-2 flex items-center justify-around md:justify-end gap-6 shrink-0">
+                          <div className="flex flex-col items-center">
+                            <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Founder axis</span>
+                            <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.founder?.score ?? "—"}</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Market axis</span>
+                            <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.market?.score ?? "—"}</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Idea axis</span>
+                            <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.idea_vs_market?.score ?? "—"}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })
+              )}
+            </div>
+
+            {auto && auto.ready + auto.decided >= target ? (
+              <button
+                onClick={processMore}
+                className="mt-6 mx-auto block rounded-full border border-white/40 bg-transparent px-8 py-2.5 text-center text-[13px] font-bold uppercase tracking-wider text-white transition-all hover:bg-white/10 cursor-pointer"
+              >
+                View More
+              </button>
+            ) : null}
+          </section>
+
+          {/* Section 2: Strong Matches From Your Search (Light grey container - moved below) */}
+          <section className="bg-[#F8F8F8] rounded-[28px] p-6 pb-8 shadow-none border-0">
+            <div className="flex items-center justify-between px-2 pb-4">
+              <span className="font-sans text-[15px] font-bold uppercase tracking-wider text-ink">
+                Strong Matches From Your Search
+              </span>
+              <Link href="/radar" className="font-sans text-[13px] font-bold text-[#0045FF] hover:underline flex items-center gap-1">
+                View All <span className="text-[14px]">→</span>
+              </Link>
+            </div>
+            
+            <div className="border-t border-[#eceef3] pt-4 space-y-4">
               {crossed.length === 0 ? (
-                <p className="px-4 py-6 text-center text-[12.5px] text-faint">
+                <p className="py-8 text-center text-[13px] text-muted font-sans">
                   No strong matches yet — run a search.
                 </p>
               ) : (
-                crossed.slice(0, 5).map((o, i) => (
+                crossed.slice(0, 5).map((o) => (
                   <Link
                     key={o.id}
                     href={`/opportunity/${o.id}`}
-                    className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 hover:bg-paper"
+                    className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white rounded-[28px] md:rounded-full px-8 py-4.5 border-0 shadow-none hover:bg-slate-50 transition-all"
                   >
-                    <span className="tnum shrink-0 font-mono text-[11px] text-faint">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline gap-x-2">
-                        <span className="font-mono text-[13px] font-semibold">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-sans text-[15px] font-bold text-ink">{o.company}</span>
+                        <span className="rounded-full bg-[#EBF0FF] text-[#0045FF] px-3.5 py-1 text-[11px] font-bold font-sans">
                           {o.founders[0]?.name ?? "Unknown"}
                         </span>
-                        <span className="text-[12px] text-muted">· {o.company}</span>
-                        {o.screenResult ? (
-                          <Badge tone={o.screenResult === "pass" ? "ok" : "bad"}>
-                            {o.screenResult === "pass" ? "passed first check" : "screened out"}
-                          </Badge>
-                        ) : null}
+                        <span className="rounded-full bg-[#EBF0FF] text-[#0045FF] px-3.5 py-1 text-[11px] font-bold font-sans">
+                          {o.screenResult === "pass" ? "Passed First Check" : o.screenResult === "reject" ? "Screened Out" : "Screening"}
+                        </span>
+                        {o.deadlineAt && (
+                          <span className="text-[12px] text-muted font-medium font-sans ml-1 flex items-center gap-1">
+                            <Countdown deadline={o.deadlineAt} decided={!!o.decision} />
+                          </span>
+                        )}
                       </div>
-                      <div className="truncate text-[11.5px] text-faint">{o.convictionReason}</div>
+                      <div className="text-[13px] text-muted font-sans mt-1 truncate">{o.oneLiner ?? o.convictionReason}</div>
                     </div>
-                    <div className="hidden items-center gap-1 sm:flex">
-                      <TrendArrow trend={o.axes.founder?.trend} title="founder axis" />
-                      <TrendArrow trend={o.axes.market?.trend} title="market axis" />
-                      <TrendArrow trend={o.axes.idea_vs_market?.trend} title="idea axis" />
+
+                    <div className="bg-[#F8F8F8] border border-[#eceef3] rounded-[20px] md:rounded-full px-6 py-2.5 flex items-center justify-around md:justify-end gap-6 shrink-0">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Founder axis</span>
+                        <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.founder?.score ?? "—"}</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Market axis</span>
+                        <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.market?.score ?? "—"}</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[9px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Idea axis</span>
+                        <span className="text-[20px] font-bold text-[#0045FF] font-sans mt-0.5">{o.axes.idea_vs_market?.score ?? "—"}</span>
+                      </div>
                     </div>
-                    <span className="tnum shrink-0 font-mono text-xl font-bold text-accent">{o.convictionScore}</span>
                   </Link>
                 ))
               )}
-            </section>
-
-            {/* Agent activity */}
-            <section className="mt-5 border border-line bg-card">
-              <div className="border-b border-line px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
-                Agent activity · reasoning trace
-              </div>
-              <div className="grid gap-x-6 gap-y-1.5 px-4 py-3 xl:grid-cols-2">
-                {activity.length === 0 ? (
-                  <p className="py-3 text-center text-[12.5px] text-faint xl:col-span-2">
-                    No agent activity yet — run diligence on a deal.
-                  </p>
-                ) : (
-                  activity.map((a) => (
-                    <TraceLine
-                      key={a.id}
-                      at={a.createdAt}
-                      agent={`${a.agent}Agent`}
-                      text={`${a.company}: ${a.outputSummary ?? ""}`}
-                    />
-                  ))
-                )}
-              </div>
-            </section>
-            <SourcingGraph nodes={graphNodes} />
-          </div>
-
-          {/* Quick actions */}
-          <aside className="flex flex-col gap-2.5">
-            <QuickAction
-              href="/thesis"
-              title="Edit your thesis"
-              sub="Change what you invest in — every future check uses the new profile."
-            />
-            <QuickAction
-              href="/radar"
-              title="Find founders"
-              sub={`${crossed.length} strong matches so far · we look before they start raising.`}
-            />
-            <QuickAction
-              href="/pipeline"
-              title="Open pipeline"
-              sub={`${undecided.length} deals in play · ${urgent.length} with less than 4h on the clock.`}
-            />
-            <QuickAction
-              href="/diligence"
-              title="Review memos"
-              sub={`${awaiting.length} fully checked · waiting on your yes or no.`}
-            />
-            {/* Top pipeline snapshot */}
-            <div className="mt-2 border border-line bg-card">
-              <div className="border-b border-line px-3.5 py-2 font-mono text-[10.5px] uppercase tracking-[0.15em] text-muted">
-                Next on the clock
-              </div>
-              {undecided
-                .filter((o) => o.deadlineAt && new Date(o.deadlineAt).getTime() > now)
-                .sort((a, b) => new Date(a.deadlineAt!).getTime() - new Date(b.deadlineAt!).getTime())
-                .slice(0, 4)
-                .map((o) => (
-                  <Link key={o.id} href={`/opportunity/${o.id}`} className="flex items-center justify-between gap-2 border-b border-line px-3.5 py-2 last:border-b-0 hover:bg-paper">
-                    <div className="min-w-0">
-                      <div className="truncate font-mono text-[12px] font-semibold">{o.company}</div>
-                      <div className="truncate text-[10.5px] text-faint">{o.founders[0]?.name}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {o.axes.founder ? <ScorePill n={o.axes.founder.score} /> : null}
-                      <Countdown deadline={o.deadlineAt} decided={!!o.decision} />
-                    </div>
-                  </Link>
-                ))}
             </div>
-
-            {/* Sourcing Suggestions */}
-            {suggestions.length > 0 && (
-              <div className="mt-2 border border-line bg-card p-3.5 rounded-xl">
-                <div className="border-b border-line pb-2 mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.15em] text-muted font-bold">
-                  Sourcing suggestions
-                </div>
-                <div className="space-y-3">
-                  {suggestions.map((s, i) => (
-                    <div key={i} className="text-[12px] leading-relaxed border-b border-line last:border-0 last:pb-0 pb-2.5">
-                      <div className="font-mono font-bold text-accent">{s.channel}</div>
-                      <div className="text-muted mt-0.5">{s.why}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </aside>
+          </section>
         </div>
       </div>
 
@@ -516,18 +470,22 @@ export default function Dashboard() {
 
 function QuickAction({ href, title, sub }: { href: string; title: string; sub: string }) {
   return (
-    <Link href={href} className="group border border-line bg-card px-4 py-3.5 transition-colors hover:border-linestrong">
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-[13px] font-semibold">{title}</span>
-        <span className="text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-accent">→</span>
+    <Link href={href} className="group border border-line bg-[#F8F9FA] rounded-2xl px-4 py-3.5 transition-colors hover:border-[#0045FF] flex flex-col justify-between">
+      <div>
+        <div className="flex items-center justify-between">
+          <span className="font-sans text-[13px] font-bold text-ink">{title}</span>
+          <span className="text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-[#0045FF]">→</span>
+        </div>
+        <p className="mt-1 text-[11.5px] text-muted font-sans leading-relaxed">{sub}</p>
       </div>
-      <p className="mt-1 text-[11.5px] text-muted">{sub}</p>
     </Link>
   );
 }
 
 function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
-  if (nodes.length === 0) {
+  const uniqueNodes = Array.from(new Map(nodes.map((n) => [n.id, n])).values());
+
+  if (uniqueNodes.length === 0) {
     return (
       <div className="flex h-56 items-center justify-center text-[12px] text-faint border border-line bg-cardalt rounded-2xl">
         No relationships in sourcing graph yet — scan for candidates.
@@ -541,7 +499,7 @@ function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
   const cy = height / 2;
 
   // Distinct institutions
-  const institutions = Array.from(new Set(nodes.map((n) => n.institutionName)));
+  const institutions = Array.from(new Set(uniqueNodes.map((n) => n.institutionName)));
   const instCoords = new Map<string, { x: number; y: number }>();
   
   institutions.forEach((inst, index) => {
@@ -554,9 +512,9 @@ function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
   });
 
   // Position nodes
-  const nodeCoords = nodes.map((n, index) => {
+  const nodeCoords = uniqueNodes.map((n, index) => {
     const instCoord = instCoords.get(n.institutionName) || { x: cx, y: cy };
-    const angle = (index * 2 * Math.PI) / nodes.length;
+    const angle = (index * 2 * Math.PI) / uniqueNodes.length;
     const r = 110;
     return {
       ...n,
@@ -568,8 +526,8 @@ function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
   });
 
   return (
-    <div className="border border-line bg-card rounded-2xl p-4 u-card mt-5">
-      <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted font-bold mb-3 flex items-center justify-between">
+    <div className="bg-[#F8F8F8] rounded-[24px] p-6 shadow-none h-full flex flex-col justify-between border-0">
+      <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted font-bold mb-4 border-b border-line pb-2 flex items-center justify-between">
         <span>Sourcing Graph Network (Stretch 3)</span>
         <span className="text-accent flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
@@ -641,5 +599,48 @@ function SourcingGraph({ nodes }: { nodes: GraphNode[] }) {
         </svg>
       </div>
     </div>
+  );
+}
+
+function IconNetwork() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="18" r="3" />
+      <circle cx="6" cy="6" r="3" />
+      <circle cx="18" cy="6" r="3" />
+      <line x1="6" y1="9" x2="18" y2="15" />
+      <line x1="18" y1="9" x2="18" y2="15" />
+      <line x1="6" y1="6" x2="15" y2="6" />
+    </svg>
+  );
+}
+
+function IconRadar() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a10 10 0 1 0 10 10" />
+      <path d="M12 12L2.5 9.5" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function IconDatabase() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+      <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+    </svg>
+  );
+}
+
+function IconClock() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
   );
 }

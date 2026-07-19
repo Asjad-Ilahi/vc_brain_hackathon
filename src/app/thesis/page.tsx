@@ -197,16 +197,16 @@ export default function ThesisPage() {
                   ["storytelling", "Storytelling"],
                 ] as const
               ).map(([k, label]) => (
-                <div key={k} className="u-card p-3">
+                <div key={k} className="bg-[#F8F8F8] rounded-[20px] p-4 border-0">
                   <div className={labelCls}>{label}</div>
-                  <div className="tnum mt-1 text-[22px] font-bold text-accent">{draft.traits[k]}</div>
+                  <div className="tnum mt-1 text-[22px] font-bold text-[#0045FF]">{draft.traits[k]}</div>
                   <input
                     type="range"
                     min={0}
                     max={100}
                     value={draft.traits[k]}
                     onChange={(e) => set("traits", { ...draft.traits, [k]: Number(e.target.value) })}
-                    className="mt-1 w-full accent-[#c44e1c]"
+                    className="mt-1 w-full accent-[#0045FF]"
                   />
                 </div>
               ))}
@@ -235,7 +235,7 @@ export default function ThesisPage() {
         </div>
 
         {/* Preview rail */}
-        <aside className="h-fit border border-dashed border-accent/50 bg-card p-4 lg:sticky lg:top-4">
+        <aside className="h-fit bg-[#F8F8F8] rounded-[24px] border-0 p-6 lg:sticky lg:top-4 shadow-none">
           <Eyebrow>Preview weight</Eyebrow>
           <p className="mt-1 text-[11px] text-faint">How this lens tilts the three axes (never averaged — read separately).</p>
           {weights ? (
@@ -248,21 +248,23 @@ export default function ThesisPage() {
                 ] as const
               ).map(([label, w]) => (
                 <div key={label}>
-                  <div className="flex items-center justify-between text-[11.5px]">
+                  <div className="flex items-center justify-between text-[11.5px] font-sans font-medium text-ink">
                     <span>{label}</span>
-                    <span className="tnum">{w.toFixed(2)}</span>
+                    <span className="tnum font-bold text-[#0045FF]">{w.toFixed(2)}</span>
                   </div>
-                  <div className="mt-1 h-1 bg-line">
-                    <div className="h-full bg-accent" style={{ width: `${w * 200}%` }} />
+                  <div className="mt-1 h-1.5 bg-[#eceef3] rounded-full overflow-hidden">
+                    <div className="h-full bg-[#0045FF] rounded-full" style={{ width: `${w * 200}%` }} />
                   </div>
                 </div>
               ))}
             </div>
           ) : null}
-          <div className="mt-4 border-t border-line pt-3 text-[11px] text-muted">
+          <div className="mt-4 border-t border-[#eceef3] pt-3 text-[11px] text-muted">
             Deploy button: ${(draft.checkSizeMinUsd / 1000).toFixed(0)}K for {draft.ownershipTargetPct}%
           </div>
-          <div className="mt-1 text-[11px] text-muted">Auto-check founders scoring ≥ {draft.convictionThreshold}</div>
+          <div className="mt-1 text-[11px] text-muted">
+            Auto-check founders scoring ≥ {draft.convictionThreshold}
+          </div>
         </aside>
       </div>
     </div>
@@ -273,7 +275,7 @@ function Section({ n, title, sub, children }: { n: string; title: string; sub: s
   return (
     <section>
       <div className="flex items-baseline gap-2.5">
-        <span className="text-[11px] font-bold text-accent">{n}</span>
+        <span className="text-[11px] font-bold text-[#0045FF]">{n}</span>
         <h2 className="text-[16px] font-bold">{title}</h2>
       </div>
       <p className="mt-1 max-w-xl text-[12px] text-muted">{sub}</p>
@@ -291,11 +293,11 @@ function Slider({ value, onChange, left, right }: { value: number; onChange: (v:
         max={100}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[#c44e1c]"
+        className="w-full accent-[#0045FF]"
       />
       <div className="flex items-center justify-between text-[11px] text-faint">
         <span>{left}</span>
-        <span className="tnum text-[13px] font-bold text-accent">{value}</span>
+        <span className="tnum text-[13px] font-bold text-[#0045FF]">{value}</span>
         <span>{right}</span>
       </div>
     </div>

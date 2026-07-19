@@ -182,43 +182,43 @@ export default function LandingPage() {
   ];
 
   const TICKER_ITEMS = [
-    "Investment Intelligence",
+    "Capital Deployment",
     "Rapid Decisions",
-    "Founder Discovery",
-    "Investment Intelligence",
+    "Founder Empowerment",
+    "Capital Deployment",
     "Rapid Decisions",
-    "Founder Discovery",
-    "Investment Intelligence",
+    "Founder Empowerment",
+    "Capital Deployment",
     "Rapid Decisions",
-    "Founder Discovery",
-    "Investment Intelligence",
+    "Founder Empowerment",
+    "Capital Deployment",
     "Rapid Decisions",
-    "Founder Discovery",
+    "Founder Empowerment",
   ];
 
   const STEPS = [
     {
       n: "01",
-      title: "Set your thesis",
-      body: "Pick sectors, stages, geographies and a few sliders. That's it.",
+      title: "Submit your pitch",
+      body: "Enter your company name, email, and upload your pitch deck or description.",
       image: "/section2/image1.svg",
     },
     {
       n: "02",
-      title: "We find founders",
-      body: "Radar scans GitHub, arXiv, ProductHunt and more, before they raise.",
+      title: "Autonomous screening",
+      body: "Our agents screen your project against our active thesis, checking github and social footprint.",
       image: "/section2/image2.svg",
     },
     {
       n: "03",
-      title: "Screen in one place",
-      body: "Every deal gets 3 independent scores: Founder, Market, Idea.",
+      title: "3-axis scoring",
+      body: "We score your project on 3 key areas: Founder track-record, Market depth, and Idea viability.",
       image: "/section2/image3.svg",
     },
     {
       n: "04",
-      title: "Decide in 24h",
-      body: "Read a cited memo. Click Deploy or Reject. Done.",
+      title: "Decision in 24h",
+      body: "You receive a final decision, detailed feedback, and capital deployed directly to you.",
       image: "/section2/image4.svg",
     },
   ];
@@ -226,38 +226,38 @@ export default function LandingPage() {
   const TOOLS = [
     {
       n: "01",
-      title: "Thesis",
-      body: "Define your investing rules encoded once, applied everywhere, continuously refined.",
+      title: "Thesis matching",
+      body: "Transparent investment criteria. Match with our active check sizes and target sectors.",
       image: "/section3/image1.svg",
     },
     {
       n: "02",
-      title: "Radar",
-      body: "Community-matched outbound that delivers deal-appropriate opportunities directly to you.",
+      title: "Radar discovery",
+      body: "Continuous profile monitoring. Get discovered based on your GitHub, arXiv, or ProductHunt activity.",
       image: "/section3/image2.svg",
     },
     {
       n: "03",
-      title: "Pipeline",
-      body: "Manage the entire 24-hour decision cycle to track and deploy capital to your targets.",
+      title: "Pipeline tracking",
+      body: "Track your review process in real-time with our 24-hour decision countdown clock.",
       image: "/section3/image3.svg",
     },
     {
       n: "04",
-      title: "Diligence",
-      body: "Autonomous, comprehensive diligence on each investment opportunity, informed by your framework.",
+      title: "Diligence engine",
+      body: "Comprehensive and unbiased technical evaluation of your product footprint.",
       image: "/section3/image4.svg",
     },
     {
       n: "05",
-      title: "Memos",
-      body: "Purpose-built to surface localized investment analysis autonomously for every deal.",
+      title: "Automated memos",
+      body: "Clear feedback and investment hypotheses drafted autonomously for every application.",
       image: "/section3/image5.svg",
     },
     {
       n: "06",
-      title: "Memory",
-      body: "Automatically build a canonical intelligence network helping you stay sharp in changing markets.",
+      title: "Founder database",
+      body: "Your profile follows you. Build a persistent record of venture milestones that never resets.",
       image: "/section3/image6.svg",
     },
   ];
@@ -507,7 +507,7 @@ export default function LandingPage() {
             }}
           >
             <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "14px" }}>+</span>
-            A venture OS for solo GPs
+            A funding OS for early-stage founders
           </div>
 
           {/* Headline */}
@@ -522,7 +522,7 @@ export default function LandingPage() {
               margin: "0 0 28px",
             }}
           >
-            Decide on any deal
+            Get funded
             <br />
             in{" "}
             <span
@@ -566,8 +566,8 @@ export default function LandingPage() {
               margin: "0 0 40px",
             }}
           >
-            VC.Brain sources founders, screens them against your thesis, and hands
-            you a memo with citations. You just say yes or no.
+            Submit your pitch deck. Our autonomous agent screens your project against
+            the active thesis. Get an investment decision and capital deployed in 24 hours.
           </p>
 
           {/* CTAs */}
@@ -1094,13 +1094,13 @@ export default function LandingPage() {
             position: "fixed",
             inset: 0,
             zIndex: 100,
-            background: "rgba(7, 9, 14, 0.8)",
-            backdropFilter: "blur(12px)",
+            background: "rgba(10, 10, 10, 0.4)",
+            backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             padding: "20px",
-            color: "#fff",
+            color: "#000000",
             fontFamily: "var(--font-sans)",
           }}
         >
@@ -1109,12 +1109,13 @@ export default function LandingPage() {
               position: "relative",
               width: "100%",
               maxWidth: "540px",
-              background: "rgba(255, 255, 255, 0.02)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              background: "#ffffff",
+              border: "1px solid #eceef3",
               borderRadius: "24px",
-              padding: "36px",
-              boxShadow: "0 24px 80px rgba(0,0,0,0.5)",
-              overflow: "hidden"
+              padding: "24px 30px",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.08)"
             }}
           >
             {/* Close button */}
@@ -1122,11 +1123,11 @@ export default function LandingPage() {
               onClick={() => setShowModal(false)}
               style={{
                 position: "absolute",
-                top: "24px",
-                right: "24px",
+                top: "20px",
+                right: "20px",
                 background: "none",
                 border: "none",
-                color: "rgba(255, 255, 255, 0.4)",
+                color: "#9E9E9E",
                 fontSize: "20px",
                 cursor: "pointer",
                 padding: "4px"
@@ -1137,35 +1138,35 @@ export default function LandingPage() {
 
             {!submitted ? (
               <>
-                <div style={{ textAlign: "center", marginBottom: "28px" }}>
+                <div style={{ textAlign: "center", marginBottom: "14px" }}>
                   <span style={{
-                    background: "rgba(0, 69, 255, 0.12)",
-                    border: "1px solid rgba(0, 69, 255, 0.3)",
+                    background: "#EBF0FF",
+                    border: "1px solid rgba(0, 69, 255, 0.2)",
                     borderRadius: "9999px",
                     padding: "4px 12px",
                     fontSize: "11px",
                     fontWeight: 600,
                     letterSpacing: "0.05em",
                     textTransform: "uppercase",
-                    color: "#3B71FE"
+                    color: "#0045FF"
                   }}>
                     Zero-Friction Submission
                   </span>
-                  <h3 style={{ fontSize: "22px", fontWeight: 700, marginTop: "12px" }}>Submit Pitch Deck</h3>
-                  <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.5)", marginTop: "6px" }}>
+                  <h3 style={{ fontSize: "20px", fontWeight: 700, marginTop: "8px", color: "#000000" }}>Submit Pitch Deck</h3>
+                  <p style={{ fontSize: "12.5px", color: "#6E6E6E", marginTop: "4px" }}>
                     Get a data-backed screening decision within 24 hours.
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {error && (
                     <div style={{
-                      background: "rgba(239, 68, 68, 0.1)",
-                      border: "1px solid rgba(239, 68, 68, 0.2)",
+                      background: "#FDEAEE",
+                      border: "1px solid rgba(224, 53, 90, 0.2)",
                       borderRadius: "12px",
                       padding: "12px",
                       fontSize: "12.5px",
-                      color: "#f87171",
+                      color: "#E0355A",
                       textAlign: "center"
                     }}>
                       {error}
@@ -1173,8 +1174,8 @@ export default function LandingPage() {
                   )}
 
                   <div style={{ display: "flex", gap: "12px" }}>
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <label style={{ fontSize: "11.5px", fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Company Name</label>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 700, color: "#9E9E9E", textTransform: "uppercase" }}>Company Name</label>
                       <input
                         type="text"
                         required
@@ -1185,15 +1186,15 @@ export default function LandingPage() {
                           background: "#F8F8F8",
                           border: "none",
                           borderRadius: "9999px",
-                          padding: "14px 24px",
-                          fontSize: "13.5px",
+                          padding: "10px 20px",
+                          fontSize: "13px",
                           color: "#000000",
                           outline: "none"
                         }}
                       />
                     </div>
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <label style={{ fontSize: "11.5px", fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Contact Email</label>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "11px", fontWeight: 700, color: "#9E9E9E", textTransform: "uppercase" }}>Contact Email</label>
                       <input
                         type="email"
                         required
@@ -1204,8 +1205,8 @@ export default function LandingPage() {
                           background: "#F8F8F8",
                           border: "none",
                           borderRadius: "9999px",
-                          padding: "14px 24px",
-                          fontSize: "13.5px",
+                          padding: "10px 20px",
+                          fontSize: "13px",
                           color: "#000000",
                           outline: "none"
                         }}
@@ -1213,8 +1214,8 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "11.5px", fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Founder Name</label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={{ fontSize: "11px", fontWeight: 700, color: "#9E9E9E", textTransform: "uppercase" }}>Founder Name</label>
                     <input
                       type="text"
                       value={fullName}
@@ -1224,8 +1225,8 @@ export default function LandingPage() {
                         background: "#F8F8F8",
                         border: "none",
                         borderRadius: "9999px",
-                        padding: "14px 24px",
-                        fontSize: "13.5px",
+                        padding: "10px 20px",
+                        fontSize: "13px",
                         color: "#000000",
                         outline: "none"
                       }}
@@ -1233,18 +1234,18 @@ export default function LandingPage() {
                   </div>
 
                   {/* Drag/Drop */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "11.5px", fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Deck PDF / Image</label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={{ fontSize: "11px", fontWeight: 700, color: "#9E9E9E", textTransform: "uppercase" }}>Deck PDF / Image</label>
                     <div
                       onDragEnter={handleDrag}
                       onDragOver={handleDrag}
                       onDragLeave={handleDrag}
                       onDrop={handleDrop}
                       style={{
-                        background: dragActive ? "rgba(0,69,255,0.05)" : "rgba(255,255,255,0.01)",
-                        border: dragActive ? "1px dashed #0045FF" : "1px dashed rgba(255,255,255,0.1)",
-                        borderRadius: "24px",
-                        padding: "24px",
+                        background: dragActive ? "rgba(0,69,255,0.05)" : "#F8F8F8",
+                        border: dragActive ? "1px dashed #0045FF" : "1px dashed #eceef3",
+                        borderRadius: "16px",
+                        padding: "16px",
                         textAlign: "center",
                         cursor: "pointer",
                         transition: "all 0.2s"
@@ -1257,20 +1258,20 @@ export default function LandingPage() {
                         onChange={handleFileChange}
                         style={{ display: "none" }}
                       />
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" style={{ margin: "0 auto 8px" }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9E9E9E" strokeWidth="1.5" style={{ margin: "0 auto 4px" }}>
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
                       </svg>
                       {file ? (
                         <div>
-                          <p style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>{file.name}</p>
-                          <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", marginTop: "2px" }}>
+                          <p style={{ fontSize: "12px", fontWeight: 600, color: "#000000" }}>{file.name}</p>
+                          <p style={{ fontSize: "10.5px", color: "#9E9E9E", marginTop: "2px" }}>
                             {(file.size / 1024 / 1024).toFixed(2)} MB · Ready to parse
                           </p>
                         </div>
                       ) : (
                         <>
-                          <p style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.8)" }}>
-                            Drag and drop your pitch deck file here, or{" "}
+                          <p style={{ fontSize: "12px", color: "#6E6E6E" }}>
+                            Drag & drop your deck here, or{" "}
                             <label htmlFor="deck-file-modal" style={{ color: "#0045FF", fontWeight: 600, cursor: "pointer" }}>
                               browse
                             </label>
@@ -1280,19 +1281,19 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={{ fontSize: "11.5px", fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Or paste pitch details</label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={{ fontSize: "11px", fontWeight: 700, color: "#9E9E9E", textTransform: "uppercase" }}>Or paste pitch details</label>
                     <textarea
                       value={pitchText}
                       onChange={(e) => setPitchText(e.target.value)}
                       placeholder="One-liner, sector, stage, problem, product, and founder background details..."
-                      rows={3}
+                      rows={2}
                       style={{
                         background: "#F8F8F8",
                         border: "none",
-                        borderRadius: "20px",
-                        padding: "16px 24px",
-                        fontSize: "13.5px",
+                        borderRadius: "14px",
+                        padding: "10px 20px",
+                        fontSize: "13px",
                         color: "#000000",
                         outline: "none",
                         resize: "none"
@@ -1305,14 +1306,14 @@ export default function LandingPage() {
                     style={{
                       background: "linear-gradient(90deg, #0045FF 0%, #002999 100%)",
                       border: "none",
-                      borderRadius: "12px",
-                      padding: "14px 0",
-                      fontSize: "14px",
-                      fontWeight: 600,
+                      borderRadius: "9999px",
+                      padding: "11px 0",
+                      fontSize: "13.5px",
+                      fontWeight: 700,
                       color: "#fff",
                       cursor: "pointer",
-                      marginTop: "8px",
-                      boxShadow: "0 4px 15px rgba(0,69,255,0.3)"
+                      marginTop: "6px",
+                      boxShadow: "0 4px 15px rgba(0,69,255,0.2)"
                     }}
                   >
                     Submit Pitch Deck
@@ -1326,9 +1327,9 @@ export default function LandingPage() {
                   width: "56px",
                   height: "56px",
                   borderRadius: "50%",
-                  background: "rgba(16, 185, 129, 0.1)",
+                  background: "#E7F6EE",
                   border: "1px solid rgba(16, 185, 129, 0.2)",
-                  color: "#10B981",
+                  color: "#12A150",
                   alignItems: "center",
                   justifyContent: "center",
                   marginBottom: "24px"
@@ -1337,13 +1338,13 @@ export default function LandingPage() {
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </div>
-                <h4 style={{ fontSize: "20px", fontWeight: 700 }}>Pitch Submitted</h4>
-                <p style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.5)", marginTop: "10px", lineHeight: 1.6 }}>
-                  Your details have been successfully queued for screening. Our automated systems will review your alignment and deliver our decision to <strong style={{ color: "#fff" }}>{email}</strong> within 24 hours.
+                <h4 style={{ fontSize: "20px", fontWeight: 700, color: "#000000" }}>Pitch Submitted</h4>
+                <p style={{ fontSize: "13.5px", color: "#6E6E6E", marginTop: "10px", lineHeight: 1.6 }}>
+                  Your details have been successfully queued for screening. Our automated systems will review your alignment and deliver our decision to <strong style={{ color: "#000000" }}>{email}</strong> within 24 hours.
                 </p>
                 {publicRef && (
                   <div style={{ marginTop: "18px" }}>
-                    <p style={{ fontSize: "11.5px", color: "rgba(255,255,255,0.4)" }}>
+                    <p style={{ fontSize: "11.5px", color: "#9E9E9E" }}>
                       No account needed — this private link is how you check your outcome:
                     </p>
                     <Link
@@ -1354,7 +1355,7 @@ export default function LandingPage() {
                         fontFamily: "var(--font-mono)",
                         fontSize: "12px",
                         fontWeight: 600,
-                        color: "#3B71FE",
+                        color: "#0045FF",
                         textDecoration: "none",
                         wordBreak: "break-all",
                       }}
@@ -1366,13 +1367,13 @@ export default function LandingPage() {
                 <button
                   onClick={() => setShowModal(false)}
                   style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "10px",
-                    padding: "10px 24px",
+                    background: "#F8F8F8",
+                    border: "none",
+                    borderRadius: "9999px",
+                    padding: "10px 28px",
                     fontSize: "13px",
-                    fontWeight: 600,
-                    color: "#fff",
+                    fontWeight: 700,
+                    color: "#000000",
                     cursor: "pointer",
                     marginTop: "28px"
                   }}
@@ -1391,12 +1392,13 @@ export default function LandingPage() {
           position: "fixed",
           inset: 0,
           zIndex: 200,
-          background: "rgba(7, 9, 14, 0.95)",
-          backdropFilter: "blur(6px)",
+          background: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(4px)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center"
+          justifyContent: "center",
+          color: "#000000"
         }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", maxWidth: "400px", textAlign: "center", padding: "20px" }}>
             <div style={{ position: "relative", width: "64px", height: "64px", marginBottom: "32px" }}>
@@ -1412,12 +1414,12 @@ export default function LandingPage() {
                 position: "absolute",
                 inset: "-8px",
                 borderRadius: "50%",
-                border: "1px solid rgba(0, 194, 255, 0.3)",
+                border: "1px solid rgba(0, 69, 255, 0.15)",
                 animation: "ping 1s cubic-bezier(0, 0, 0.2, 1) infinite"
               }}></div>
             </div>
-            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#fff", letterSpacing: "0.08em", textTransform: "uppercase" }}>VC Brain Screening</h3>
-            <p style={{ fontSize: "13px", fontFamily: "var(--font-mono)", color: "rgba(255,255,255,0.6)", marginTop: "8px", height: "40px" }}>
+            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#000000", letterSpacing: "0.08em", textTransform: "uppercase" }}>VC Brain Screening</h3>
+            <p style={{ fontSize: "13px", fontFamily: "var(--font-mono)", color: "#6E6E6E", marginTop: "8px", height: "40px" }}>
               {HUD_STEPS[loadingStep]}
             </p>
             <div style={{ width: "192px", height: "6px", background: "rgba(255,255,255,0.05)", borderRadius: "9999px", overflow: "hidden", marginTop: "32px" }}>

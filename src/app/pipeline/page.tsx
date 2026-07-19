@@ -157,7 +157,7 @@ function Pipeline() {
               <button
                 key={s}
                 onClick={() => setSort(s)}
-                className={`px-1.5 py-0.5 ${sort === s ? "text-accent" : "hover:text-ink"}`}
+                className={`px-1.5 py-0.5 font-sans font-semibold ${sort === s ? "text-[#0045FF]" : "hover:text-ink"}`}
               >
                 {s === "countdown" ? "Countdown ↑" : s === "score" ? "Score ↓" : "Sector"}
               </button>
@@ -169,10 +169,10 @@ function Pipeline() {
         {loading ? (
           <div className="py-20 text-center"><Spinner label="Loading pipeline…" /></div>
         ) : (
-          <div className="mt-4 overflow-x-auto u-card">
+          <div className="mt-4 overflow-x-auto bg-[#F8F8F8] rounded-[28px] p-6 shadow-none border-0">
             <table className="w-full min-w-[980px] border-collapse text-left">
               <thead>
-                <tr className="border-b border-linestrong">
+                <tr className="border-b border-[#eceef3]">
                   <Th># Company · Founder</Th>
                   <Th>Founder score<br /><span className="font-normal normal-case text-faint">persists · memory layer</span></Th>
                   <Th>Founder axis<br /><span className="font-normal normal-case text-faint">traits + track record</span></Th>
@@ -200,19 +200,19 @@ function Pipeline() {
         {/* Decided */}
         {decidedRows.length > 0 && !q ? (
           <div className="mt-6">
-            <div className="text-[10.5px] uppercase tracking-wide text-muted">
+            <div className="text-[10.5px] uppercase tracking-wide text-muted font-bold mb-3 pl-2">
               Decided · {decidedRows.length}
             </div>
-            <div className="mt-2 grid gap-1.5">
+            <div className="bg-[#F8F8F8] rounded-[28px] p-6 border-0 shadow-none space-y-3">
               {decidedRows.map((o) => (
                 <Link
                   key={o.id}
                   href={`/opportunity/${o.id}`}
-                  className="flex items-center justify-between gap-3 u-card px-3.5 py-2 hover:border-linestrong"
+                  className="flex items-center justify-between gap-3 bg-white rounded-full px-8 py-3.5 border border-[#eceef3] shadow-none hover:bg-slate-50 transition-all"
                 >
                   <div className="flex min-w-0 items-baseline gap-2">
-                    <span className="truncate text-[12.5px] font-semibold">{o.company}</span>
-                    <span className="truncate text-[11.5px] text-faint">{o.founders[0]?.name}</span>
+                    <span className="truncate text-[13px] font-bold text-ink">{o.company}</span>
+                    <span className="truncate text-[11.5px] text-muted">{o.founders[0]?.name}</span>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Badge tone={o.decision === "invest" ? "ok" : o.decision === "watch" ? "warn" : "bad"}>
@@ -276,13 +276,13 @@ function Row({ o, i, reasons }: { o: OpportunitySummary; i: number; reasons?: st
               {o.source === "outbound" ? "⚡ out" : "▸ in"}
             </Badge>
             <div className="min-w-0">
-              <div className="truncate text-[13px] font-semibold group-hover:text-accent">{o.company}</div>
+              <div className="truncate text-[13px] font-semibold group-hover:text-[#0045FF]">{o.company}</div>
               <div className="truncate text-[11px] text-faint">
                 {f?.name ?? "—"} · {o.sector ?? "—"}
                 {f?.isColdStart ? " · new founder" : ""}
               </div>
               {reasons?.length ? (
-                <div className="mt-0.5 truncate text-[10.5px] text-accent">matched: {reasons.join(", ")}</div>
+                <div className="mt-0.5 truncate text-[10.5px] text-[#0045FF]">matched: {reasons.join(", ")}</div>
               ) : null}
               {/* On narrow screens the countdown column scrolls off — surface it here. */}
               <div className="mt-0.5 flex items-center gap-1.5 lg:hidden">

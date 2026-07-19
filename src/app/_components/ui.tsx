@@ -153,13 +153,15 @@ export function Spinner({ label }: { label?: string }) {
 
 export function Stat({ label, value, sub, icon }: { label: string; value: React.ReactNode; sub?: React.ReactNode; icon?: React.ReactNode }) {
   return (
-    <div className="u-card p-5">
-      <div className="flex items-start justify-between">
-        <div className="text-[13px] font-semibold text-muted">{label}</div>
-        {icon ? <span className="grid h-10 w-10 place-items-center rounded-full bg-brandfaint text-brand">{icon}</span> : null}
+    <div className="bg-[#F8F8F8] rounded-[24px] p-6 shadow-none border-0 flex flex-col justify-between">
+      <div>
+        <div className="flex items-start justify-between">
+          <div className="text-[12.5px] font-semibold text-[#0045FF] font-sans">{label}</div>
+          {icon ? <span className="grid h-10 w-10 place-items-center rounded-full bg-[#EBF0FF] text-[#0045FF]">{icon}</span> : null}
+        </div>
+        <div className="tnum mt-4 text-[36px] font-bold leading-none text-ink">{value}</div>
       </div>
-      <div className="tnum mt-3 text-[34px] font-extrabold leading-none text-ink">{value}</div>
-      {sub ? <div className="mt-2 text-[12px] text-faint">{sub}</div> : null}
+      {sub ? <div className="mt-2 text-[11.5px] text-muted font-sans">{sub}</div> : null}
     </div>
   );
 }

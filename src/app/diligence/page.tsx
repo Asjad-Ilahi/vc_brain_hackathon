@@ -43,30 +43,30 @@ export default function DiligencePage() {
             Queue is clear — source founders on the Radar or take an application.
           </div>
         ) : (
-          <div className="grid gap-2">
+          <div className="bg-[#F8F8F8] rounded-[28px] p-6 border-0 shadow-none space-y-3">
             {queue.map((o) => {
               const stage = o.status === "awaiting_decision" ? 4 : o.axes.founder ? 3 : o.screenResult ? 2 : 1;
               return (
                 <Link
                   key={o.id}
                   href={`/opportunity/${o.id}`}
-                  className="group flex flex-wrap items-center gap-x-4 gap-y-2 u-card px-4 py-3 transition-colors hover:border-linestrong"
+                  className="group flex flex-wrap items-center gap-x-4 gap-y-2 bg-white rounded-full px-8 py-3.5 border border-[#eceef3] shadow-none hover:bg-slate-50 transition-all"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="truncate text-[13.5px] font-semibold group-hover:text-accent">{o.company}</span>
-                      <span className="truncate text-[11.5px] text-faint">
+                      <span className="truncate text-[14px] font-bold text-ink group-hover:text-[#0045FF]">{o.company}</span>
+                      <span className="truncate text-[11.5px] text-muted">
                         {o.founders[0]?.name} · {o.sector ?? "—"}
                       </span>
                       {o.founders.some((f) => f.isColdStart) ? <Badge tone="warn">new founder</Badge> : null}
                     </div>
-                    <div className="mt-1.5 flex items-center gap-1 text-[10.5px] uppercase tracking-wide text-faint">
+                    <div className="mt-1.5 flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">
                       <StageDot done={stage >= 2} label="screen" />
-                      <span>→</span>
+                      <span className="text-[#eceef3]">/</span>
                       <StageDot done={stage >= 3} label="3-axis" />
-                      <span>→</span>
+                      <span className="text-[#eceef3]">/</span>
                       <StageDot done={stage >= 4} label="memo" />
-                      <span>→</span>
+                      <span className="text-[#eceef3]">/</span>
                       <StageDot done={false} label="decide" active={stage >= 4} />
                     </div>
                   </div>
@@ -80,7 +80,7 @@ export default function DiligencePage() {
                     {o.flags > 0 ? <Badge tone="warn">⚠ {o.flags}</Badge> : null}
                     {o.status === "awaiting_decision" ? <Badge tone="accent">memo ready</Badge> : null}
                     <Countdown deadline={o.deadlineAt} decided={!!o.decision} />
-                    <span className="text-faint group-hover:text-accent">→</span>
+                    <span className="text-faint group-hover:text-[#0045FF]">→</span>
                   </div>
                 </Link>
               );
@@ -94,8 +94,8 @@ export default function DiligencePage() {
 
 function StageDot({ done, label, active }: { done: boolean; label: string; active?: boolean }) {
   return (
-    <span className={`flex items-center gap-1 ${done ? "text-ok" : active ? "text-accent" : ""}`}>
-      <span>{done ? "✓" : active ? "◉" : "○"}</span>
+    <span className={`flex items-center gap-1 ${done ? "text-[#12A150]" : active ? "text-[#0045FF] font-bold" : "text-[#9E9E9E]"}`}>
+      <span className="text-[12px]">{done ? "✓" : active ? "◉" : "○"}</span>
       {label}
     </span>
   );

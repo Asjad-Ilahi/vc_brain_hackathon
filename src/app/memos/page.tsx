@@ -43,16 +43,16 @@ export default function MemosPage() {
             No memos yet — run diligence on a pipeline deal.
           </div>
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             {rows.map((m) => (
-              <Link key={m.id} href={`/opportunity/${m.opportunityId}`} className="group u-card p-4 transition-colors hover:border-linestrong">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate text-[14px] font-bold group-hover:text-accent">{m.company}</span>
+              <Link key={m.id} href={`/opportunity/${m.opportunityId}`} className="group bg-white border border-[#eceef3] rounded-[24px] p-6 shadow-none transition-colors hover:border-[#0045FF]/40">
+                <div className="flex items-baseline justify-between gap-2 border-b border-[#eceef3] pb-3 mb-3">
+                  <span className="truncate text-[15px] font-bold text-ink group-hover:text-[#0045FF]">{m.company}</span>
                   <span className="shrink-0 text-[10.5px] text-faint">{fmtAgo(m.createdAt)}</span>
                 </div>
-                {m.oneLiner ? <p className="mt-0.5 truncate text-[11.5px] text-faint">{m.oneLiner}</p> : null}
-                <p className="mt-2 line-clamp-3 text-[12.5px] leading-relaxed text-muted">{m.summary}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                {m.oneLiner ? <p className="mt-0.5 truncate text-[11.5px] text-muted font-sans font-medium">{m.oneLiner}</p> : null}
+                <p className="mt-2 line-clamp-3 text-[12.5px] leading-relaxed text-muted font-sans">{m.summary}</p>
+                <div className="mt-4 flex flex-wrap items-center gap-1.5 pt-1">
                   {m.recommendation ? (
                     <Badge tone={m.recommendation === "invest" ? "ok" : m.recommendation === "watch" ? "warn" : "bad"}>
                       recommends {m.recommendation === "invest" ? "deploy" : m.recommendation}

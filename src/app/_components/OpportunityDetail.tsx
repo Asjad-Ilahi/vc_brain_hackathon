@@ -257,7 +257,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
     return (
       <div className="py-16">
         <p className="text-[13px] text-bad">{err}</p>
-        <Link href="/pipeline" className="text-[12px] text-accent hover:underline">← Pipeline</Link>
+        <Link href="/pipeline" className="text-[12px] text-[#0045FF] font-bold hover:underline">← Pipeline</Link>
       </div>
     );
   if (!d) return null;
@@ -287,7 +287,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
     <div>
       {/* Header */}
       <div className="mb-5">
-        <Link href="/pipeline" className="text-[11px] text-accent hover:underline">← Pipeline</Link>
+        <Link href="/pipeline" className="text-[12px] text-[#0045FF] font-bold hover:underline">← Pipeline</Link>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <Eyebrow>
@@ -334,7 +334,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
         </div>
 
         {/* Score strip */}
-        <div className="mt-4 grid grid-cols-2 gap-px border border-line bg-line sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <StripCell label="Founder">
             {s.axes.founder ? (
               <span className={`tnum text-[24px] font-bold ${scoreTone(s.axes.founder.score)}`}>{s.axes.founder.score}</span>
@@ -359,7 +359,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
       <div className="grid gap-6 px-6 py-6 md:px-8 xl:grid-cols-[1fr_290px]">
         <div className="min-w-0">
           {/* Pipeline runner */}
-          <section className="u-card p-4">
+          <section className="bg-[#F8F8F8] rounded-[28px] p-6 border-0 shadow-none">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] uppercase tracking-wide">
                 <StageChip label="Screen" state={screened} note={s.screenResult ?? undefined} />
@@ -402,9 +402,9 @@ export default function OpportunityDetail({ id }: { id: string }) {
             ) : null}
             {err ? <p className="mt-2.5 text-[12px] text-bad">{err}</p> : null}
             {outreach ? (
-              <div className="mt-4 border border-line bg-cardalt p-4 rounded-xl">
-                <div className="flex items-center justify-between border-b border-line pb-2 mb-3">
-                  <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-accent">
+              <div className="mt-4 border border-[#eceef3] bg-white p-6 rounded-[24px] shadow-none">
+                <div className="flex items-center justify-between border-b border-[#eceef3] pb-2 mb-3">
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#0045FF]">
                     ⚡ Outreach Command Center
                   </span>
                   <Badge tone={outreachSent ? "ok" : "warn"}>
@@ -421,7 +421,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                       onChange={(e) => setRecipientEmail(e.target.value)}
                       disabled={outreachSent || sendingOutreach}
                       placeholder="Enter founder email address..."
-                      className="w-full border border-line bg-paper px-3 py-2 text-[12.5px] rounded-lg focus:outline-none focus:ring-1 focus:ring-accent"
+                      className="w-full bg-[#F8F8F8] border-0 rounded-full px-6 py-3 text-[12.5px] text-ink focus:outline-none focus:ring-1 focus:ring-[#0045FF]"
                     />
                   </div>
 
@@ -432,7 +432,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
                       onChange={(e) => setOutreach(e.target.value)}
                       disabled={outreachSent || sendingOutreach}
                       rows={5}
-                      className="w-full border border-line bg-paper px-3 py-2 text-[12.5px] rounded-lg focus:outline-none focus:ring-1 focus:ring-accent leading-relaxed"
+                      className="w-full bg-[#F8F8F8] border-0 rounded-[20px] px-6 py-4.5 text-[12.5px] text-ink focus:outline-none focus:ring-1 focus:ring-[#0045FF] leading-relaxed"
                     />
                   </div>
                   
@@ -453,7 +453,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
           {/* Cold-start predictor */}
           {predictor ? (
-            <section className="mt-5 border border-dashed border-accent/60 bg-card p-4">
+            <section className="mt-5 bg-[#F8F8F8] rounded-[28px] border-0 p-6 shadow-none">
               <div className="flex items-center justify-between">
                 <Eyebrow>Background check · public footprint</Eyebrow>
                 <Badge tone={predictor.verdict === "promising" ? "ok" : predictor.verdict === "weak" ? "bad" : "warn"}>
@@ -468,37 +468,37 @@ export default function OpportunityDetail({ id }: { id: string }) {
                     ["Domain consistency", predictor.domainConsistency],
                   ] as const
                 ).map(([label, v]) => (
-                  <div key={label} className="border border-line bg-paper p-3">
-                    <div className="text-[10.5px] uppercase tracking-wide text-muted">{label}</div>
+                  <div key={label} className="bg-white rounded-2xl p-4 border border-[#eceef3] shadow-none">
+                    <div className="text-[10px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">{label}</div>
                     <div className={`tnum mt-1 text-[22px] font-bold ${scoreTone(v)}`}>{v}</div>
-                    <div className="mt-1 h-1 bg-line">
-                      <div className={`h-full ${v >= 60 ? "bg-ok" : v >= 40 ? "bg-warn" : "bg-bad"}`} style={{ width: `${v}%` }} />
+                    <div className="mt-2.5 h-1.5 bg-[#eceef3] rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${v >= 60 ? "bg-[#12A150]" : v >= 40 ? "bg-[#B7791F]" : "bg-[#E0355A]"}`} style={{ width: `${v}%` }} />
                     </div>
                   </div>
                 ))}
               </div>
-              <ul className="mt-3 space-y-1">
+              <ul className="mt-4 space-y-1">
                 {predictor.indicators.map((x, i) => (
-                  <li key={i} className="flex gap-2 text-[12px] text-muted">
-                    <span className="text-ok">·</span>
+                  <li key={i} className="flex gap-2 text-[12.5px] text-muted">
+                    <span className="text-[#12A150]">·</span>
                     {x}
                   </li>
                 ))}
                 {predictor.gaps.map((x, i) => (
-                  <li key={i} className="flex gap-2 text-[12px] text-faint">
-                    <span className="text-warn">·</span>
-                    {x} <span className="text-[10.5px]">(gap — stated, not guessed)</span>
+                  <li key={i} className="flex gap-2 text-[12.5px] text-muted opacity-75">
+                    <span className="text-[#B7791F]">·</span>
+                    {x} <span className="text-[10.5px] font-sans">(gap — stated, not guessed)</span>
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-[11.5px] text-faint">
+              <p className="mt-3 text-[11.5px] text-faint font-sans">
                 confidence {Math.round(predictor.confidence * 100)}% — this feeds the Founder score as evidence; it never replaces judgment.
               </p>
             </section>
           ) : isCold && !s.decision ? (
-            <section className="mt-5 flex flex-wrap items-center justify-between gap-3 border border-dashed border-warn/60 bg-card p-4">
+            <section className="mt-5 flex flex-wrap items-center justify-between gap-3 bg-[#FDF2D8] border-0 rounded-[28px] p-6 shadow-none">
               <div>
-                <Eyebrow className="!text-warn">New founder · background check not run yet</Eyebrow>
+                <Eyebrow className="!text-[#B7791F]">New founder · background check not run yet</Eyebrow>
                 <p className="mt-1 max-w-lg text-[12.5px] text-muted">
                   No track record on file — exactly who this fund exists to find. Check their public footprint
                   (what they write, where they participate, how long they've been at it) before judging.
@@ -524,27 +524,27 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
           {/* Memo */}
           {memo ? (
-            <section className="mt-6 u-card" id="memo">
-              <div className="border-b border-line px-5 py-4">
+            <section className="mt-6 bg-[#F8F8F8] rounded-[28px] p-6 border-0 shadow-none" id="memo">
+              <div className="border-b border-[#eceef3] pb-4 mb-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <Eyebrow>Investment memo · v1 · auto-drafted</Eyebrow>
                   <Badge tone={memo.recommendation === "invest" ? "ok" : memo.recommendation === "watch" ? "warn" : "bad"}>
                     recommends {memo.recommendation === "invest" ? "deploy" : memo.recommendation}
                   </Badge>
                 </div>
-                <h2 className="mt-2 text-[20px] font-bold">{s.company}</h2>
-                <p className="mt-0.5 text-[11.5px] text-muted">
+                <h2 className="mt-2 text-[20px] font-bold text-ink">{s.company}</h2>
+                <p className="mt-0.5 text-[11.5px] text-muted font-sans font-medium">
                   {[founderName, s.geography, s.stage, `$${checkK}K for ${ownPct}%`].filter(Boolean).join(" · ")}
                 </p>
               </div>
-              <div className="space-y-5 px-5 py-5">
+              <div className="space-y-5">
                 <MemoBlock title="TL;DR" body={memo.summary} />
                 <MemoBlock title="Company snapshot" body={sections.companySnapshot} warnings={claimsBySection(["company", "snapshot"])} />
                 <MemoList title="Investment hypotheses" items={sections.investmentHypotheses} warnings={claimsBySection(["hypothes"])} />
                 {sections.swot ? (
                   <div>
                     <MemoTitle>SWOT</MemoTitle>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <div className="mt-2.5 grid gap-3 sm:grid-cols-2">
                       <Quad title="Strengths" tone="ok" items={sections.swot.strengths} />
                       <Quad title="Weaknesses" tone="bad" items={sections.swot.weaknesses} />
                       <Quad title="Opportunities" tone="accent" items={sections.swot.opportunities} />
@@ -556,16 +556,16 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 <MemoBlock title="Traction & KPIs" body={sections.tractionKpis} warnings={claimsBySection(["traction", "kpi", "revenue", "team", "market"])} />
                 <div>
                   <MemoTitle>Deal terms</MemoTitle>
-                  <p className="mt-1 text-[13px] text-muted">
+                  <p className="mt-1 text-[13px] text-muted font-sans">
                     ${checkK}K SAFE · target {ownPct}% · standard pro-rata. Derived from the committed thesis — not negotiated.
                   </p>
                 </div>
                 {sections.gaps && sections.gaps.length ? (
-                  <div className="border border-warn/40 bg-warnwash p-3">
-                    <div className="text-[10.5px] uppercase tracking-wide text-warn">Flagged gaps — stated, never fabricated</div>
+                  <div className="border border-[#B7791F]/30 bg-[#FDF2D8] p-4 rounded-xl">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#B7791F]">Flagged gaps — stated, never fabricated</div>
                     <ul className="mt-1.5 space-y-1">
                       {sections.gaps.map((g, i) => (
-                        <li key={i} className="text-[12.5px] text-muted">· {g}</li>
+                        <li key={i} className="text-[12.5px] text-muted font-sans">· {g}</li>
                       ))}
                     </ul>
                   </div>
@@ -577,7 +577,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
           {/* Claims & Trust */}
           {claims.length ? (
             <section className="mt-6">
-              <div className="mb-2 text-[10.5px] uppercase tracking-wide text-muted">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#9E9E9E] font-sans">
                 Validated evidence · per-claim Trust Score + external verification
               </div>
               <div className="grid gap-2">
@@ -590,11 +590,11 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
           {/* Trace */}
           {d.reasoningSteps.length ? (
-            <section className="mt-6 u-card">
-              <div className="border-b border-line px-4 py-2.5 text-[10.5px] uppercase tracking-wide text-muted">
+            <section className="mt-6 bg-[#F8F8F8] rounded-[28px] p-6 border-0 shadow-none">
+              <div className="border-b border-[#eceef3] pb-3 mb-3 text-[10px] font-bold uppercase tracking-wider text-[#9E9E9E] font-sans">
                 Agent reasoning trace · every conclusion cites its evidence
               </div>
-              <div className="space-y-1.5 px-4 py-3">
+              <div className="space-y-1.5">
                 {d.reasoningSteps.map((st) => (
                   <TraceLine
                     key={st.id}
@@ -609,16 +609,16 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
           {/* Founders */}
           <section className="mt-6">
-            <div className="mb-2 text-[10.5px] uppercase tracking-wide text-muted">
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#9E9E9E] font-sans">
               Founders · persistent Founder Score (never resets)
             </div>
-            <div className="grid gap-2.5 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               {s.founders.map((f) => {
                 const h = histories[f.id];
                 return (
-                  <div key={f.id} className="u-card p-4">
+                  <div key={f.id} className="bg-[#F8F8F8] rounded-[24px] border-0 p-6 shadow-none">
                     <div className="flex items-center justify-between">
-                      <Link href={`/founder/${f.id}`} className="text-[13px] font-semibold hover:text-accent">
+                      <Link href={`/founder/${f.id}`} className="text-[13.5px] font-bold text-ink hover:text-[#0045FF]">
                         {f.name} {f.isColdStart ? <Badge tone="warn">new founder</Badge> : null}{" "}
                         <span className="font-normal text-faint">→ profile</span>
                       </Link>
@@ -632,11 +632,11 @@ export default function OpportunityDetail({ id }: { id: string }) {
                               {e.delta >= 0 ? "+" : ""}
                               {e.delta}
                             </span>
-                            <span className="tnum">{e.score}</span>
+                            <span className="tnum font-semibold">{e.score}</span>
                             <span className="truncate text-faint">· {e.reason}</span>
                           </div>
                         ))}
-                        <div className="pt-1 text-[10.5px] text-faint">Score follows the person across ventures — never resets.</div>
+                        <div className="pt-2 text-[10px] text-[#9E9E9E]">Score follows the person across ventures — never resets.</div>
                       </div>
                     ) : null}
                   </div>
@@ -647,22 +647,22 @@ export default function OpportunityDetail({ id }: { id: string }) {
 
           {/* Signals */}
           <section className="mt-6">
-            <div className="mb-2 text-[10.5px] uppercase tracking-wide text-muted">
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#9E9E9E] font-sans">
               Memory · signals ({signals.length}) — timestamped, source-tagged, deduped
             </div>
             <div className="grid gap-2">
               {signals.map((sg) => (
-                <div key={sg.id} className="u-card p-3">
+                <div key={sg.id} className="bg-[#F8F8F8] rounded-[24px] border-0 p-6 shadow-none">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge>{sg.sourceType}</Badge>
-                    {sg.title ? <span className="text-[12px] font-semibold">{sg.title}</span> : null}
+                    {sg.title ? <span className="text-[12px] font-bold text-ink">{sg.title}</span> : null}
                     {sg.sourceUrl ? (
-                      <a href={sg.sourceUrl} target="_blank" rel="noreferrer" className="text-[11px] text-accent hover:underline">
+                      <a href={sg.sourceUrl} target="_blank" rel="noreferrer" className="text-[11px] text-[#0045FF] font-semibold hover:underline">
                         Source ↗
                       </a>
                     ) : null}
                   </div>
-                  <p className="mt-1.5 line-clamp-3 text-[12px] leading-relaxed text-muted">{sg.rawText}</p>
+                  <p className="mt-1.5 line-clamp-3 text-[12px] leading-relaxed text-muted font-sans">{sg.rawText}</p>
                 </div>
               ))}
             </div>
@@ -672,9 +672,9 @@ export default function OpportunityDetail({ id }: { id: string }) {
         {/* Right rail */}
         <aside className="flex h-fit flex-col gap-4 xl:sticky xl:top-4">
           {/* Axis scores */}
-          <div className="u-card p-4">
-            <div className="text-[10.5px] uppercase tracking-wide text-muted">Axis scores</div>
-            <div className="mt-3 space-y-2.5">
+          <div className="bg-[#F8F8F8] rounded-[24px] border-0 p-6 shadow-none">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#9E9E9E] font-sans pb-2 border-b border-[#eceef3] mb-3">Axis scores</div>
+            <div className="space-y-3">
               {(
                 [
                   ["Founder", s.axes.founder?.score],
@@ -683,23 +683,23 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 ] as const
               ).map(([label, v]) => (
                 <div key={label}>
-                  <div className="flex justify-between text-[11.5px]">
+                  <div className="flex justify-between text-[11.5px] font-sans font-medium text-ink">
                     <span>{label}</span>
                     <span className={`tnum font-bold ${v != null ? scoreTone(v) : "text-faint"}`}>{v ?? "—"}</span>
                   </div>
-                  <div className="mt-1 h-1 bg-line">
-                    {v != null ? <div className={`h-full ${v >= 80 ? "bg-ok" : v >= 60 ? "bg-ink" : "bg-bad"}`} style={{ width: `${v}%` }} /> : null}
+                  <div className="mt-1 h-1.5 bg-[#eceef3] rounded-full overflow-hidden">
+                    {v != null ? <div className={`h-full rounded-full ${v >= 80 ? "bg-[#12A150]" : v >= 60 ? "bg-[#0045FF]" : "bg-[#E0355A]"}`} style={{ width: `${v}%` }} /> : null}
                   </div>
                 </div>
               ))}
               {medianClaimTrust != null ? (
                 <div>
-                  <div className="flex justify-between text-[11.5px]">
+                  <div className="flex justify-between text-[11.5px] font-sans font-medium text-ink">
                     <span title="Trust Score is per-claim; this is only the median rollup">Claim trust · median</span>
                     <span className={`tnum font-bold ${scoreTone(medianClaimTrust)}`}>{medianClaimTrust}</span>
                   </div>
-                  <div className="mt-1 h-1 bg-line">
-                    <div className={`h-full ${medianClaimTrust >= 80 ? "bg-ok" : "bg-warn"}`} style={{ width: `${medianClaimTrust}%` }} />
+                  <div className="mt-1 h-1.5 bg-[#eceef3] rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${medianClaimTrust >= 80 ? "bg-[#12A150]" : "bg-[#B7791F]"}`} style={{ width: `${medianClaimTrust}%` }} />
                   </div>
                 </div>
               ) : null}
@@ -707,13 +707,13 @@ export default function OpportunityDetail({ id }: { id: string }) {
           </div>
 
           {/* Decision */}
-          <div className={`border p-4 ${s.decision ? "border-line bg-card" : "border-accent bg-card"}`}>
-            <div className={`text-[10.5px] uppercase tracking-wide ${s.decision ? "text-muted" : "text-accent"}`}>
+          <div className="bg-[#F8F8F8] rounded-[24px] border-0 p-6 shadow-none">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#9E9E9E] font-sans pb-2 border-b border-[#eceef3] mb-3">
               Your decision
             </div>
             {s.decision ? (
               <div className="mt-3">
-                <div className="text-[14px] font-bold">
+                <div className="text-[14px] font-bold text-ink">
                   {s.decision === "invest" ? `✓ Deployed $${checkK}K` : s.decision === "watch" ? "◎ Watching" : "✕ Passed"}
                 </div>
                 {s.decisionNote ? <p className="mt-1.5 text-[12px] text-muted">“{s.decisionNote}”</p> : null}
@@ -728,28 +728,28 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 <button
                   onClick={() => decide("invest")}
                   disabled={deciding || !memo}
-                  className="bg-ok px-3 py-2.5 text-[12px] font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                  className="bg-[#12A150] rounded-full px-4 py-3 text-[12px] font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-90 disabled:opacity-40 cursor-pointer border-0"
                 >
                   ✓ Deploy ${checkK}K
                 </button>
                 <button
                   onClick={() => decide("watch")}
                   disabled={deciding || !memo}
-                  className="border border-line bg-paper px-3 py-2 text-[11.5px] uppercase tracking-wide text-muted hover:text-ink disabled:opacity-40"
+                  className="bg-white border border-[#eceef3] rounded-full px-4 py-2.5 text-[11.5px] font-bold uppercase tracking-wider text-muted hover:bg-slate-50 hover:text-ink disabled:opacity-40 cursor-pointer"
                 >
                   ◎ Watch — track in Memory
                 </button>
                 <button
                   onClick={extendClock}
                   disabled={deciding}
-                  className="border border-line bg-paper px-3 py-2 text-[11.5px] uppercase tracking-wide text-muted hover:text-ink disabled:opacity-40"
+                  className="bg-white border border-[#eceef3] rounded-full px-4 py-2.5 text-[11.5px] font-bold uppercase tracking-wider text-muted hover:bg-slate-50 hover:text-ink disabled:opacity-40 cursor-pointer"
                 >
                   ⏱ Extend clock 24h
                 </button>
                 <button
                   onClick={() => decide("pass")}
                   disabled={deciding}
-                  className="border border-bad/40 bg-badwash px-3 py-2 text-[11.5px] uppercase tracking-wide text-bad hover:opacity-90 disabled:opacity-40"
+                  className="bg-[#FDEAEE] text-[#E0355A] rounded-full px-4 py-2.5 text-[11.5px] font-bold uppercase tracking-wider hover:bg-[#E0355A] hover:text-white transition-all disabled:opacity-40 cursor-pointer border-0"
                 >
                   ✕ Reject with feedback
                 </button>
@@ -765,7 +765,7 @@ export default function OpportunityDetail({ id }: { id: string }) {
             )}
           </div>
 
-          <a href="#diligence" className="u-card px-4 py-2.5 text-center text-[11px] uppercase tracking-wide text-muted hover:text-ink">
+          <a href="#diligence" className="bg-[#F8F8F8] border-0 rounded-full px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-muted hover:text-ink hover:bg-[#eee] transition-all">
             ← Review diligence
           </a>
         </aside>
@@ -777,8 +777,8 @@ export default function OpportunityDetail({ id }: { id: string }) {
 /* ------------------------------- sub-pieces -------------------------------- */
 function StripCell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="bg-card px-4 py-3">
-      <div className="text-[10.5px] uppercase tracking-wide text-muted">{label}</div>
+    <div className="bg-[#F8F8F8] px-5 py-4 rounded-2xl border-0 shadow-none">
+      <div className="text-[10px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">{label}</div>
       <div className="mt-1.5 flex items-center">{children}</div>
     </div>
   );
@@ -786,15 +786,15 @@ function StripCell({ label, children }: { label: string; children: React.ReactNo
 
 function StageChip({ label, state, note }: { label: string; state: string; note?: string }) {
   const cls: Record<string, string> = {
-    idle: "border-line text-faint",
-    ready: "border-accent text-accent",
-    running: "border-accent bg-wash text-accent",
-    done: "border-ok/50 bg-okwash text-ok",
-    error: "border-bad/50 bg-badwash text-bad",
+    idle: "border-[#eceef3] text-faint rounded-full bg-white",
+    ready: "border-[#0045FF] text-[#0045FF] font-bold rounded-full bg-white",
+    running: "border-[#0045FF] bg-[#EBF0FF] text-[#0045FF] font-bold rounded-full",
+    done: "border-[#12A150]/30 bg-[#E7F6EE] text-[#12A150] font-bold rounded-full",
+    error: "border-[#E0355A]/30 bg-[#FDEAEE] text-[#E0355A] font-bold rounded-full",
   };
   const mark = state === "running" ? "◌" : state === "done" ? "✓" : state === "error" ? "✕" : state === "ready" ? "◉" : "○";
   return (
-    <span className={`inline-flex items-center gap-1 border px-2 py-0.5 ${cls[state] ?? cls.idle}`}>
+    <span className={`inline-flex items-center gap-1 border px-3.5 py-1 text-[11px] font-sans ${cls[state] ?? cls.idle}`}>
       {mark} {label}
       {note ? `: ${note}` : ""}
     </span>
@@ -861,18 +861,18 @@ function MemoList({
 }
 
 function Quad({ title, items, tone }: { title: string; items?: string[]; tone: "ok" | "bad" | "accent" | "warn" }) {
-  const border: Record<string, string> = {
-    ok: "border-ok/30",
-    bad: "border-bad/30",
-    accent: "border-accent/30",
-    warn: "border-warn/30",
+  const bg: Record<string, string> = {
+    ok: "bg-[#E7F6EE] text-[#12A150]",
+    bad: "bg-[#FDEAEE] text-[#E0355A]",
+    accent: "bg-[#EBF0FF] text-[#0045FF]",
+    warn: "bg-[#FDF2D8] text-[#B7791F]",
   };
   return (
-    <div className={`border ${border[tone]} bg-paper p-3`}>
-      <div className="text-[10.5px] font-bold uppercase tracking-wide">{title}</div>
-      <ul className="mt-1.5 space-y-1">
+    <div className={`p-4 rounded-2xl border-0 shadow-none ${bg[tone] || "bg-white"}`}>
+      <div className="text-[10px] font-bold uppercase tracking-wider font-sans">{title}</div>
+      <ul className="mt-2 space-y-1">
         {(items ?? []).map((it, i) => (
-          <li key={i} className="text-[12px] leading-snug text-muted">· {it}</li>
+          <li key={i} className="text-[12px] leading-snug font-sans opacity-95">· {it}</li>
         ))}
       </ul>
     </div>
@@ -884,16 +884,16 @@ function ClaimRow({ c, evidence }: { c: Claim; evidence: Signal[] }) {
   const contradicted = c.externalVerification === "contradicted";
   const corroborated = c.externalVerification === "corroborated";
   return (
-    <div className={`border p-3 ${contradicted ? "border-bad/40 bg-badwash" : "border-line bg-card"}`}>
+    <div className={`p-4 rounded-[20px] shadow-none border ${contradicted ? "border-[#E0355A]/30 bg-[#FDEAEE]" : "border-[#eceef3] bg-white"}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 gap-2">
-          <span className={`mt-0.5 text-[13px] ${contradicted ? "text-bad" : corroborated ? "text-ok" : "text-faint"}`}>
+          <span className={`mt-0.5 text-[13px] ${contradicted ? "text-[#E0355A]" : corroborated ? "text-[#12A150]" : "text-faint"}`}>
             {contradicted ? "⚠" : corroborated ? "✓" : "•"}
           </span>
           <div className="min-w-0">
-            <div className="text-[10.5px] uppercase tracking-wide text-faint">{c.section}</div>
-            <p className="text-[13px]">{c.claimText}</p>
-            {c.contradictionNote ? <p className="mt-1 text-[11.5px] text-bad">⚠ {c.contradictionNote}</p> : null}
+            <div className="text-[10px] uppercase tracking-wider text-[#9E9E9E] font-bold font-sans">{c.section}</div>
+            <p className="text-[13px] text-ink font-sans mt-0.5">{c.claimText}</p>
+            {c.contradictionNote ? <p className="mt-1 text-[11.5px] text-[#E0355A] font-sans">⚠ {c.contradictionNote}</p> : null}
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -902,21 +902,21 @@ function ClaimRow({ c, evidence }: { c: Claim; evidence: Signal[] }) {
         </div>
       </div>
       {evidence.length ? (
-        <button onClick={() => setOpen((v) => !v)} className="mt-1.5 text-[11px] text-accent hover:underline">
+        <button onClick={() => setOpen((v) => !v)} className="mt-2 text-[11px] text-[#0045FF] font-bold hover:underline cursor-pointer">
           {open ? "hide" : "show"} evidence ({evidence.length})
         </button>
       ) : (
-        <span className="mt-1.5 block text-[10.5px] text-faint">no linked evidence</span>
+        <span className="mt-2 block text-[10.5px] text-faint">no linked evidence</span>
       )}
       {open ? (
-        <div className="mt-2 space-y-1.5 border-t border-line pt-2">
+        <div className="mt-3 space-y-1.5 border-t border-[#eceef3] pt-3">
           {evidence.map((e) => (
             <div key={e.id} className="flex flex-wrap items-baseline gap-1.5 text-[11.5px] text-muted">
               <Badge>{e.sourceType}</Badge>
-              <span className="font-semibold">{e.title}</span>
+              <span className="font-semibold text-ink">{e.title}</span>
               <span className="text-faint">{(e.rawText ?? "").slice(0, 160)}</span>
               {e.sourceUrl ? (
-                <a href={e.sourceUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">
+                <a href={e.sourceUrl} target="_blank" rel="noreferrer" className="text-[#0045FF] hover:underline">
                   Source ↗
                 </a>
               ) : null}

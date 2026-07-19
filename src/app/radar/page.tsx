@@ -165,14 +165,14 @@ export default function RadarPage() {
 
       <div className="space-y-4">
         {/* Deep Manual Search Box */}
-        <div className="mb-6 u-card p-4 rounded-sm">
-          <h2 className="text-[11.5px] uppercase tracking-wide text-accent mb-2">Deep search for new founders</h2>
+        <div className="mb-6 bg-[#F8F8F8] rounded-[24px] p-6 border-0 shadow-none">
+          <h2 className="text-[11.5px] uppercase tracking-wider text-[#0045FF] font-bold mb-2.5">Deep search for new founders</h2>
           <form onSubmit={handleManualSearch} className="flex gap-2">
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               disabled={searching}
-              className="flex-1 bg-paper border border-line px-3 py-2 text-[12.5px] text-ink focus:border-accent focus:outline-none placeholder-faint"
+              className="flex-1 bg-white border-0 rounded-full px-6 py-3 text-[12.5px] text-ink focus:outline-none placeholder-[#a0a0a0]"
               placeholder="Enter founder name, GitHub login, research paper title, or project keywords..."
             />
             <PrimaryButton type="submit" disabled={searching || !searchQuery.trim()}>
@@ -180,7 +180,7 @@ export default function RadarPage() {
             </PrimaryButton>
           </form>
           {searchStatus && (
-            <div className="mt-3 flex items-center gap-2 text-[11.5px] text-accent animate-pulse">
+            <div className="mt-3 flex items-center gap-2 text-[11.5px] text-[#0045FF] animate-pulse">
               <Spinner />
               <span>{searchStatus} (This runs real audits across GitHub, arXiv, LinkedIn, and Web - may take up to 45s)</span>
             </div>
@@ -241,8 +241,8 @@ export default function RadarPage() {
 
           {/* Channel rail */}
           <aside className="flex flex-col gap-4">
-            <div className="u-card p-4">
-              <div className="text-[10.5px] uppercase tracking-wide text-muted">Sweep a channel</div>
+            <div className="bg-[#F8F8F8] rounded-[24px] border-0 p-6 shadow-none">
+              <div className="text-[10.5px] uppercase tracking-wider text-muted font-bold mb-2">Sweep a channel</div>
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {SOURCEABLE.map((k) => (
                   <Chip key={k} onClick={() => source(k)} disabled={!!busy}>
@@ -256,8 +256,8 @@ export default function RadarPage() {
             </div>
 
             {channels && (
-              <div className="u-card p-4">
-                <div className="text-[10.5px] uppercase tracking-wide text-muted">Channel intelligence</div>
+              <div className="bg-[#F8F8F8] rounded-[24px] border-0 p-6 shadow-none">
+                <div className="text-[10.5px] uppercase tracking-wider text-muted font-bold">Channel intelligence</div>
                 <p className="mt-0.5 text-[11px] text-faint">Which sources find your best founders — learns from your decisions.</p>
                 <div className="mt-3 space-y-2.5">
                   {channels.channels.length === 0 ? (
@@ -273,8 +273,8 @@ export default function RadarPage() {
                               q{c.quality} · {c.found} found · {c.converted} converted
                             </span>
                           </div>
-                          <div className="mt-1 h-1 w-full bg-line">
-                            <div className="h-full bg-accent" style={{ width: `${(c.quality / max) * 100}%` }} />
+                          <div className="mt-1 h-1.5 w-full bg-[#eceef3] rounded-full overflow-hidden">
+                            <div className="h-full bg-[#0045FF] rounded-full" style={{ width: `${(c.quality / max) * 100}%` }} />
                           </div>
                         </div>
                       );
@@ -282,7 +282,7 @@ export default function RadarPage() {
                   )}
                 </div>
                 {channels.suggestions.length > 0 && (
-                  <div className="mt-4 border-t border-line pt-3">
+                  <div className="mt-4 border-t border-[#eceef3] pt-3">
                     <div className="text-[10.5px] uppercase tracking-wide text-warn">Underexplored</div>
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {channels.suggestions.map((s) => (
@@ -297,21 +297,21 @@ export default function RadarPage() {
             )}
 
             {groupedGraph.length > 0 && (
-              <div className="border border-line bg-card p-4">
-                <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">Sourcing Graph</div>
+              <div className="bg-[#F8F8F8] rounded-[24px] border-0 p-6 shadow-none">
+                <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted font-bold">Sourcing Graph</div>
                 <p className="mt-0.5 text-[11px] text-faint">Network path: Institution → Program → Founder</p>
                 <div className="mt-3 space-y-4 max-h-[350px] overflow-y-auto pr-1">
                   {groupedGraph.map(([instName, programs]) => (
-                    <div key={instName} className="border-l border-line pl-2.5 space-y-2">
-                      <div className="font-mono text-[11px] font-bold text-accent">{instName}</div>
+                    <div key={instName} className="border-l border-[#eceef3] pl-2.5 space-y-2">
+                      <div className="font-mono text-[11px] font-bold text-[#0045FF]">{instName}</div>
                       {[...programs.entries()].map(([progName, items]) => (
-                        <div key={progName} className="border-l border-accent/20 pl-2.5 space-y-1">
+                        <div key={progName} className="border-l border-[#0045FF]/20 pl-2.5 space-y-1">
                           <div className="font-mono text-[9.5px] text-muted uppercase tracking-wide">{progName}</div>
                           {items.map((item, idx) => (
                             <div key={idx} className="flex items-center gap-1.5 text-[11.5px] leading-snug">
                               <span className="text-faint">↳</span>
-                              <Link href={`/opportunity/${item.opportunityId}`} className="hover:text-accent font-mono truncate text-muted">
-                                <span className="font-semibold text-white hover:text-accent">{item.founderName}</span>
+                              <Link href={`/opportunity/${item.opportunityId}`} className="hover:text-[#0045FF] font-mono truncate text-muted">
+                                <span className="font-semibold text-ink hover:text-[#0045FF]">{item.founderName}</span>
                                 <span className="text-faint"> @{item.companyName}</span>
                               </Link>
                             </div>
@@ -357,40 +357,44 @@ function RadarCard({
   const cold = o.founders.some((x) => x.isColdStart);
   const signal = CHANNEL_SIGNAL[o.sourceChannel ?? ""] ?? "Signal";
   return (
-    <div className="flex flex-col u-card">
-      <div className="flex items-start gap-3 border-b border-line p-3.5">
-        <span className="grid h-9 w-9 shrink-0 place-items-center border border-line bg-paper text-[12px] font-bold">
+    <div className="flex flex-col bg-white rounded-[24px] border border-[#eceef3] shadow-none overflow-hidden hover:border-[#0045FF]/40 transition-colors">
+      <div className="flex items-center gap-3 border-b border-[#eceef3] p-4">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#eceef3] bg-[#F8F8F8] text-[#0045FF] text-[12px] font-bold">
           {f && !cold ? initialsOf(f.name) : cold ? "??" : "—"}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-[13.5px] font-semibold">{f?.name ?? o.company}</span>
-            {o.sector ? <Badge>{o.sector}</Badge> : null}
+            <span className="truncate text-[13.5px] font-bold text-ink">{f?.name ?? o.company}</span>
+            {o.sector ? (
+              <span className="rounded-full bg-[#EBF0FF] text-[#0045FF] text-[10px] px-2.5 py-0.5 font-bold font-sans">
+                {o.sector}
+              </span>
+            ) : null}
           </div>
-          <div className="truncate text-[11.5px] text-faint">
+          <div className="truncate text-[11.5px] text-muted">
             {o.company}
             {o.geography ? ` · ${o.geography}` : ""}
           </div>
         </div>
       </div>
-      <div className="flex-1 p-3.5">
-        <div className={`text-[10.5px] uppercase tracking-wide ${cold ? "text-warn" : "text-accent"}`}>
+      <div className="flex-1 p-4">
+        <div className={`text-[10px] font-bold uppercase tracking-wider ${cold ? "text-[#E0355A]" : "text-[#0045FF]"}`}>
           {cold ? `New founder · ${signal}` : signal}
         </div>
-        <p className="mt-1.5 line-clamp-2 text-[12.5px] text-muted">{o.oneLiner ?? o.convictionReason}</p>
-        <p className="mt-1 line-clamp-1 text-[11px] text-faint">why now: {o.convictionReason ?? "—"}</p>
-        <div className="mt-3 flex items-end justify-between">
+        <p className="mt-1.5 line-clamp-2 text-[12.5px] text-muted leading-relaxed font-sans">{o.oneLiner ?? o.convictionReason}</p>
+        <p className="mt-1 line-clamp-1 text-[11px] text-faint font-sans">why now: {o.convictionReason ?? "—"}</p>
+        <div className="mt-4 flex items-end justify-between">
           <div className="flex items-center gap-4">
             <div>
-              <div className="text-[10.5px] uppercase tracking-wide text-faint">Match</div>
-              <div className={`tnum text-[24px] font-bold leading-none ${(o.convictionScore ?? 0) >= threshold ? "text-accent" : ""}`}>
+              <div className="text-[10px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Match</div>
+              <div className={`tnum text-[24px] font-bold leading-none mt-0.5 ${(o.convictionScore ?? 0) >= threshold ? "text-[#0045FF]" : "text-ink"}`}>
                 {o.convictionScore ?? "—"}
               </div>
             </div>
             {f ? (
               <div>
-                <div className="text-[10.5px] uppercase tracking-wide text-faint">Founder</div>
-                <div className="mt-0.5"><ScorePill n={f.founderScore} /></div>
+                <div className="text-[10px] uppercase tracking-wider text-[#9E9E9E] font-medium font-sans">Founder</div>
+                <div className="mt-1"><ScorePill n={f.founderScore} /></div>
               </div>
             ) : null}
             <div className="flex items-center gap-1 pb-0.5">
@@ -405,17 +409,17 @@ function RadarCard({
           ) : null}
         </div>
       </div>
-      <div className="grid grid-cols-2 border-t border-line">
+      <div className="grid grid-cols-2 border-t border-[#eceef3]">
         <button
           onClick={onActivate}
           disabled={busy}
-          className="border-r border-line px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wide text-accent transition-colors hover:bg-wash disabled:opacity-50"
+          className="border-r border-[#eceef3] px-3 py-2.5 text-[10.5px] font-bold uppercase tracking-wider text-[#0045FF] transition-colors hover:bg-[#F8F8F8] disabled:opacity-50 cursor-pointer"
         >
           {busy ? "Drafting…" : "⚡ Activate → outreach"}
         </button>
         <Link
           href={`/opportunity/${o.id}`}
-          className="px-3 py-2 text-center text-[10.5px] font-semibold uppercase tracking-wide text-muted transition-colors hover:bg-paper hover:text-ink"
+          className="px-3 py-2.5 text-center text-[10.5px] font-bold uppercase tracking-wider text-muted transition-colors hover:bg-[#F8F8F8] hover:text-ink"
         >
           Assess →
         </Link>

@@ -34,8 +34,8 @@ function SidebarNav({ pathname, onNav }: { pathname: string; onNav?: () => void 
             key={n.href}
             href={n.href}
             onClick={onNav}
-            className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-[14px] font-semibold transition-colors ${
-              active ? "bg-white text-brand shadow-sm" : "text-white/80 hover:bg-white/10 hover:text-white"
+            className={`flex items-center gap-3 rounded-full px-4 py-3 text-[14px] font-semibold transition-colors ${
+              active ? "bg-white text-[#0045FF] shadow-none" : "text-white/80 hover:bg-white/10 hover:text-white"
             }`}
           >
             <n.icon />
@@ -82,7 +82,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const Sidebar = (
-    <div className="flex h-full flex-col bg-gradient-to-b from-brand to-branddeep py-6 text-white">
+    <div className="flex h-full flex-col bg-[#0045FF] py-6 text-white">
       <Link href="/dashboard" onClick={() => setNavOpen(false)} className="mb-8 flex items-center gap-2.5 px-6">
         <IconBrain />
         <span className="text-[19px] font-extrabold tracking-tight">VC.BRAIN</span>
@@ -93,9 +93,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Link
             href="/admin/users"
             onClick={() => setNavOpen(false)}
-            className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-[14px] font-semibold transition-colors ${
+            className={`flex items-center gap-3 rounded-full px-4 py-3 text-[14px] font-semibold transition-colors ${
               pathname.startsWith("/admin/users")
-                ? "bg-white text-brand shadow-sm"
+                ? "bg-white text-[#0045FF] shadow-none"
                 : "text-white/80 hover:bg-white/10 hover:text-white"
             }`}
           >
@@ -109,11 +109,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex min-h-screen bg-[#f7f8fb]">
+    <div className="flex min-h-screen bg-[#ffffff]">
       {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 md:block">
         <div className="sticky top-0 h-screen p-3">
-          <div className="h-full overflow-hidden rounded-[28px] u-soft">{Sidebar}</div>
+          <div className="h-full overflow-hidden rounded-[28px] border border-line shadow-none">{Sidebar}</div>
         </div>
       </aside>
 
@@ -122,7 +122,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-ink/40" onClick={() => setNavOpen(false)} aria-hidden />
           <div className="absolute left-0 top-0 h-full w-64 p-2">
-            <div className="h-full overflow-hidden rounded-[24px]">{Sidebar}</div>
+            <div className="h-full overflow-hidden rounded-[24px] shadow-none">{Sidebar}</div>
           </div>
         </div>
       ) : null}
@@ -134,7 +134,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setNavOpen(true)}
             aria-label="Open navigation"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-ink u-card md:hidden"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F8F8F8] text-ink shadow-none border-0 md:hidden"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
               <path d="M2 4h12M2 8h12M2 12h12" />
@@ -147,32 +147,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               if (q.trim()) router.push(`/pipeline?q=${encodeURIComponent(q.trim())}`);
             }}
           >
-            <div className="flex max-w-xl items-center gap-2.5 rounded-full bg-white px-5 py-3 u-card">
+            <div className="flex max-w-xl items-center gap-2.5 rounded-full bg-[#F8F8F8] px-5 py-3 shadow-none border-0">
               <IconSearch />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search founders, companies, memos…"
-                className="w-full bg-transparent text-[14px] outline-none placeholder:text-faint"
+                placeholder="Search transactions, clients, counterparties..."
+                className="w-full bg-transparent text-[14px] outline-none placeholder-[#a0a0a0] text-ink"
                 aria-label="Search"
               />
             </div>
           </form>
           <div className="ml-auto flex items-center gap-2.5">
-            <span className="hidden items-center rounded-full bg-white px-4 py-2.5 text-[13.5px] font-semibold u-card sm:flex">
+            <span className="hidden items-center rounded-full bg-[#F8F8F8] px-5 py-2.5 text-[13.5px] font-semibold text-ink shadow-none border-0 sm:flex">
               {user?.name ?? "Signed in"}
             </span>
             <Link
               href="/thesis"
               aria-label="Settings"
-              className="grid h-10 w-10 place-items-center rounded-full bg-white text-muted u-card hover:text-brand"
+              className="grid h-10 w-10 place-items-center rounded-full bg-[#F8F8F8] text-muted shadow-none border-0 hover:text-[#0045FF]"
             >
               <IconGear />
             </Link>
             <button
               onClick={logout}
               aria-label="Log out"
-              className="grid h-10 w-10 place-items-center rounded-full bg-badwash text-bad hover:bg-bad hover:text-white"
+              className="grid h-10 w-10 place-items-center rounded-full bg-[#FDEAEE] text-[#E0355A] hover:bg-[#E0355A] hover:text-white transition-all shadow-none border-0 cursor-pointer"
             >
               <IconLogout />
             </button>

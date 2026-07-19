@@ -54,7 +54,7 @@
 
 html,
 body {
-  background: #f7f8fb;
+  background: #ffffff;
   color: #10132a;
 }
 
@@ -117,21 +117,22 @@ a:focus-visible {
 .u-card {
   background: #ffffff;
   border-radius: 22px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.04);
+  border: 1px solid #eceef3;
+  box-shadow: none;
 }
 .u-card-hover {
-  transition: box-shadow 0.18s ease, transform 0.18s ease;
+  transition: border-color 0.18s ease;
 }
 .u-card-hover:hover {
-  box-shadow: 0 8px 28px rgba(16, 24, 40, 0.09);
-  transform: translateY(-1px);
+  border-color: #0045ff;
 }
 .u-panel {
   background: #f1f3f7;
   border-radius: 26px;
 }
 .u-soft {
-  box-shadow: 0 6px 30px rgba(16, 24, 40, 0.06);
+  box-shadow: none;
+  border: 1px solid #eceef3;
 }
 
 /* pills */
