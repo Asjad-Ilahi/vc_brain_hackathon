@@ -1,0 +1,25 @@
+{
+  "name": "odin-launch-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ODIN — programmatic SaaS launch video (Remotion)",
+  "scripts": {
+    "dev": "remotion studio",
+    "voiceover": "node scripts/generate-voiceover.mjs",
+    "render": "remotion render OdinLaunch out/odin-launch.mp4 --concurrency=4",
+    "still": "remotion still OdinLaunch out/frame.png --frame=90"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.495",
+    "@remotion/google-fonts": "^4.0.495",
+    "@remotion/media-utils": "^4.0.495",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "remotion": "^4.0.495"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}
