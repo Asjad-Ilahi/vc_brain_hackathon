@@ -36,12 +36,12 @@ export const Scene04Pipeline: React.FC = () => {
       <Background intensity={0.85} panY={-8} />
 
       {/* Heading */}
-      <AbsoluteFill style={{ alignItems: "center", paddingTop: 150 }}>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 128 }}>
         <div style={revealUp(frame, 4)}>
           <Eyebrow>The agent pipeline</Eyebrow>
         </div>
         <div style={{ ...revealUp(frame, 12), marginTop: 14 }}>
-          <Title size={72}>Signal in. Conviction out.</Title>
+          <Title size={68}>Signal in. Conviction out.</Title>
         </div>
       </AbsoluteFill>
 
@@ -195,7 +195,7 @@ export const Scene04Pipeline: React.FC = () => {
       })}
 
       {/* Human-in-the-loop payoff */}
-      <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 96 }}>
+      <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 72 }}>
         <div style={revealUp(frame, 196)}>
           <Pill tone="ok" size={24}>
             → then one human decides · the system never deploys capital on its own

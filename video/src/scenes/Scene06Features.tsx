@@ -50,18 +50,18 @@ export const Scene06Features: React.FC = () => {
     <AbsoluteFill>
       <Background intensity={0.55} panX={-14} />
 
-      <AbsoluteFill style={{ alignItems: "center", paddingTop: 96 }}>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 80 }}>
         <div style={revealUp(frame, 2)}>
           <Eyebrow>Built for conviction</Eyebrow>
         </div>
         <div style={{ ...revealUp(frame, 10), marginTop: 12 }}>
-          <Title size={64}>Everything the fund needs.</Title>
+          <Title size={60}>Everything the fund needs.</Title>
         </div>
 
         {/* 3 × 2 grid */}
         <div
           style={{
-            marginTop: 56,
+            marginTop: 44,
             display: "grid",
             gridTemplateColumns: "repeat(3, 470px)",
             gap: 26,

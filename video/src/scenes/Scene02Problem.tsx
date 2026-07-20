@@ -89,10 +89,10 @@ export const Scene02Problem: React.FC = () => {
         style={{ justifyContent: "center", alignItems: "center", textAlign: "center" }}
       >
         <div style={revealUp(frame, 10)}>
-          <Title size={104}>Too many decks.</Title>
+          <Title size={96}>Too many decks.</Title>
         </div>
         <div style={{ ...revealUp(frame, stagger(1, 12, 10)), marginTop: 6 }}>
-          <Title size={104} style={{ color: c.brand }}>
+          <Title size={96} style={{ color: c.brand }}>
             Too little time.
           </Title>
         </div>

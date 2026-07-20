@@ -24,8 +24,8 @@ export const Scene03Platform: React.FC = () => {
   const frame = useCurrentFrame();
 
   // Slow lateral camera drift + tiny rotation → "floating UI" feel.
-  const camX = interpolate(frame, [0, 300], [26, -26], { easing: easeOut });
-  const camScale = interpolate(frame, [0, 300], [0.97, 1.02], { easing: easeOut });
+  const camX = interpolate(frame, [0, 300], [16, -16], { easing: easeOut });
+  const camScale = interpolate(frame, [0, 300], [0.985, 1.005], { easing: easeOut });
 
   const sidebar = enter(frame, 4, 180);
 
@@ -43,8 +43,8 @@ export const Scene03Platform: React.FC = () => {
         {/* ---- the workspace shell ---- */}
         <div
           style={{
-            width: 1560,
-            height: 830,
+            width: 1500,
+            height: 800,
             display: "flex",
             gap: 22,
             filter: "drop-shadow(0 40px 90px rgba(16,19,42,0.13))",
@@ -214,7 +214,7 @@ export const Scene03Platform: React.FC = () => {
       </AbsoluteFill>
 
       {/* Caption */}
-      <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 42 }}>
+      <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 30 }}>
         <div style={revealUp(frame, 100)}>
           <Pill tone="brand" size={22}>
             One command center · source · screen · decide

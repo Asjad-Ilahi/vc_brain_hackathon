@@ -80,10 +80,10 @@ async function resolveVoiceId() {
   if (!voices?.length) throw new Error("No voices available on this account.");
 
   // Prefer a calm, authoritative narrator for a product launch film.
-  const preferred = ["Adam", "Daniel", "Brian", "George", "Rachel", "Antoni"];
+  const preferred = ["Sarah", "Sara", "Rachel", "Matilda", "Alice"];
   for (const name of preferred) {
     const hit = voices.find(
-      (v) => v.name?.toLowerCase() === name.toLowerCase()
+      (v) => v.name?.toLowerCase().includes(name.toLowerCase())
     );
     if (hit) return hit.voice_id;
   }
@@ -105,9 +105,9 @@ async function synthesize(voiceId, text, outPath) {
         text,
         model_id: MODEL_ID,
         voice_settings: {
-          stability: 0.45,       // steady, not sing-songy
+          stability: 0.5,        // steady, natural pacing
           similarity_boost: 0.8,
-          style: 0.15,           // a touch of energy, still corporate
+          style: 0.32,           // warmer, more human delivery
           use_speaker_boost: true,
         },
       }),

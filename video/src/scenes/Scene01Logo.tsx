@@ -14,8 +14,9 @@ import { enter, easeOut } from "../utils/anim";
 export const Scene01Logo: React.FC = () => {
   const frame = useCurrentFrame();
 
-  // A slow push-in on the whole lockup — cinematic "settle".
-  const push = interpolate(frame, [0, 150], [1.06, 1], {
+  // A slow push-in on the whole lockup — cinematic "settle". Kept subtle so the
+  // ring never crosses the frame edge (safe margins).
+  const push = interpolate(frame, [0, 150], [1.025, 1], {
     extrapolateRight: "clamp",
     easing: easeOut,
   });
@@ -44,7 +45,7 @@ export const Scene01Logo: React.FC = () => {
         }}
       >
         <div style={{ position: "relative", display: "grid", placeItems: "center" }}>
-          <LogoMark frame={frame} width={640} ring delay={4} />
+          <LogoMark frame={frame} width={470} ring delay={4} />
 
           {/* Specular sweep — a single pass of light over the mark */}
           <div
@@ -73,12 +74,12 @@ export const Scene01Logo: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ height: 34 }} />
+        <div style={{ height: 22 }} />
         <LogoTagline frame={frame} delay={54} />
 
         <div
           style={{
-            height: 30,
+            height: 24,
           }}
         />
         <div

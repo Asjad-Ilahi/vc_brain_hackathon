@@ -21,8 +21,8 @@ const STACK = [
 ];
 
 const CX = 960;
-const CY = 620;
-const RADIUS = 330;
+const CY = 604;
+const RADIUS = 298;
 
 export const Scene05Architecture: React.FC = () => {
   const frame = useCurrentFrame();
@@ -35,12 +35,12 @@ export const Scene05Architecture: React.FC = () => {
     <AbsoluteFill>
       <Background intensity={0.6} panY={10} />
 
-      <AbsoluteFill style={{ alignItems: "center", paddingTop: 116 }}>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 96 }}>
         <div style={revealUp(frame, 2)}>
           <Eyebrow>Architecture</Eyebrow>
         </div>
         <div style={{ ...revealUp(frame, 10), marginTop: 12 }}>
-          <Title size={66}>Serverless. Production ready.</Title>
+          <Title size={62}>Serverless. Production ready.</Title>
         </div>
       </AbsoluteFill>
 

@@ -89,7 +89,14 @@ export const LogoMark: React.FC<{
 
       <Img
         src={staticFile("logo.png")}
-        style={{ width, objectFit: "contain", position: "relative" }}
+        style={{
+          width,
+          objectFit: "contain",
+          position: "relative",
+          // The asset has a white background box — multiply blends it into the
+          // light canvas so only the mark shows.
+          mixBlendMode: "multiply",
+        }}
       />
     </div>
   );

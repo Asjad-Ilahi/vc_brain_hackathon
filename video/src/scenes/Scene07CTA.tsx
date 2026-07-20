@@ -27,11 +27,11 @@ export const Scene07CTA: React.FC = () => {
     <AbsoluteFill>
       <Background intensity={0.9} />
 
-      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
-        <LogoMark frame={frame} width={480} ring delay={0} />
+      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", padding: "60px 120px" }}>
+        <LogoMark frame={frame} width={360} ring delay={0} />
 
-        <div style={{ ...revealUp(frame, 26), marginTop: 30, textAlign: "center" }}>
-          <Title size={72}>
+        <div style={{ ...revealUp(frame, 26), marginTop: 22, textAlign: "center" }}>
+          <Title size={66}>
             Decide on any founder in{" "}
             <span style={{ color: c.brand }}>24 hours.</span>
           </Title>
@@ -45,7 +45,7 @@ export const Scene07CTA: React.FC = () => {
 
         <div
           style={{
-            marginTop: 44,
+            marginTop: 34,
             opacity: interpolate(btn, [0, 1], [0, 1], { extrapolateRight: "clamp" }),
             transform: `translateY(${interpolate(btn, [0, 1], [20, 0])}px) scale(${interpolate(
               btn,

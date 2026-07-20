@@ -63,8 +63,9 @@ export const sceneEnvelope = (
     [0, 1, 1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: easeInOut }
   );
-  // Very slow continuous push-in gives every scene a "camera" feel.
-  const scale = interpolate(frame, [0, duration], [1, 1.04], {
+  // Very slow continuous push-in gives every scene a "camera" feel. Kept very
+  // subtle (1.5%) so edge content never overflows the frame.
+  const scale = interpolate(frame, [0, duration], [1, 1.015], {
     extrapolateRight: "clamp",
     easing: Easing.linear,
   });

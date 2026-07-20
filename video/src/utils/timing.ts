@@ -34,7 +34,7 @@ export type SceneDef = {
 export const SCENES: SceneDef[] = [
   {
     key: "logo",
-    durationInFrames: 150, // 0:00 – 0:05
+    durationInFrames: 158, // 0:00 – 0:05
     narration:
       "This is ODIN. An AI operating system for autonomous venture intelligence.",
   },
